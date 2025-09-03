@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Negocio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .loading-overlay {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col h-screen">
+
+    <!-- Loading and Status Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 flex flex-col items-center justify-center loading-overlay z-50">
+        <div id="spinner" class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p id="status-message" class="mt-4 text-gray-700 font-medium">Iniciando...</p>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app-container" class="flex flex-col flex-grow hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-md p-4 flex items-center justify-between z-10">
+            <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
+            <div id="auth-status" class="text-sm text-gray-500">
+                <span id="user-id">Cargando...</span>
+            </div>
+            <nav id="nav-tabs" class="flex space-x-2">
+                <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
+                <button onclick="navigate('orders')" id="tab-orders" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Pedidos</button>
+                <button onclick="navigate('locations')" id="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Localidades</button>
+                <button onclick="navigate('categories')" id="tab-categories" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Categorías</button>
+            </nav>
+        </header>
+
+        <!-- Main Content View -->
+        <main id="main-content" class="p-4 flex-grow overflow-y-auto">
+            <!-- Content will be injected here -->
+        </main>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modal-container" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay">
+        <div id="modal-content" class="bg-white rounded-lg shadow-lg p-6 w-11/12 md:w-1/3">
+            <!-- Modal content will be injected here -->
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+	// Import the functions you need from the SDKs you need
+	import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+	// TODO: Add SDKs for Firebase products that you want to use
+	// https://firebase.google.com/docs/web/setup#available-libraries
+
+	// Your web app's Firebase configuration
+    const firebaseConfig = {
+    apiKey: "AIzaSyDBRT5IUIoB2H8UwN7tkmqSkzq9Lch7yeg",
+    authDomain: "url-de-pedidos.firebaseapp.com",
+    projectId: "url-de-pedidos",
+    storageBucket: "url-de-pedidos.firebasestorage.app",
+    messagingSenderId: "180972439681",
+    appId: "1:180972439681:web:f9000673e003840f572580"
+  };
+
+          // --- App State ---
+        const appState = {
+            currentView: 'promotions',
+            promotions: {},
+            categories: {},
+            locations: {},
+            orders: {},
+            selectedOrder: null,
+            orderProducts: {}
+        };
+
+        const viewTemplates = {
+            promotions: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Catálogo de Promociones</h2>
+                    <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                        <i class="fas fa-plus mr-2"></i>Nueva Promoción
+                    </button>
+                </div>
+                <div id="promotions-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            `,
+            orders: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Pedidos</h2>
+                    <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Pedido
+                    </button>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md mb-4 flex justify-around flex-wrap text-center">
+                    <div>
+                        <p class="text-sm text-gray-500">Total General</p>
+                        <p id="total-general" class="text-xl font-bold text-blue-600">$0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Entregados</p>
+                        <p id="total-delivered" class="text-xl font-bold text-green-600">$0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Pendientes</p>
+                        <p id="total-pending" class="text-xl font-bold text-red-600">$0.00</p>
+                    </div>
+                </div>
+                <div id="orders-list" class="space-y-4"></div>
+            `,
+            locations: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Gestión de Localidades</h2>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex mb-4">
+                        <input type="text" id="new-location-input" placeholder="Nombre de la nueva localidad" class="flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="addLocation()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
+                    </div>
+                    <ul id="locations-list" class="space-y-2"></ul>
+                </div>
+            `,
+            categories: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Gestión de Categorías</h2>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex mb-4">
+                        <input type="text" id="new-category-input" placeholder="Nombre de la nueva categoría" class="flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="addCategory()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
+                    </div>
+                    <ul id="categories-list" class="space-y-2"></ul>
+                </div>
+            `
+        };
+
+        // --- Utility Functions ---
+        window.showLoading = function(show, message = 'Cargando...') {
+            document.getElementById('loading-overlay').classList.toggle('hidden', !show);
+            document.getElementById('app-container').classList.toggle('hidden', show);
+            document.getElementById('status-message').innerText = message;
+        }
+
+        function showStatusMessage(message, isError = false) {
+            document.getElementById('status-message').innerText = message;
+            if (isError) {
+                document.getElementById('spinner').classList.add('hidden');
+                document.getElementById('status-message').classList.remove('text-gray-700');
+                document.getElementById('status-message').classList.add('text-red-600');
+            } else {
+                document.getElementById('spinner').classList.remove('hidden');
+                document.getElementById('status-message').classList.remove('text-red-600');
+                document.getElementById('status-message').classList.add('text-gray-700');
+            }
+        }
+
+        window.showModal = function(contentHtml) {
+            const modalContainer = document.getElementById('modal-container');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = contentHtml;
+            modalContainer.classList.remove('hidden');
+        }
+
+        window.closeModal = function() {
+            document.getElementById('modal-container').classList.add('hidden');
+        }
+
+        // --- Navigation ---
+        window.navigate = function(view) {
+            appState.currentView = view;
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = viewTemplates[view];
+            
+            // Highlight active tab
+            document.querySelectorAll('#nav-tabs button').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white');
+                btn.classList.add('text-gray-700', 'hover:bg-gray-200');
+            });
+            document.getElementById(`tab-${view}`).classList.remove('text-gray-700', 'hover:bg-gray-200');
+            document.getElementById(`tab-${view}`).classList.add('bg-blue-500', 'text-white');
+
+            renderView();
+        }
+
+        function renderView() {
+            switch(appState.currentView) {
+                case 'promotions':
+                    renderPromotions();
+                    break;
+                case 'orders':
+                    renderOrders();
+                    break;
+                case 'locations':
+                    renderLocations();
+                    break;
+                case 'categories':
+                    renderCategories();
+                    break;
+            }
+        }
+
+        // --- Data Fetching and Real-time Listeners ---
+        function listenForData() {
+            if (!isAuthReady || !userId) return;
+
+            // Promotions Listener
+            const promotionsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/promotions`);
+            onSnapshot(promotionsCollectionRef, (snapshot) => {
+                snapshot.docChanges().forEach(change => {
+                    const promoData = change.doc.data();
+                    const promoId = change.doc.id;
+                    if (change.type === "added" || change.type === "modified") {
+                        appState.promotions[promoId] = { ...promoData, id: promoId };
+                    } else if (change.type === "removed") {
+                        delete appState.promotions[promoId];
+                    }
+                });
+                renderView();
+            });
+
+            // Categories Listener
+            const categoriesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/categories`);
+            onSnapshot(categoriesCollectionRef, (snapshot) => {
+                appState.categories = {};
+                snapshot.forEach(doc => {
+                    appState.categories[doc.id] = doc.data().name;
+                });
+                renderView();
+            });
+
+            // Locations Listener
+            const locationsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/localidades`);
+            onSnapshot(locationsCollectionRef, (snapshot) => {
+                appState.locations = {};
+                snapshot.forEach(doc => {
+                    appState.locations[doc.id] = doc.data().name;
+                });
+                renderView();
+            });
+
+            // Orders Listener
+            const ordersCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/pedidos`);
+            onSnapshot(ordersCollectionRef, (snapshot) => {
+                appState.orders = {};
+                snapshot.docChanges().forEach(change => {
+                    const orderData = change.doc.data();
+                    const orderId = change.doc.id;
+                    if (change.type === "added" || change.type === "modified") {
+                        appState.orders[orderId] = { ...orderData, id: orderId };
+                    } else if (change.type === "removed") {
+                        delete appState.orders[orderId];
+                    }
+                });
+                renderView();
+            });
+
+            showLoading(false);
+        }
+
+        // --- Render Functions ---
+        function renderPromotions() {
+            const listContainer = document.getElementById('promotions-list');
+            if (!listContainer) return;
+
+            listContainer.innerHTML = '';
+            const promosByCategory = Object.values(appState.promotions).reduce((acc, promo) => {
+                const categoryId = promo.categoryId || 'sin-categoria';
+                if (!acc[categoryId]) {
+                    acc[categoryId] = { name: appState.categories[categoryId] || 'Sin Categoría', promos: [] };
+                }
+                acc[categoryId].promos.push(promo);
+                return acc;
+            }, {});
+
+            for (const categoryId in promosByCategory) {
+                const category = promosByCategory[categoryId];
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'col-span-full mb-4';
+                categoryDiv.innerHTML = `<h3 class="text-lg font-bold text-blue-600">${category.name}</h3>`;
+                listContainer.appendChild(categoryDiv);
+
+                category.promos.forEach(promo => {
+                    const promoCard = document.createElement('div');
+                    promoCard.className = 'bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center transition-transform transform hover:scale-105';
+                    
+                    const promoImage = promo.image || 'https://placehold.co/150x150/d1d5db/374151?text=No+Image';
+                    promoCard.innerHTML = `
+                        <img src="${promoImage}" alt="${promo.name}" class="w-32 h-32 object-cover rounded-lg mb-2">
+                        <div class="flex-grow w-full">
+                            <h3 class="text-lg font-bold text-gray-800">${promo.name}</h3>
+                            <p class="text-sm text-gray-600">${promo.stock} en stock</p>
+                            ${promo.originalPrice ? `<p class="text-sm text-red-500 line-through">$${promo.originalPrice.toFixed(2)}</p>` : ''}
+                            <p class="text-xl font-bold text-green-600">$${promo.price.toFixed(2)}</p>
+                        </div>
+                        <div class="mt-4 flex space-x-2 w-full justify-center">
+                            <button onclick="showPromoModal('${promo.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded-lg hover:bg-yellow-600 transition-colors text-sm">Editar</button>
+                            <button onclick="deletePromo('${promo.id}')" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors text-sm">Eliminar</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(promoCard);
+                });
+            }
+        }
+
+        function renderOrders() {
+            const listContainer = document.getElementById('orders-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            let totalGeneral = 0, totalDelivered = 0, totalPending = 0;
+
+            const sortedOrders = Object.values(appState.orders).sort((a, b) => b.id.localeCompare(a.id));
+
+            sortedOrders.forEach(order => {
+                totalGeneral += order.total;
+                if (order.status === 'Entregado') totalDelivered += order.total;
+                else totalPending += order.total;
+
+                const orderCard = document.createElement('div');
+                orderCard.className = `bg-white p-4 rounded-lg shadow-md flex justify-between items-center transition-shadow hover:shadow-lg ${order.status === 'Entregado' ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`;
+                
+                const locationName = appState.locations[order.locationId] || 'Localidad desconocida';
+                const statusColor = order.status === 'Entregado' ? 'text-green-600' : 'text-red-600';
+                
+                orderCard.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="font-bold text-gray-800">Pedido #${order.id.substring(0, 6)}</h3>
+                        <p class="text-sm text-gray-600">Cliente: ${order.clientName}</p>
+                        <p class="text-sm text-gray-600">Localidad: ${locationName}</p>
+                        <p class="text-sm ${statusColor}">${order.status}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-blue-600">$${order.total.toFixed(2)}</p>
+                        <div class="mt-2 flex space-x-2">
+                            <button onclick="showOrderModal('${order.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-yellow-600 transition-colors">Ver</button>
+                            <button onclick="toggleOrderStatus('${order.id}', '${order.status}')" class="bg-gray-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-gray-600 transition-colors">${order.status === 'Pendiente' ? 'Marcar Entregado' : 'Marcar Pendiente'}</button>
+                            <button onclick="deleteOrder('${order.id}')" class="bg-red-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-red-600 transition-colors">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(orderCard);
+            });
+
+            document.getElementById('total-general').innerText = `$${totalGeneral.toFixed(2)}`;
+            document.getElementById('total-delivered').innerText = `$${totalDelivered.toFixed(2)}`;
+            document.getElementById('total-pending').innerText = `$${totalPending.toFixed(2)}`;
+        }
+
+        function renderLocations() {
+            const listContainer = document.getElementById('locations-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            const locationsArray = Object.values(appState.locations).map(name => ({ name }));
+            locationsArray.sort((a, b) => a.name.localeCompare(b.name));
+
+            locationsArray.forEach(location => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors';
+                li.innerHTML = `
+                    <span>${location.name}</span>
+                    <button onclick="deleteLocation('${location.name}')" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                listContainer.appendChild(li);
+            });
+        }
+
+        function renderCategories() {
+            const listContainer = document.getElementById('categories-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            const categoriesArray = Object.values(appState.categories).map(name => ({ name }));
+            categoriesArray.sort((a, b) => a.name.localeCompare(b.name));
+            
+            categoriesArray.forEach(category => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors';
+                li.innerHTML = `
+                    <span>${category.name}</span>
+                    <button onclick="deleteCategory('${category.name}')" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                listContainer.appendChild(li);
+            });
+        }
+
+        // --- CRUD Operations ---
+
+        // Promotions
+        window.showPromoModal = function(promoId = null) {
+            const isEditing = promoId !== null;
+            const promo = appState.promotions[promoId] || {};
+            const categoryOptions = Object.keys(appState.categories).map(id => `<option value="${id}" ${promo.categoryId === id ? 'selected' : ''}>${appState.categories[id]}</option>`).join('');
+
+            const modalHtml = `
+                <h3 class="text-xl font-bold mb-4">${isEditing ? 'Editar Promoción' : 'Nueva Promoción'}</h3>
+                <form id="promo-form" class="space-y-4">
+                    <div>
+                        <label for="promo-name" class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" id="promo-name" value="${promo.name || ''}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-original-price" class="block text-sm font-medium text-gray-700">Precio Original</label>
+                        <input type="number" id="promo-original-price" value="${promo.originalPrice || ''}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-price" class="block text-sm font-medium text-gray-700">Precio Final</label>
+                        <input type="number" id="promo-price" value="${promo.price || ''}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-stock" class="block text-sm font-medium text-gray-700">Stock</label>
+                        <input type="number" id="promo-stock" value="${promo.stock || 0}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-category" class="block text-sm font-medium text-gray-700">Categoría</label>
+                        <select id="promo-category" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">Sin Categoría</option>
+                            ${categoryOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="promo-image" class="block text-sm font-medium text-gray-700">Imagen</label>
+                        <input type="file" id="promo-image" accept="image/*" class="mt-1 block w-full text-sm">
+                        ${promo.image ? `<img src="${promo.image}" class="mt-2 w-24 h-24 object-cover rounded-lg">` : ''}
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">${isEditing ? 'Guardar Cambios' : 'Crear Promoción'}</button>
+                    </div>
+                </form>
+            `;
+            showModal(modalHtml);
+
+            document.getElementById('promo-form').onsubmit = async (e) => {
+                e.preventDefault();
+                await savePromo(promoId);
+            };
+        };
+
+        async function savePromo(promoId) {
+            showLoading(true, 'Guardando promoción...');
+            const name = document.getElementById('promo-name').value;
+            const originalPrice = parseFloat(document.getElementById('promo-original-price').value) || null;
+            const price = parseFloat(document.getElementById('promo-price').value);
+            const stock = parseInt(document.getElementById('promo-stock').value, 10);
+            const categoryId = document.getElementById('promo-category').value;
+            const imageFile = document.getElementById('promo-image').files[0];
+            let imageData = appState.promotions[promoId]?.image || null;
+
+            if (isNaN(price) || isNaN(stock) || stock < 0) {
+                alert('Por favor, introduce valores válidos para precio y stock.');
+                showLoading(false);
+                return;
+            }
+
+            if (originalPrice !== null && price > originalPrice) {
+                alert('El precio final no puede ser mayor que el precio original.');
+                showLoading(false);
+                return;
+            }
+
+            if (imageFile) {
+                imageData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(imageFile);
+                });
+            }
+
+            const promoData = {
+                name,
+                originalPrice,
+                price,
+                stock,
+                categoryId: categoryId || null,
+                image: imageData
+            };
+
+            const promosCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/promotions`);
+            if (promoId) {
+                await updateDoc(doc(promosCollectionRef, promoId), promoData);
+            } else {
+                await addDoc(promosCollectionRef, promoData);
+            }
+            closeModal();
+            showLoading(false, 'Promoción guardada.');
+        }
+
+        window.deletePromo = async function(promoId) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta promoción?')) {
+                showLoading(true, 'Eliminando promoción...');
+                const promoDocRef = doc(db, `artifacts/${appId}/users/${userId}/promotions`, promoId);
+                await deleteDoc(promoDocRef);
+                showLoading(false, 'Promoción eliminada.');
+            }
+        }
+
+        // Orders
+        window.showOrderModal = function(orderId = null) {
+            const isEditing = orderId !== null;
+            const order = appState.orders[orderId] || { products: [] };
+            const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.locationId === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
+            
+            let selectedProductsHtml = '';
+            order.products.forEach(p => {
+                selectedProductsHtml += `<li class="flex justify-between items-center p-2 rounded-lg bg-gray-100">
+                    <span>${p.name} (x${p.quantity})</span>
+                    <span>$${(p.price * p.quantity).toFixed(2)}</span>
+                </li>`;
+            });
+
+            const promoOptions = Object.values(appState.promotions).map(p => `<option value="${p.id}">${p.name} ($${p.price.toFixed(2)})</option>`).join('');
+
+            const modalHtml = `
+                <h3 class="text-xl font-bold mb-4">${isEditing ? 'Detalles del Pedido' : 'Nuevo Pedido'}</h3>
+                <form id="order-form" class="space-y-4">
+                    <div>
+                        <label for="order-client" class="block text-sm font-medium text-gray-700">Cliente</label>
+                        <input type="text" id="order-client" value="${order.clientName || ''}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="order-location" class="block text-sm font-medium text-gray-700">Localidad</label>
+                        <select id="order-location" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">Selecciona una localidad</option>
+                            ${locationOptions}
+                        </select>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Productos del Pedido</label>
+                        <div class="flex space-x-2">
+                            <select id="order-promo-select" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                                <option value="">Selecciona un producto</option>
+                                ${promoOptions}
+                            </select>
+                            <input type="number" id="order-quantity" value="1" min="1" class="w-20 p-2 border border-gray-300 rounded-lg text-center">
+                            <button type="button" onclick="addProductToOrder()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Añadir</button>
+                        </div>
+                        <ul id="selected-products-list" class="mt-4 space-y-2">
+                            ${selectedProductsHtml}
+                        </ul>
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Guardar Pedido</button>
+                    </div>
+                </form>
+            `;
+            showModal(modalHtml);
+            appState.orderProducts = isEditing ? order.products.reduce((acc, p) => { acc[p.id] = p.quantity; return acc; }, {}) : {};
+
+            document.getElementById('order-form').onsubmit = async (e) => {
+                e.preventDefault();
+                await saveOrder(orderId);
+            };
+        };
+
+        window.addProductToOrder = function() {
+            const promoSelect = document.getElementById('order-promo-select');
+            const quantityInput = document.getElementById('order-quantity');
+            const promoId = promoSelect.value;
+            const quantity = parseInt(quantityInput.value, 10);
+
+            if (!promoId || isNaN(quantity) || quantity <= 0) {
+                alert('Por favor, selecciona un producto y una cantidad válida.');
+                return;
+            }
+
+            const promo = appState.promotions[promoId];
+            if (!promo) {
+                alert('Promoción no encontrada.');
+                return;
+            }
+
+            const currentQuantityInOrder = appState.orderProducts[promoId] || 0;
+            if (currentQuantityInOrder + quantity > promo.stock) {
+                alert(`No hay suficiente stock. Stock disponible: ${promo.stock - currentQuantityInOrder}`);
+                return;
+            }
+
+            appState.orderProducts[promoId] = (appState.orderProducts[promoId] || 0) + quantity;
+            renderSelectedProducts();
+        }
+
+        function renderSelectedProducts() {
+            const list = document.getElementById('selected-products-list');
+            if (!list) return;
+            list.innerHTML = '';
+            for (const promoId in appState.orderProducts) {
+                const quantity = appState.orderProducts[promoId];
+                const promo = appState.promotions[promoId];
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-100';
+                li.innerHTML = `
+                    <span>${promo.name} (x${quantity})</span>
+                    <span>$${(promo.price * quantity).toFixed(2)}</span>
+                    <button type="button" onclick="removeProductFromOrder('${promoId}')" class="text-red-500 hover:text-red-700"><i class="fas fa-times-circle"></i></button>
+                `;
+                list.appendChild(li);
+            }
+        }
+
+        window.removeProductFromOrder = function(promoId) {
+            delete appState.orderProducts[promoId];
+            renderSelectedProducts();
+        }
+        
+        async function saveOrder(orderId) {
+            showLoading(true, 'Guardando pedido...');
+            const clientName = document.getElementById('order-client').value;
+            const locationId = document.getElementById('order-location').value;
+
+            if (!clientName || !locationId || Object.keys(appState.orderProducts).length === 0) {
+                alert('Por favor, completa todos los campos y añade al menos un producto.');
+                showLoading(false);
+                return;
+            }
+
+            let total = 0;
+            const productsArray = [];
+            for (const promoId in appState.orderProducts) {
+                const quantity = appState.orderProducts[promoId];
+                const promo = appState.promotions[promoId];
+                total += promo.price * quantity;
+                productsArray.push({ id: promoId, name: promo.name, price: promo.price, quantity });
+            }
+
+            const orderData = {
+                clientName,
+                locationId,
+                total,
+                status: 'Pendiente',
+                products: productsArray
+            };
+
+            const ordersCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/pedidos`);
+            if (orderId) {
+                await updateDoc(doc(ordersCollectionRef, orderId), orderData);
+            } else {
+                await addDoc(ordersCollectionRef, orderData);
+            }
+            closeModal();
+            showLoading(false, 'Pedido guardado.');
+        }
+
+        window.toggleOrderStatus = async function(orderId, currentStatus) {
+            showLoading(true, 'Actualizando estado...');
+            const newStatus = currentStatus === 'Pendiente' ? 'Entregado' : 'Pendiente';
+            const orderDocRef = doc(db, `artifacts/${appId}/users/${userId}/pedidos`, orderId);
+            await updateDoc(orderDocRef, { status: newStatus });
+            showLoading(false, 'Estado actualizado.');
+        }
+
+        window.deleteOrder = async function(orderId) {
+            if (confirm('¿Estás seguro de que quieres eliminar este pedido?')) {
+                showLoading(true, 'Eliminando pedido...');
+                const orderDocRef = doc(db, `artifacts/${appId}/users/${userId}/pedidos`, orderId);
+                await deleteDoc(orderDocRef);
+                showLoading(false, 'Pedido eliminado.');
+            }
+        }
+
+        // Locations
+        window.addLocation = async function() {
+            showLoading(true, 'Agregando localidad...');
+            const name = document.getElementById('new-location-input').value.trim();
+            if (name === '') {
+                alert('El nombre no puede estar vacío.');
+                showLoading(false);
+                return;
+            }
+            const locationsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/localidades`);
+            const q = query(locationsCollectionRef, where('name', '==', name));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                alert('Esta localidad ya existe.');
+                showLoading(false);
+                return;
+            }
+            await addDoc(locationsCollectionRef, { name });
+            document.getElementById('new-location-input').value = '';
+            showLoading(false, 'Localidad agregada.');
+        }
+
+        window.deleteLocation = async function(locationName) {
+            if (confirm(`¿Estás seguro de que quieres eliminar la localidad "${locationName}"?`)) {
+                showLoading(true, 'Eliminando localidad...');
+                const locationsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/localidades`);
+                const q = query(locationsCollectionRef, where('name', '==', locationName));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const docId = querySnapshot.docs[0].id;
+                    await deleteDoc(doc(locationsCollectionRef, docId));
+                }
+                showLoading(false, 'Localidad eliminada.');
+            }
+        }
+
+        // Categories
+        window.addCategory = async function() {
+            showLoading(true, 'Agregando categoría...');
+            const name = document.getElementById('new-category-input').value.trim();
+            if (name === '') {
+                alert('El nombre no puede estar vacío.');
+                showLoading(false);
+                return;
+            }
+            const categoriesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/categories`);
+            const q = query(categoriesCollectionRef, where('name', '==', name));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                alert('Esta categoría ya existe.');
+                showLoading(false);
+                return;
+            }
+            await addDoc(categoriesCollectionRef, { name });
+            document.getElementById('new-category-input').value = '';
+            showLoading(false, 'Categoría agregada.');
+        }
+
+        window.deleteCategory = async function(categoryName) {
+            if (confirm(`¿Estás seguro de que quieres eliminar la categoría "${categoryName}"?`)) {
+                showLoading(true, 'Eliminando categoría...');
+                const categoriesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/categories`);
+                const q = query(categoriesCollectionRef, where('name', '==', categoryName));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const docId = querySnapshot.docs[0].id;
+                    await deleteDoc(doc(categoriesCollectionRef, docId));
+                }
+                showLoading(false, 'Categoría eliminada.');
+            }
+        }
+        
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            showStatusMessage("Iniciando...");
+            try {
+                // Step 1: Initialize Firebase App
+                showStatusMessage("Iniciando Firebase...");
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Step 2: Authenticate Anonymously
+                showStatusMessage("Autenticando usuario...");
+                if (!firebaseConfig.apiKey) {
+                    throw new Error("Clave de API de Firebase no encontrada. Revisa la configuración.");
+                }
+
+                try {
+                    const userCredential = await signInAnonymously(auth);
+                    userId = userCredential.user.uid;
+                    isAuthReady = true;
+                    document.getElementById('user-id').innerText = `ID de Usuario: ${userId}`;
+                } catch (authError) {
+                    console.error("Error de autenticación:", authError);
+                    throw new Error(`Error de autenticación: ${authError.message}. Por favor, revisa la configuración de Autenticación en la consola de Firebase.`);
+                }
+                
+                // Step 3: Verify Firestore Connection
+                showStatusMessage("Conectando a la base de datos...");
+                const verificationDocRef = doc(db, `artifacts/${appId}/users/${userId}/verification/status`);
+                try {
+                    const docSnap = await getDoc(verificationDocRef);
+                    if (!docSnap.exists()) {
+                        await setDoc(verificationDocRef, { timestamp: Date.now() });
+                    }
+                } catch (firestoreError) {
+                    console.error("Error de conexión con Firestore:", firestoreError);
+                    throw new Error("Verificación de Firestore fallida. Revisa las reglas de seguridad de tu base de datos.");
+                }
+
+                // Step 4: Start listeners and navigate
+                showStatusMessage("Cargando datos iniciales...");
+                listenForData();
+                navigate('promotions');
+            } catch (error) {
+                console.error("Error crítico de inicialización:", error);
+                showStatusMessage(`Error: ${error.message || 'La aplicación no puede iniciar.'}`, true);
+            }
+        });
+
+    </script>
+</body>
+</html>
