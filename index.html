@@ -30,24 +30,11 @@
         <p id="status-message" class="mt-4 text-gray-700 font-medium">Iniciando...</p>
     </div>
 
-    <div id="auth-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gray-100 p-4 z-40 hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
-            <h2 class="text-2xl font-bold text-blue-600 mb-4">Iniciar Sesión</h2>
-            <p class="text-gray-600 mb-6">Inicia sesión con tu cuenta de Google para continuar.</p>
-            <button id="google-login-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center w-full hover:bg-blue-700 transition-colors shadow-md">
-                <i class="fab fa-google mr-2"></i> Iniciar Sesión con Google
-            </button>
-        </div>
-    </div>
-
-    <div id="app-container" class="flex flex-col flex-grow hidden">
+    <div id="app-container" class="flex flex-col flex-grow">
         <header class="bg-white shadow-md p-4 flex items-center justify-between z-10">
             <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
             <div id="auth-status" class="text-sm text-gray-500 flex items-center space-x-2">
-                <span id="user-name" class="font-medium"></span>
-                <button onclick="signOutUser()" class="text-red-500 hover:text-red-700 transition-colors text-lg" title="Cerrar sesión">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+                <span id="user-name" class="font-medium">Usuario de Demo</span>
             </div>
             <nav id="nav-tabs" class="flex space-x-2">
                 <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
@@ -84,15 +71,13 @@
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        const provider = new GoogleAuthProvider();
 
         // Global app state
         let appState = {
-            userId: null,
-            userName: null,
+            userId: 'demo-user-1234', // Fixed user ID
+            userName: 'Usuario de Demo',
             currentView: 'promotions',
             promotions: {},
             categories: {},
@@ -169,7 +154,6 @@
             const spinner = document.getElementById('spinner');
 
             loadingOverlay.classList.toggle('hidden', !show);
-            appContainer.classList.toggle('hidden', show);
             statusMessage.innerText = message;
             spinner.classList.toggle('hidden', !show);
             statusMessage.classList.remove('text-red-600');
@@ -235,51 +219,8 @@
             }
         }
 
-        // --- Authentication ---
-        window.signInWithGoogle = async function() {
-            try {
-                showLoading(true, 'Iniciando sesión...');
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Error signing in:", error);
-                showStatusMessage('Error al iniciar sesión. Inténtalo de nuevo.', true);
-                setTimeout(() => showLoading(false), 3000);
-            }
-        };
-
-        window.signOutUser = async function() {
-            showLoading(true, 'Cerrando sesión...');
-            await signOut(auth);
-            showLoading(false);
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            const authScreen = document.getElementById('auth-screen');
-            const appContainer = document.getElementById('app-container');
-            
-            if (user) {
-                appState.userId = user.uid;
-                appState.userName = user.displayName;
-                document.getElementById('user-name').innerText = user.displayName;
-                authScreen.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-                listenForData();
-                navigate(appState.currentView);
-            } else {
-                appState.userId = null;
-                appState.userName = null;
-                authScreen.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-                showLoading(false); // Hide loading on sign out
-            }
-        });
-
-        document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
-
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
-            if (!appState.userId) return;
-
             // Promotions Listener
             onSnapshot(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`), (snapshot) => {
                 snapshot.docChanges().forEach(change => {
@@ -882,6 +823,12 @@
                 showStatusMessage('Error al eliminar categoría. Revisa la consola.', true);
             }
         };
+        
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            listenForData();
+            navigate('promotions');
+        });
     </script>
 </body>
 </html>
