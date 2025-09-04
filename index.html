@@ -453,42 +453,32 @@
         };
         
         window.savePromo = async function(promoId) {
-        showLoading(true, 'Guardando promoción...');
-    
-    // ... [Tu código de validación y obtención de datos] ...
+    showLoading(true, 'Guardando promoción...');
 
+    // AÑADE ESTA LÍNEA AQUÍ PARA ASEGURARTE DE QUE LA VARIABLE ESTÉ DEFINIDA
+    const imageFile = document.getElementById('promo-image').files[0];
+
+    const name = document.getElementById('promo-name').value.trim();
+    const originalPriceInput = document.getElementById('promo-original-price').value;
+    const priceInput = document.getElementById('promo-price').value;
+    const stockInput = document.getElementById('promo-stock').value;
+    const categoryId = document.getElementById('promo-category').value || null;
+    let imageUrl = appState.promotions[promoId]?.image || null;
+
+    if (!name || !priceInput || !stockInput) {
+        // ... (resto del código de validación)
+    }
+
+    // El resto del código que maneja la subida de la imagen y el guardado en Firestore
     try {
         if (imageFile) {
-            const imageRef = ref(storage, `promo_images/${appState.userId}/${Date.now()}_${imageFile.name}`);
-            const snapshot = await uploadBytes(imageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
+            // ... (código para subir la imagen)
         }
-
-        const promoData = {
-            name,
-            originalPrice,
-            price,
-            stock,
-            categoryId,
-            image: imageUrl
-        };
-
-        const promosCollectionRef = collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`);
-        if (promoId) {
-            await updateDoc(doc(promosCollectionRef, promoId), promoData);
-        } else {
-            await addDoc(promosCollectionRef, promoData);
-        }
-
-        closeModal();
-        showStatusMessage('Promoción guardada con éxito.');
-
+        // ... (código para guardar en Firestore)
     } catch (error) {
-        console.error("Error al guardar promoción:", error);
-        showStatusMessage('Error al guardar promoción. Revisa la consola para más detalles.', true);
+        // ... (manejo de errores)
     } finally {
-        // Esta línea se ejecutará siempre, tanto si hay error como si no
-        setTimeout(() => showLoading(false), 2000);
+        // ... (ocultar la pantalla de carga)
     }
 };
        
@@ -791,5 +781,6 @@
     </script>
 </body>
 </html>
+
 
 
