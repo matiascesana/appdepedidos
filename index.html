@@ -452,7 +452,7 @@
             };
         };
 
-        async function savePromo(promoId) {
+        window.savePromo = async function(promoId) {
             showLoading(true, 'Guardando promoción...');
             const name = document.getElementById('promo-name').value.trim();
             const originalPriceInput = document.getElementById('promo-original-price').value;
@@ -832,3 +832,4 @@
     </script>
 </body>
 </html>
+
