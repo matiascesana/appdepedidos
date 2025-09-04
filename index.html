@@ -31,12 +31,28 @@
     </div>
 
     <div id="auth-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gray-100 p-4 z-40 hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
-            <h2 class="text-2xl font-bold text-blue-600 mb-4">Iniciar Sesión</h2>
-            <p class="text-gray-600 mb-6">Inicia sesión con tu cuenta de Google para continuar.</p>
-            <button id="google-login-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center w-full hover:bg-blue-700 transition-colors shadow-md">
-                <i class="fab fa-google mr-2"></i> Iniciar Sesión con Google
-            </button>
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">Gestor de Negocio</h2>
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label for="email-input" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" id="email-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="password-input" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="password-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                </div>
+                <button type="button" id="login-btn" class="w-full bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-bold">
+                    Iniciar Sesión
+                </button>
+                <div class="text-center mt-4">
+                    <p class="text-sm text-gray-600">¿No tienes una cuenta?</p>
+                    <button type="button" id="register-btn" class="text-blue-600 font-bold hover:underline transition-colors mt-1">
+                        Regístrate
+                    </button>
+                </div>
+            </form>
+            <p id="auth-error-message" class="text-red-500 text-sm mt-4 text-center hidden"></p>
         </div>
     </div>
 
@@ -68,7 +84,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
@@ -87,7 +103,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        const provider = new GoogleAuthProvider();
 
         // Global app state
         let appState = {
@@ -236,16 +251,69 @@
         }
 
         // --- Authentication ---
-        window.signInWithGoogle = async function() {
+        const authForm = document.getElementById('auth-form');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const authErrorMessage = document.getElementById('auth-error-message');
+
+        function showAuthError(message) {
+            authErrorMessage.innerText = message;
+            authErrorMessage.classList.remove('hidden');
+        }
+
+        function hideAuthError() {
+            authErrorMessage.classList.add('hidden');
+        }
+        
+        loginBtn.addEventListener('click', async () => {
+            hideAuthError();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            if (!email || !password) {
+                showAuthError("Por favor, ingresa tu correo y contraseña.");
+                return;
+            }
             try {
                 showLoading(true, 'Iniciando sesión...');
-                await signInWithPopup(auth, provider);
+                await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
-                console.error("Error signing in:", error);
-                showStatusMessage('Error al iniciar sesión. Inténtalo de nuevo.', true);
+                console.error("Error al iniciar sesión:", error.code, error.message);
+                let message = "Error al iniciar sesión. Intenta de nuevo.";
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                    message = "Correo o contraseña incorrectos.";
+                } else if (error.code === 'auth/invalid-email') {
+                    message = "El formato del correo es inválido.";
+                }
+                showStatusMessage(message, true);
                 setTimeout(() => showLoading(false), 3000);
             }
-        };
+        });
+
+        registerBtn.addEventListener('click', async () => {
+            hideAuthError();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            if (!email || !password) {
+                showAuthError("Por favor, ingresa un correo y contraseña para registrarte.");
+                return;
+            }
+            try {
+                showLoading(true, 'Registrando...');
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error al registrar:", error.code, error.message);
+                let message = "Error al registrar. Intenta de nuevo.";
+                if (error.code === 'auth/email-already-in-use') {
+                    message = "Este correo ya está registrado.";
+                } else if (error.code === 'auth/weak-password') {
+                    message = "La contraseña debe tener al menos 6 caracteres.";
+                }
+                showStatusMessage(message, true);
+                setTimeout(() => showLoading(false), 3000);
+            }
+        });
 
         window.signOutUser = async function() {
             showLoading(true, 'Cerrando sesión...');
@@ -259,30 +327,25 @@
             
             if (user) {
                 appState.userId = user.uid;
-                appState.userName = user.displayName;
-                document.getElementById('user-name').innerText = user.displayName;
-                authScreen.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-                listenForData();
-                navigate(appState.currentView);
-            } else {
-                // Aquí se usa el UID fijo si no hay usuario autenticado
-                appState.userId = 'JZiscY8uJ1d13Li4O1j1PwsDayP2';
-                appState.userName = 'Usuario Demo';
+                appState.userName = user.email; // Se usa el correo como nombre de usuario
                 document.getElementById('user-name').innerText = appState.userName;
                 authScreen.classList.add('hidden');
                 appContainer.classList.remove('hidden');
                 listenForData();
                 navigate(appState.currentView);
+            } else {
+                appState.userId = null;
+                appState.userName = null;
+                authScreen.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                showLoading(false);
             }
         });
-
-        document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
 
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
             if (!appState.userId) {
-                showStatusMessage('Error: UID de usuario no encontrado.', true);
+                console.error('Error: UID de usuario no encontrado.');
                 return;
             }
 
