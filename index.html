@@ -455,7 +455,8 @@
         window.savePromo = async function(promoId) {
     showLoading(true, 'Guardando promoción...');
 
-    // AÑADE ESTA LÍNEA AQUÍ PARA ASEGURARTE DE QUE LA VARIABLE ESTÉ DEFINIDA
+    // Mueve la declaración de imageFile aquí para que sea accesible
+    // en toda la función.
     const imageFile = document.getElementById('promo-image').files[0];
 
     const name = document.getElementById('promo-name').value.trim();
@@ -466,19 +467,70 @@
     let imageUrl = appState.promotions[promoId]?.image || null;
 
     if (!name || !priceInput || !stockInput) {
-        // ... (resto del código de validación)
+        showModal(`
+            <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+            <p class="text-gray-700 mb-4">Por favor, rellena todos los campos obligatorios.</p>
+            <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+        `);
+        showLoading(false);
+        return;
     }
 
-    // El resto del código que maneja la subida de la imagen y el guardado en Firestore
+    const originalPrice = originalPriceInput ? parseFloat(originalPriceInput) : null;
+    const price = parseFloat(priceInput);
+    const stock = parseInt(stockInput, 10);
+
+    if (isNaN(price) || isNaN(stock) || stock < 0) {
+        showModal(`
+            <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+            <p class="text-gray-700 mb-4">Por favor, introduce valores numéricos válidos para precio y stock.</p>
+            <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+        `);
+        showLoading(false);
+        return;
+    }
+
+    if (originalPrice !== null && price > originalPrice) {
+        showModal(`
+            <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+            <p class="text-gray-700 mb-4">El precio final no puede ser mayor que el precio original.</p>
+            <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+        `);
+        showLoading(false);
+        return;
+    }
+
     try {
         if (imageFile) {
-            // ... (código para subir la imagen)
+            const imageRef = ref(storage, `promo_images/${appState.userId}/${Date.now()}_${imageFile.name}`);
+            const snapshot = await uploadBytes(imageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
         }
-        // ... (código para guardar en Firestore)
+
+        const promoData = {
+            name,
+            originalPrice,
+            price,
+            stock,
+            categoryId,
+            image: imageUrl
+        };
+
+        const promosCollectionRef = collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`);
+        if (promoId) {
+            await updateDoc(doc(promosCollectionRef, promoId), promoData);
+        } else {
+            await addDoc(promosCollectionRef, promoData);
+        }
+        
+        closeModal();
+        showStatusMessage('Promoción guardada con éxito.');
+
     } catch (error) {
-        // ... (manejo de errores)
+        console.error("Error al guardar promoción:", error);
+        showStatusMessage('Error al guardar promoción. Revisa la consola para más detalles.', true);
     } finally {
-        // ... (ocultar la pantalla de carga)
+        setTimeout(() => showLoading(false), 2000);
     }
 };
        
@@ -781,6 +833,7 @@
     </script>
 </body>
 </html>
+
 
 
 
