@@ -30,11 +30,24 @@
         <p id="status-message" class="mt-4 text-gray-700 font-medium">Iniciando...</p>
     </div>
 
-    <div id="app-container" class="flex flex-col flex-grow">
+    <div id="auth-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gray-100 p-4 z-40 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h2 class="text-2xl font-bold text-blue-600 mb-4">Iniciar Sesión</h2>
+            <p class="text-gray-600 mb-6">Inicia sesión con tu cuenta de Google para continuar.</p>
+            <button id="google-login-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center w-full hover:bg-blue-700 transition-colors shadow-md">
+                <i class="fab fa-google mr-2"></i> Iniciar Sesión con Google
+            </button>
+        </div>
+    </div>
+
+    <div id="app-container" class="flex flex-col flex-grow hidden">
         <header class="bg-white shadow-md p-4 flex items-center justify-between z-10">
             <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
             <div id="auth-status" class="text-sm text-gray-500 flex items-center space-x-2">
-                <span id="user-name" class="font-medium">Usuario de Demo</span>
+                <span id="user-name" class="font-medium"></span>
+                <button onclick="signOutUser()" class="text-red-500 hover:text-red-700 transition-colors text-lg" title="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
             </div>
             <nav id="nav-tabs" class="flex space-x-2">
                 <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
@@ -45,12 +58,12 @@
         </header>
 
         <main id="main-content" class="p-4 flex-grow overflow-y-auto">
-            </main>
+        </main>
     </div>
 
     <div id="modal-container" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay">
         <div id="modal-content" class="bg-white rounded-lg shadow-lg p-6 w-11/12 md:w-1/3">
-            </div>
+        </div>
     </div>
 
     <script type="module">
@@ -71,13 +84,15 @@
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
+        const provider = new GoogleAuthProvider();
 
         // Global app state
         let appState = {
-            userId: 'demo-user-1234', // Fixed user ID
-            userName: 'Usuario de Demo',
+            userId: null,
+            userName: null,
             currentView: 'promotions',
             promotions: {},
             categories: {},
@@ -154,6 +169,7 @@
             const spinner = document.getElementById('spinner');
 
             loadingOverlay.classList.toggle('hidden', !show);
+            appContainer.classList.toggle('hidden', show);
             statusMessage.innerText = message;
             spinner.classList.toggle('hidden', !show);
             statusMessage.classList.remove('text-red-600');
@@ -219,8 +235,51 @@
             }
         }
 
+        // --- Authentication ---
+        window.signInWithGoogle = async function() {
+            try {
+                showLoading(true, 'Iniciando sesión...');
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Error signing in:", error);
+                showStatusMessage('Error al iniciar sesión. Inténtalo de nuevo.', true);
+                setTimeout(() => showLoading(false), 3000);
+            }
+        };
+
+        window.signOutUser = async function() {
+            showLoading(true, 'Cerrando sesión...');
+            await signOut(auth);
+            showLoading(false);
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            const authScreen = document.getElementById('auth-screen');
+            const appContainer = document.getElementById('app-container');
+            
+            if (user) {
+                appState.userId = user.uid;
+                appState.userName = user.displayName;
+                document.getElementById('user-name').innerText = user.displayName;
+                authScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                listenForData();
+                navigate(appState.currentView);
+            } else {
+                appState.userId = null;
+                appState.userName = null;
+                authScreen.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                showLoading(false); // Hide loading on sign out
+            }
+        });
+
+        document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
+            if (!appState.userId) return;
+
             // Promotions Listener
             onSnapshot(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`), (snapshot) => {
                 snapshot.docChanges().forEach(change => {
@@ -451,89 +510,88 @@
                 await savePromo(promoId);
             };
         };
-        
+
         window.savePromo = async function(promoId) {
-    showLoading(true, 'Guardando promoción...');
+            showLoading(true, 'Guardando promoción...');
+            
+            // Declaración de la variable para que esté disponible en toda la función
+            const imageFile = document.getElementById('promo-image').files[0];
 
-    // Mueve la declaración de imageFile aquí para que sea accesible
-    // en toda la función.
-    const imageFile = document.getElementById('promo-image').files[0];
+            const name = document.getElementById('promo-name').value.trim();
+            const originalPriceInput = document.getElementById('promo-original-price').value;
+            const priceInput = document.getElementById('promo-price').value;
+            const stockInput = document.getElementById('promo-stock').value;
+            const categoryId = document.getElementById('promo-category').value || null;
+            let imageUrl = appState.promotions[promoId]?.image || null;
 
-    const name = document.getElementById('promo-name').value.trim();
-    const originalPriceInput = document.getElementById('promo-original-price').value;
-    const priceInput = document.getElementById('promo-price').value;
-    const stockInput = document.getElementById('promo-stock').value;
-    const categoryId = document.getElementById('promo-category').value || null;
-    let imageUrl = appState.promotions[promoId]?.image || null;
+            if (!name || !priceInput || !stockInput) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">Por favor, rellena todos los campos obligatorios.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
 
-    if (!name || !priceInput || !stockInput) {
-        showModal(`
-            <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
-            <p class="text-gray-700 mb-4">Por favor, rellena todos los campos obligatorios.</p>
-            <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
-        `);
-        showLoading(false);
-        return;
-    }
+            const originalPrice = originalPriceInput ? parseFloat(originalPriceInput) : null;
+            const price = parseFloat(priceInput);
+            const stock = parseInt(stockInput, 10);
 
-    const originalPrice = originalPriceInput ? parseFloat(originalPriceInput) : null;
-    const price = parseFloat(priceInput);
-    const stock = parseInt(stockInput, 10);
+            if (isNaN(price) || isNaN(stock) || stock < 0) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">Por favor, introduce valores numéricos válidos para precio y stock.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
 
-    if (isNaN(price) || isNaN(stock) || stock < 0) {
-        showModal(`
-            <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
-            <p class="text-gray-700 mb-4">Por favor, introduce valores numéricos válidos para precio y stock.</p>
-            <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
-        `);
-        showLoading(false);
-        return;
-    }
+            if (originalPrice !== null && price > originalPrice) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">El precio final no puede ser mayor que el precio original.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
 
-    if (originalPrice !== null && price > originalPrice) {
-        showModal(`
-            <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
-            <p class="text-gray-700 mb-4">El precio final no puede ser mayor que el precio original.</p>
-            <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
-        `);
-        showLoading(false);
-        return;
-    }
+            try {
+                if (imageFile) {
+                    const imageRef = ref(storage, `promo_images/${appState.userId}/${Date.now()}_${imageFile.name}`);
+                    const snapshot = await uploadBytes(imageRef, imageFile);
+                    imageUrl = await getDownloadURL(snapshot.ref);
+                }
 
-    try {
-        if (imageFile) {
-            const imageRef = ref(storage, `promo_images/${appState.userId}/${Date.now()}_${imageFile.name}`);
-            const snapshot = await uploadBytes(imageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
-        }
+                const promoData = {
+                    name,
+                    originalPrice,
+                    price,
+                    stock,
+                    categoryId,
+                    image: imageUrl
+                };
 
-        const promoData = {
-            name,
-            originalPrice,
-            price,
-            stock,
-            categoryId,
-            image: imageUrl
+                const promosCollectionRef = collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`);
+                if (promoId) {
+                    await updateDoc(doc(promosCollectionRef, promoId), promoData);
+                } else {
+                    await addDoc(promosCollectionRef, promoData);
+                }
+                
+                closeModal();
+                showStatusMessage('Promoción guardada con éxito.');
+
+            } catch (error) {
+                console.error("Error al guardar promoción:", error);
+                showStatusMessage('Error al guardar promoción. Revisa la consola para más detalles.', true);
+            } finally {
+                setTimeout(() => showLoading(false), 2000);
+            }
         };
 
-        const promosCollectionRef = collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`);
-        if (promoId) {
-            await updateDoc(doc(promosCollectionRef, promoId), promoData);
-        } else {
-            await addDoc(promosCollectionRef, promoData);
-        }
-        
-        closeModal();
-        showStatusMessage('Promoción guardada con éxito.');
-
-    } catch (error) {
-        console.error("Error al guardar promoción:", error);
-        showStatusMessage('Error al guardar promoción. Revisa la consola para más detalles.', true);
-    } finally {
-        setTimeout(() => showLoading(false), 2000);
-    }
-};
-       
         window.deletePromo = async function(promoId) {
             showModal(`
                 <h3 class="font-bold text-xl text-red-600 mb-2">Confirmar Eliminación</h3>
@@ -546,36 +604,123 @@
         }
         
         window.confirmDeletePromo = async function(promoId) {
-            closeModal();
             showLoading(true, 'Eliminando promoción...');
             try {
-                const promoDocRef = doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`, promoId);
-                await deleteDoc(promoDocRef);
+                const promosCollectionRef = collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`);
+                await deleteDoc(doc(promosCollectionRef, promoId));
+                closeModal();
                 showStatusMessage('Promoción eliminada con éxito.');
-                setTimeout(() => showLoading(false), 2000);
             } catch (error) {
                 console.error("Error deleting promotion:", error);
                 showStatusMessage('Error al eliminar promoción. Revisa la consola.', true);
+            } finally {
+                setTimeout(() => showLoading(false), 2000);
             }
         }
+        
+        // Locations
+        window.addLocation = async function() {
+            const name = document.getElementById('new-location-input').value.trim();
+            if (!name) return;
+            try {
+                await addDoc(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/localidades`), { name });
+                document.getElementById('new-location-input').value = '';
+            } catch (e) {
+                console.error("Error adding document: ", e);
+            }
+        };
+
+        window.deleteLocation = async function(docId) {
+            try {
+                await deleteDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/localidades`, docId));
+            } catch (e) {
+                console.error("Error deleting document: ", e);
+            }
+        };
+
+        // Categories
+        window.addCategory = async function() {
+            const name = document.getElementById('new-category-input').value.trim();
+            if (!name) return;
+            try {
+                await addDoc(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/categories`), { name });
+                document.getElementById('new-category-input').value = '';
+            } catch (e) {
+                console.error("Error adding document: ", e);
+            }
+        };
+
+        window.deleteCategory = async function(docId) {
+            try {
+                await deleteDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/categories`, docId));
+            } catch (e) {
+                console.error("Error deleting document: ", e);
+            }
+        };
 
         // Orders
-        window.showOrderModal = function(orderId = null) {
-            const isEditing = orderId !== null;
-            const order = appState.orders[orderId] || { products: [], total: 0 };
-            appState.selectedOrder = isEditing ? order : null;
-            appState.orderProducts = isEditing ? order.products.reduce((acc, p) => { acc[p.id] = p; return acc; }, {}) : {};
-
-            const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.locationId === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
+        window.showOrderModal = async function(orderId = null) {
+            if (orderId) {
+                showLoading(true, 'Cargando pedido...');
+                try {
+                    const orderDoc = await getDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos`, orderId));
+                    if (orderDoc.exists()) {
+                        appState.selectedOrder = { ...orderDoc.data(), id: orderId };
+                        
+                        const productsSnapshot = await getDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos/${orderId}/productos/productos`));
+                        if (productsSnapshot.exists()) {
+                            appState.orderProducts = productsSnapshot.data().items;
+                        } else {
+                            appState.orderProducts = [];
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching order:", e);
+                    showStatusMessage('Error al cargar el pedido.', true);
+                    setTimeout(() => showLoading(false), 2000);
+                    return;
+                }
+            } else {
+                appState.selectedOrder = {
+                    clientName: '',
+                    clientPhone: '',
+                    locationId: '',
+                    total: 0,
+                    status: 'Pendiente'
+                };
+                appState.orderProducts = [];
+            }
             
-            const promoOptions = Object.values(appState.promotions).map(p => `<option value="${p.id}">${p.name} ($${p.price.toFixed(2)})</option>`).join('');
+            showLoading(false);
+            renderOrderModalContent();
+        }
 
-            let modalHtml = `
-                <h3 class="text-xl font-bold mb-4">${isEditing ? 'Detalles del Pedido' : 'Nuevo Pedido'}</h3>
+        function renderOrderModalContent() {
+            const order = appState.selectedOrder;
+            const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.locationId === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
+            const productOptions = Object.keys(appState.promotions).map(id => `<option value="${id}">${appState.promotions[id].name} - $${appState.promotions[id].price.toFixed(2)}</option>`).join('');
+            
+            const productListHtml = appState.orderProducts.map((item, index) => {
+                const promoName = appState.promotions[item.promoId]?.name || 'Producto Desconocido';
+                return `
+                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded-lg mb-2">
+                        <span class="flex-grow">${item.quantity} x ${promoName}</span>
+                        <span>$${(item.quantity * item.price).toFixed(2)}</span>
+                        <button onclick="removeOrderProduct(${index})" class="ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            }).join('');
+
+            const modalHtml = `
+                <h3 class="text-xl font-bold mb-4">${order.id ? 'Ver Pedido' : 'Nuevo Pedido'}</h3>
                 <form id="order-form" class="space-y-4">
                     <div>
-                        <label for="order-client" class="block text-sm font-medium text-gray-700">Cliente</label>
-                        <input type="text" id="order-client" value="${order.clientName || ''}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                        <label for="client-name" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                        <input type="text" id="client-name" value="${order.clientName}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="client-phone" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                        <input type="tel" id="client-phone" value="${order.clientPhone}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
                     </div>
                     <div>
                         <label for="order-location" class="block text-sm font-medium text-gray-700">Localidad</label>
@@ -584,252 +729,158 @@
                             ${locationOptions}
                         </select>
                     </div>
-
                     <div class="border-t pt-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Productos del Pedido</label>
-                        <div class="flex space-x-2">
-                            <select id="order-promo-select" class="flex-grow p-2 border border-gray-300 rounded-lg">
-                                <option value="">Selecciona un producto</option>
-                                ${promoOptions}
-                            </select>
-                            <input type="number" id="order-quantity" value="1" min="1" class="w-20 p-2 border border-gray-300 rounded-lg text-center">
-                            <button type="button" onclick="addProductToOrder()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Añadir</button>
+                        <h4 class="text-lg font-semibold mb-2">Productos</h4>
+                        <div id="order-products-list" class="max-h-48 overflow-y-auto mb-2">
+                            ${productListHtml}
                         </div>
-                        <ul id="selected-products-list" class="mt-4 space-y-2"></ul>
+                        <div class="flex items-end space-x-2">
+                            <div class="flex-grow">
+                                <label for="product-select" class="block text-sm font-medium text-gray-700">Añadir producto</label>
+                                <select id="product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                                    ${productOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="product-quantity" class="block text-sm font-medium text-gray-700">Cantidad</label>
+                                <input type="number" id="product-quantity" value="1" min="1" class="mt-1 w-20 p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <button type="button" onclick="addOrderProduct()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md flex-shrink-0">Añadir</button>
+                        </div>
                     </div>
-                    <div class="mt-4 border-t pt-4">
-                        <p class="text-lg font-bold">Total: <span id="order-total">$${order.total.toFixed(2)}</span></p>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-gray-800">Total: $${appState.selectedOrder.total.toFixed(2)}</p>
                     </div>
-
                     <div class="flex justify-end space-x-2 mt-4">
                         <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
-                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Guardar Pedido</button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">${order.id ? 'Guardar Pedido' : 'Crear Pedido'}</button>
                     </div>
                 </form>
             `;
             showModal(modalHtml);
-
-            renderOrderProducts();
-
+            
             document.getElementById('order-form').onsubmit = async (e) => {
                 e.preventDefault();
-                await saveOrder(orderId);
+                await saveOrder(order.id);
             };
-        };
-        
-        function renderOrderProducts() {
-            const list = document.getElementById('selected-products-list');
-            if (!list) return;
-            list.innerHTML = '';
-            let currentTotal = 0;
-
-            for (const promoId in appState.orderProducts) {
-                const product = appState.orderProducts[promoId];
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-100';
-                li.innerHTML = `
-                    <span>${product.name} (x${product.quantity})</span>
-                    <div class="flex items-center space-x-2">
-                        <span>$${(product.price * product.quantity).toFixed(2)}</span>
-                        <button type="button" onclick="removeProductFromOrder('${promoId}')" class="text-red-500 hover:text-red-700 transition-colors">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                list.appendChild(li);
-                currentTotal += product.price * product.quantity;
-            }
-            document.getElementById('order-total').innerText = `$${currentTotal.toFixed(2)}`;
         }
 
-        window.addProductToOrder = function() {
-            const select = document.getElementById('order-promo-select');
-            const quantityInput = document.getElementById('order-quantity');
+        window.addOrderProduct = function() {
+            const select = document.getElementById('product-select');
+            const quantityInput = document.getElementById('product-quantity');
             const promoId = select.value;
             const quantity = parseInt(quantityInput.value, 10);
             
-            if (!promoId || isNaN(quantity) || quantity <= 0) {
-                showModal(`
-                    <h3 class="font-bold text-xl text-red-600 mb-2">Error</h3>
-                    <p class="text-gray-700 mb-4">Selecciona un producto y una cantidad válida.</p>
-                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
-                `);
+            if (!promoId || quantity <= 0 || isNaN(quantity)) {
+                alert('Por favor, selecciona una promoción y una cantidad válida.');
                 return;
             }
 
             const promo = appState.promotions[promoId];
-            if (!promo) return;
-
-            if (appState.orderProducts[promoId]) {
-                appState.orderProducts[promoId].quantity += quantity;
-            } else {
-                appState.orderProducts[promoId] = {
-                    id: promo.id,
-                    name: promo.name,
-                    price: promo.price,
-                    quantity: quantity
-                };
+            if (!promo) {
+                alert('Promoción no encontrada.');
+                return;
             }
 
-            renderOrderProducts();
-            quantityInput.value = 1;
-        };
+            const existingItemIndex = appState.orderProducts.findIndex(item => item.promoId === promoId);
+            if (existingItemIndex !== -1) {
+                appState.orderProducts[existingItemIndex].quantity += quantity;
+            } else {
+                appState.orderProducts.push({
+                    promoId,
+                    quantity,
+                    price: promo.price
+                });
+            }
 
-        window.removeProductFromOrder = function(promoId) {
-            delete appState.orderProducts[promoId];
-            renderOrderProducts();
-        };
+            // Recalcular el total
+            appState.selectedOrder.total = appState.orderProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            renderOrderModalContent();
+        }
 
-        async function saveOrder(orderId) {
+        window.removeOrderProduct = function(index) {
+            appState.orderProducts.splice(index, 1);
+            appState.selectedOrder.total = appState.orderProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            renderOrderModalContent();
+        }
+
+        window.saveOrder = async function(orderId) {
             showLoading(true, 'Guardando pedido...');
-            const clientName = document.getElementById('order-client').value.trim();
-            const locationId = document.getElementById('order-location').value;
-            const products = Object.values(appState.orderProducts);
-            const total = products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
             
-            if (!clientName || !locationId || products.length === 0) {
-                showModal(`
-                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
-                    <p class="text-gray-700 mb-4">Por favor, rellena el nombre del cliente, la localidad y añade al menos un producto.</p>
-                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
-                `);
-                showLoading(false);
+            const clientName = document.getElementById('client-name').value.trim();
+            const clientPhone = document.getElementById('client-phone').value.trim();
+            const locationId = document.getElementById('order-location').value;
+
+            if (!clientName || !locationId) {
+                showStatusMessage('Por favor, completa todos los campos obligatorios.', true);
+                setTimeout(() => showLoading(false), 2000);
                 return;
             }
 
             const orderData = {
                 clientName,
+                clientPhone,
                 locationId,
-                products,
-                total,
-                status: 'Pendiente',
-                timestamp: new Date().toISOString()
+                total: appState.selectedOrder.total,
+                status: appState.selectedOrder.status,
+                createdAt: orderId ? appState.selectedOrder.createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             };
 
             try {
                 const ordersCollectionRef = collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos`);
+                let docRef;
                 if (orderId) {
-                    await updateDoc(doc(ordersCollectionRef, orderId), orderData);
+                    docRef = doc(ordersCollectionRef, orderId);
+                    await updateDoc(docRef, orderData);
                 } else {
-                    await addDoc(ordersCollectionRef, orderData);
+                    docRef = await addDoc(ordersCollectionRef, orderData);
                 }
+
+                // Guardar los productos como una subcolección/subdocumento
+                await setDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos/${docRef.id}/productos/productos`), { items: appState.orderProducts });
+
                 closeModal();
                 showStatusMessage('Pedido guardado con éxito.');
-                setTimeout(() => showLoading(false), 2000);
+
             } catch (error) {
                 console.error("Error saving order:", error);
                 showStatusMessage('Error al guardar el pedido. Revisa la consola.', true);
+            } finally {
+                setTimeout(() => showLoading(false), 2000);
             }
         }
 
         window.toggleOrderStatus = async function(orderId, currentStatus) {
             showLoading(true, 'Actualizando estado...');
+            const newStatus = currentStatus === 'Entregado' ? 'Pendiente' : 'Entregado';
+            const orderDocRef = doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos`, orderId);
             try {
-                const newStatus = currentStatus === 'Pendiente' ? 'Entregado' : 'Pendiente';
-                const orderDocRef = doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos`, orderId);
-                await updateDoc(orderDocRef, { status: newStatus });
-                showStatusMessage('Estado del pedido actualizado.');
-                setTimeout(() => showLoading(false), 2000);
+                await updateDoc(orderDocRef, { status: newStatus, updatedAt: new Date().toISOString() });
+                showStatusMessage('Estado actualizado con éxito.');
             } catch (error) {
-                console.error("Error updating order status:", error);
-                showStatusMessage('Error al actualizar el estado. Revisa la consola.', true);
+                console.error("Error updating status:", error);
+                showStatusMessage('Error al actualizar el estado.', true);
+            } finally {
+                setTimeout(() => showLoading(false), 2000);
             }
         }
 
         window.deleteOrder = async function(orderId) {
-            showModal(`
-                <h3 class="font-bold text-xl text-red-600 mb-2">Confirmar Eliminación</h3>
-                <p class="text-gray-700 mb-4">¿Estás seguro de que quieres eliminar este pedido?</p>
-                <div class="flex justify-end space-x-2">
-                    <button onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
-                    <button onclick="confirmDeleteOrder('${orderId}')" class="bg-red-500 text-white px-4 py-2 rounded-lg">Eliminar</button>
-                </div>
-            `);
-        }
-        
-        window.confirmDeleteOrder = async function(orderId) {
-            closeModal();
             showLoading(true, 'Eliminando pedido...');
             try {
-                const orderDocRef = doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos`, orderId);
-                await deleteDoc(orderDocRef);
+                // Eliminar el subdocumento de productos primero
+                await deleteDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos/${orderId}/productos/productos`));
+                // Luego eliminar el pedido principal
+                await deleteDoc(doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/pedidos`, orderId));
                 showStatusMessage('Pedido eliminado con éxito.');
-                setTimeout(() => showLoading(false), 2000);
             } catch (error) {
                 console.error("Error deleting order:", error);
-                showStatusMessage('Error al eliminar el pedido. Revisa la consola.', true);
+                showStatusMessage('Error al eliminar el pedido.', true);
+            } finally {
+                setTimeout(() => showLoading(false), 2000);
             }
         }
-        
-        // Locations
-        window.addLocation = async function() {
-            const newLocationInput = document.getElementById('new-location-input');
-            const locationName = newLocationInput.value.trim();
-            if (!locationName) return;
-
-            showLoading(true, 'Añadiendo localidad...');
-            try {
-                const docRef = doc(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/localidades`));
-                await setDoc(docRef, { name: locationName });
-                newLocationInput.value = '';
-                showStatusMessage('Localidad añadida con éxito.');
-                setTimeout(() => showLoading(false), 2000);
-            } catch (error) {
-                console.error("Error adding location:", error);
-                showStatusMessage('Error al añadir localidad. Revisa la consola.', true);
-            }
-        };
-
-        window.deleteLocation = async function(locationId) {
-            showLoading(true, 'Eliminando localidad...');
-            try {
-                const locationDocRef = doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/localidades`, locationId);
-                await deleteDoc(locationDocRef);
-                showStatusMessage('Localidad eliminada con éxito.');
-                setTimeout(() => showLoading(false), 2000);
-            } catch (error) {
-                console.error("Error deleting location:", error);
-                showStatusMessage('Error al eliminar localidad. Revisa la consola.', true);
-            }
-        };
-        
-        // Categories
-        window.addCategory = async function() {
-            const newCategoryInput = document.getElementById('new-category-input');
-            const categoryName = newCategoryInput.value.trim();
-            if (!categoryName) return;
-
-            showLoading(true, 'Añadiendo categoría...');
-            try {
-                const docRef = doc(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/categories`));
-                await setDoc(docRef, { name: categoryName });
-                newCategoryInput.value = '';
-                showStatusMessage('Categoría añadida con éxito.');
-                setTimeout(() => showLoading(false), 2000);
-            } catch (error) {
-                console.error("Error adding category:", error);
-                showStatusMessage('Error al añadir categoría. Revisa la consola.', true);
-            }
-        };
-
-        window.deleteCategory = async function(categoryId) {
-            showLoading(true, 'Eliminando categoría...');
-            try {
-                const categoryDocRef = doc(db, `artifacts/${app.options.appId}/users/${appState.userId}/categories`, categoryId);
-                await deleteDoc(categoryDocRef);
-                showStatusMessage('Categoría eliminada con éxito.');
-                setTimeout(() => showLoading(false), 2000);
-            } catch (error) {
-                console.error("Error deleting category:", error);
-                showStatusMessage('Error al eliminar categoría. Revisa la consola.', true);
-            }
-        };
-        
-        // Initial setup
-        document.addEventListener('DOMContentLoaded', () => {
-            listenForData();
-            navigate('promotions');
-        });
     </script>
 </body>
 </html>
