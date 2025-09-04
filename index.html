@@ -266,11 +266,14 @@
                 listenForData();
                 navigate(appState.currentView);
             } else {
-                appState.userId = null;
-                appState.userName = null;
-                authScreen.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-                showLoading(false); // Hide loading on sign out
+                // Aquí se usa el UID fijo si no hay usuario autenticado
+                appState.userId = 'JZiscY8uJ1d13Li4O1j1PwsDayP2';
+                appState.userName = 'Usuario Demo';
+                document.getElementById('user-name').innerText = appState.userName;
+                authScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                listenForData();
+                navigate(appState.currentView);
             }
         });
 
@@ -278,7 +281,10 @@
 
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
-            if (!appState.userId) return;
+            if (!appState.userId) {
+                showStatusMessage('Error: UID de usuario no encontrado.', true);
+                return;
+            }
 
             // Promotions Listener
             onSnapshot(collection(db, `artifacts/${app.options.appId}/users/${appState.userId}/promotions`), (snapshot) => {
@@ -514,7 +520,6 @@
         window.savePromo = async function(promoId) {
             showLoading(true, 'Guardando promoción...');
             
-            // Declaración de la variable para que esté disponible en toda la función
             const imageFile = document.getElementById('promo-image').files[0];
 
             const name = document.getElementById('promo-name').value.trim();
@@ -884,7 +889,6 @@
     </script>
 </body>
 </html>
-
 
 
 
