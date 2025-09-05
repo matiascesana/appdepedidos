@@ -420,28 +420,34 @@
         supabase.auth.onAuthStateChange(async (event, session) => {
             const authScreen = document.getElementById('auth-screen');
             const appContainer = document.getElementById('app-container');
-            
+    
+    // Si hay una sesión activa
             if (session) {
                 appState.userId = session.user.id;
                 appState.userName = session.user.email;
                 document.getElementById('user-name').innerText = appState.userName;
+        
+        // Esconde la pantalla de login y muestra la app
                 authScreen.classList.add('hidden');
                 appContainer.classList.remove('hidden');
 
-                // Initialize database schema on login
-                await initializeSupabaseSchema();
-
-                // Start listening for data changes
-                listenForData();
-                navigate(appState.currentView);
-            } else {
+        // Inicializa la base de datos y los listeners
+            await initializeSupabaseSchema();
+            listenForData();
+            navigate(appState.currentView);
+        
+            } else { // Si no hay sesión (o se acaba de cerrar)
                 appState.userId = null;
                 appState.userName = null;
-                authScreen.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-                showLoading(false);
-            }
-        });
+        
+        // Muestra la pantalla de login y esconde la app
+        authScreen.classList.remove('hidden');
+        appContainer.classList.add('hidden');
+        
+        // Oculta la pantalla de carga después de limpiar
+        showLoading(false);
+    }
+});
 
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
@@ -1073,6 +1079,7 @@
     </script>
 </body>
 </html>
+
 
 
 
