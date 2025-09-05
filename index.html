@@ -421,16 +421,24 @@
             if (!appState.userId) return;
 
             // Promotions Listener
-            supabase.from('promotions').on('*', payload => { fetchPromotions(); }).subscribe();
+            supabase.channel('promotions_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, payload => {
+                fetchPromotions();
+            }).subscribe();
 
             // Categories Listener
-            supabase.from('categories').on('*', payload => { fetchCategories(); }).subscribe();
+            supabase.channel('categories_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, payload => {
+                fetchCategories();
+            }).subscribe();
 
             // Locations Listener
-            supabase.from('locations').on('*', payload => { fetchLocations(); }).subscribe();
+            supabase.channel('locations_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, payload => {
+                fetchLocations();
+            }).subscribe();
 
             // Orders Listener
-            supabase.from('orders').on('*', payload => { fetchOrders(); }).subscribe();
+            supabase.channel('orders_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
+                fetchOrders();
+            }).subscribe();
 
             fetchPromotions();
             fetchCategories();
@@ -1043,5 +1051,6 @@
     </script>
 </body>
 </html>
+
 
 
