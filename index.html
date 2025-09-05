@@ -694,7 +694,8 @@
             const name = document.getElementById('new-location-input').value.trim();
             if (!name) return;
             try {
-                const { error } = await supabase.from('locations').insert({ name });
+                // Se incluye el user_id para que no viole la política de seguridad
+                const { error } = await supabase.from('locations').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-location-input').value = '';
                 await fetchLocations(); 
@@ -703,21 +704,13 @@
             }
         };
 
-        window.deleteLocation = async function(id) {
-            try {
-                const { error } = await supabase.from('locations').delete().eq('id', id);
-                if (error) throw error;
-            } catch (e) {
-                console.error("Error deleting location: ", e.message);
-            }
-        };
-
         // Categories
         window.addCategory = async function() {
             const name = document.getElementById('new-category-input').value.trim();
             if (!name) return;
             try {
-                const { error } = await supabase.from('categories').insert({ name });
+                // Se incluye el user_id para que no viole la política de seguridad
+                const { error } = await supabase.from('categories').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-category-input').value = '';
                 await fetchCategories();
@@ -726,41 +719,64 @@
             }
         };
 
-        window.deleteCategory = async function(id) {
-            try {
-                const { error } = await supabase.from('categories').delete().eq('id', id);
-                if (error) throw error;
-            } catch (e) {
-                console.error("Error deleting category: ", e.message);
-            }
-        };
-
         // Orders
-        window.showOrderModal = function(orderId = null) {
-            const isEditing = orderId !== null;
-            if (isEditing) {
-                appState.selectedOrder = appState.orders[orderId];
-                // Fetch products for the specific order
-                supabase.from('order_products').select('*').eq('order_id', orderId)
-                    .then(({ data, error }) => {
-                        if (error) throw error;
-                        appState.orderProducts = data;
-                        renderOrderModalContent();
-                    }).catch(e => console.error('Error fetching order products:', e.message));
-            } else {
-                appState.selectedOrder = {
-                    client_name: '',
-                    location_id: null,
-                    total: 0,
-                    status: 'Pendiente',
-                    products: [],
-                };
-                appState.orderProducts = [];
-                renderOrderModalContent();
+        window.saveOrder = async function(orderId) {
+            showLoading(true, 'Guardando pedido...');
+            
+            const clientName = document.getElementById('client-name').value.trim();
+            const locationId = document.getElementById('order-location').value;
+            
+            if (!clientName || !locationId || appState.orderProducts.length === 0) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">Por favor, completa todos los campos y añade al menos un producto.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
             }
-        };
+            
+            const orderData = {
+                client_name: clientName,
+                location_id: locationId,
+                total: appState.selectedOrder.total,
+                user_id: appState.userId // Se incluye el user_id para que no viole la política de seguridad
+            };
+
+            try {
+                let orderResult;
+                if (orderId) {
+                    orderResult = await supabase.from('orders').update(orderData).eq('id', orderId).select();
+                } else {
+                    orderResult = await supabase.from('orders').insert(orderData).select();
+                }
+
+                if (orderResult.error) throw orderResult.error;
+
+                const newOrderId = orderResult.data[0].id;
+                
+                await supabase.from('order_products').delete().eq('order_id', newOrderId);
+
+                const productsToInsert = appState.orderProducts.map(p => ({
+                    ...p,
+                    order_id: newOrderId
+                }));
+                
+                const { error: productsError } = await supabase.from('order_products').insert(productsToInsert);
+                if (productsError) throw productsError;
+
+                closeModal();
+                showStatusMessage('Pedido guardado con éxito.');
+
+            } catch (error) {
+                console.error("Error al guardar el pedido:", error.message);
+                showStatusMessage('Error al guardar el pedido. Revisa la consola para más detalles.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
         
-        function renderOrderModalContent() {
+            function renderOrderModalContent() {
             const clientNameInput = document.getElementById('client-name');
             if (clientNameInput) {
                 appState.selectedOrder.client_name = clientNameInput.value;
@@ -964,3 +980,4 @@
     </script>
 </body>
 </html>
+
