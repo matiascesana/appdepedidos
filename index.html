@@ -759,9 +759,11 @@
         
         function renderOrderModalContent() {
             const clientNameInput = document.getElementById('client-name');
-            if (clientNameInput) {
-                appState.selectedOrder.client_name = clientNameInput.value;
-            }
+            const locationSelect = document.getElementById('order-location');
+
+            const currentClientName = clientNameInput ? clientNameInput.value : '';
+            const currentLocationId = locationSelect ? locationSelect.value : '';
+
             const order = appState.selectedOrder;
             const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.location_id === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
             const productOptions = Object.keys(appState.promotions).map(id => `<option value="${id}">${appState.promotions[id].name} - $${appState.promotions[id].price.toFixed(2)}</option>`).join('');
@@ -782,7 +784,7 @@
                 <form id="order-form" class="space-y-4">
                     <div>
                         <label for="client-name" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
-                        <input type="text" id="client-name" value="${order.client_name}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                        <input type="text" id="client-name" value="${currentClientName}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
                     </div>
                     <div>
                         <label for="order-location" class="block text-sm font-medium text-gray-700">Localidad</label>
@@ -821,6 +823,10 @@
             `;
             showModal(modalHtml);
             
+            // Restaura los valores de localidad y cliente después de renderizar el modal
+            document.getElementById('client-name').value = currentClientName;
+            document.getElementById('order-location').value = currentLocationId;
+
             document.getElementById('order-form').onsubmit = async (e) => {
                 e.preventDefault();
                 await saveOrder(order.id);
@@ -972,4 +978,5 @@
     </script>
 </body>
 </html>
+
 
