@@ -394,7 +394,7 @@
                 CREATE POLICY "Allow user to read their order products" ON public.order_products FOR SELECT TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
                 CREATE POLICY "Allow user to manage their order products" ON public.order_products FOR ALL TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
 
-                -- Storage Bucket and Policies (optional)
+                -- Storage Bucket and Policies (optional, but recommended)
                 -- CREATE BUCKET IF NOT EXISTS promo_images WITH public AS false;
                 -- CREATE POLICY IF NOT EXISTS "Allow authenticated users to upload and read their files" ON storage.objects
                 -- FOR ALL
@@ -403,14 +403,35 @@
             `;
 
             try {
-                // Check if a table exists
+                // Try to get data from a table. If the table doesn't exist, it will throw a '42P01' error.
                 const { error } = await supabase.from('promotions').select('id').limit(1);
                 
                 if (error && error.code === '42P01') {
                     showStatusMessage('Configurando la base de datos por primera vez. Esto puede tardar unos segundos...');
                     
-                    const { error: queryError } = await supabase.rpc('query_tables', { p_sql: sql });
-                    if (queryError) throw queryError;
+                    // We must create a new function in Supabase's SQL editor to run a batch of SQL queries.
+                    // This is a more robust way to run schema migrations from the client.
+                    // Go to the SQL editor in Supabase and run this once:
+                    //
+                    // CREATE OR REPLACE FUNCTION public.execute_sql(sql_query text)
+                    // RETURNS void
+                    // LANGUAGE plpgsql
+                    // SECURITY DEFINER
+                    // AS $$
+                    // BEGIN
+                    //   EXECUTE sql_query;
+                    // END;
+                    // $$;
+                    //
+                    // GRANT EXECUTE ON FUNCTION public.execute_sql(text) TO authenticated;
+                    
+                    // After creating the above function, call it from here:
+                    const { error: queryError } = await supabase.rpc('execute_sql', { sql_query: sql });
+                    
+                    if (queryError) {
+                        console.error('Error al ejecutar script SQL:', queryError);
+                        throw queryError;
+                    }
                     
                     showStatusMessage('Base de datos configurada. ¡Listo para usar!');
                 }
@@ -593,16 +614,16 @@
             locationsArray.sort((a, b) => a.name.localeCompare(b.name));
 
             locationsArray.forEach(location => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors';
-                li.innerHTML = `
-                    <span>${location.name}</span>
-                    <button onclick="deleteLocation('${location.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                listContainer.appendChild(li);
-            });
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors';
+                    li.innerHTML = `
+                        <span>${location.name}</span>
+                        <button onclick="deleteLocation('${location.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    listContainer.appendChild(li);
+                });
         }
 
         function renderCategories() {
@@ -1073,9 +1094,9 @@
                 setTimeout(() => showLoading(false), 2000);
             }
         };
-
     </script>
 </body>
 </html>
+
 
 
