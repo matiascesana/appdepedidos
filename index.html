@@ -22,6 +22,15 @@
             background-color: rgba(255, 255, 255, 0.8);
         }
     </style>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+    <script>
+        // Configuración Supabase
+        const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const bucketName = "promociones"; // nombre del bucket en Supabase
+    </script>
 </head>
 <body class="bg-gray-100 flex flex-col h-screen">
 
@@ -83,98 +92,136 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
-
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDBRT5IUIoB2H8UwN7tkmqSkzq9Lch7yeg",
-            authDomain: "url-de-pedidos.firebaseapp.com",
-            projectId: "url-de-pedidos",
-            storageBucket: "url-de-pedidos.firebasestorage.app",
-            messagingSenderId: "180972439681",
-            appId: "1:180972439681:web:f9000673e003840f572580"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
-
-        // Global app state
-        let appState = {
-            userId: null,
-            userName: null,
-            currentView: 'promotions',
-            promotions: {},
-            categories: {},
-            locations: {},
-            orders: {},
-            selectedOrder: null,
-            orderProducts: {}
-        };
+        // ----------------- Vistas y navegación -----------------
+        let appState = { currentView: 'promotions' };
 
         const viewTemplates = {
             promotions: `
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">Catálogo de Promociones</h2>
-                    <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
-                        <i class="fas fa-plus mr-2"></i>Nueva Promoción
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Nueva Promoción
+                        </button>
+                        <input type="file" id="promo-file-input" class="border p-2 rounded-lg" />
+                        <button onclick="uploadPromoFile()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
+                            Subir Imagen
+                        </button>
+                    </div>
                 </div>
                 <div id="promotions-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
             `,
             orders: `
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">Pedidos</h2>
-                    <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
-                        <i class="fas fa-plus mr-2"></i>Nuevo Pedido
+                    <input type="file" id="order-file-input" class="border p-2 rounded-lg" />
+                    <button onclick="uploadOrderFile()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
+                        Subir Archivo
                     </button>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow-md mb-4 flex justify-around flex-wrap text-center">
-                    <div>
-                        <p class="text-sm text-gray-500">Total General</p>
-                        <p id="total-general" class="text-xl font-bold text-blue-600">$0.00</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Total Entregados</p>
-                        <p id="total-delivered" class="text-xl font-bold text-green-600">$0.00</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Total Pendientes</p>
-                        <p id="total-pending" class="text-xl font-bold text-red-600">$0.00</p>
-                    </div>
                 </div>
                 <div id="orders-list" class="space-y-4"></div>
             `,
-            locations: `
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">Gestión de Localidades</h2>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="flex mb-4">
-                        <input type="text" id="new-location-input" placeholder="Nombre de la nueva localidad" class="flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button onclick="addLocation()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
-                    </div>
-                    <ul id="locations-list" class="space-y-2"></ul>
-                </div>
-            `,
-            categories: `
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">Gestión de Categorías</h2>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="flex mb-4">
-                        <input type="text" id="new-category-input" placeholder="Nombre de la nueva categoría" class="flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button onclick="addCategory()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
-                    </div>
-                    <ul id="categories-list" class="space-y-2"></ul>
-                </div>
-            `
+            locations: `<div class="p-4">Aquí van las localidades...</div>`,
+            categories: `<div class="p-4">Aquí van las categorías...</div>`
         };
+
+        function navigate(view) {
+            appState.currentView = view;
+            document.getElementById("main-content").innerHTML = viewTemplates[view];
+
+            if(view === 'promotions') listPromoFiles();
+            if(view === 'orders') listOrderFiles();
+        }
+
+        navigate(appState.currentView);
+
+        // ----------------- Supabase Storage funciones -----------------
+        async function uploadPromoFile() {
+            const fileInput = document.getElementById("promo-file-input");
+            const file = fileInput.files[0];
+            if (!file) return alert("Selecciona un archivo");
+
+            const fileName = Date.now() + "_" + file.name;
+            const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file);
+
+            if (error) {
+                alert("Error al subir archivo: " + error.message);
+            } else {
+                alert("Archivo subido correctamente!");
+                listPromoFiles();
+                fileInput.value = "";
+            }
+        }
+
+        async function listPromoFiles() {
+            const { data, error } = await supabase.storage.from(bucketName).list();
+            const listContainer = document.getElementById("promotions-list");
+            listContainer.innerHTML = "";
+
+            if (error) {
+                listContainer.innerHTML = `<p class="text-red-500">Error al cargar archivos</p>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(item.name);
+                const div = document.createElement("div");
+                div.className = "bg-white rounded-lg shadow-md p-2 flex flex-col items-center";
+                div.innerHTML = `
+                    <img src="${urlData.publicUrl}" class="w-full h-32 object-cover rounded-md mb-2"/>
+                    <p class="text-sm text-gray-700">${item.name}</p>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        // Subir archivos en vista de pedidos
+        async function uploadOrderFile() {
+            const fileInput = document.getElementById("order-file-input");
+            const file = fileInput.files[0];
+            if (!file) return alert("Selecciona un archivo");
+
+            const fileName = Date.now() + "_" + file.name;
+            const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file);
+
+            if (error) {
+                alert("Error al subir archivo: " + error.message);
+            } else {
+                alert("Archivo subido correctamente!");
+                listOrderFiles();
+                fileInput.value = "";
+            }
+        }
+
+        async function listOrderFiles() {
+            const { data, error } = await supabase.storage.from(bucketName).list();
+            const listContainer = document.getElementById("orders-list");
+            listContainer.innerHTML = "";
+
+            if (error) {
+                listContainer.innerHTML = `<p class="text-red-500">Error al cargar archivos</p>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(item.name);
+                const div = document.createElement("div");
+                div.className = "bg-white rounded-lg shadow-md p-2 flex flex-col items-center";
+                div.innerHTML = `
+                    <a href="${urlData.publicUrl}" target="_blank" class="text-blue-600 hover:underline">${item.name}</a>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        // ----------------- Placeholder funciones -----------------
+        function showPromoModal(){ alert("Abrir modal de nueva promoción"); }
+        function signOutUser(){ alert("Cerrar sesión"); }
+
+    </script>
+</body>
+</html>
+
 
         // --- Utility Functions ---
         window.showLoading = function(show, message = 'Cargando...') {
@@ -952,6 +999,7 @@
     </script>
 </body>
 </html>
+
 
 
 
