@@ -1,403 +1,405 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Gestor de Negocio (Supabase Mejorado)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-<style>
-  body { font-family: 'Inter', sans-serif; }
-  .modal-overlay { background-color: rgba(0,0,0,0.5); }
-  .loading-overlay { background-color: rgba(255,255,255,0.85); }
-  .progress-bar { background-color: #3b82f6; height: 6px; border-radius: 3px; transition: width 0.2s; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-<!-- Loading Overlay -->
-<div id="loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center loading-overlay hidden">
-  <div class="text-center">
-    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto"></div>
-    <p id="status-message" class="mt-4 text-gray-700 font-medium">Cargando...</p>
-  </div>
-</div>
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Panel de Administración</h1>
 
-<!-- Auth Screen -->
-<div id="auth-screen" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-gray-100">
-  <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
-    <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">Gestor de Negocio</h2>
-    <form id="auth-form" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Correo</label>
-        <input id="email-input" type="email" class="mt-1 block w-full p-2 border rounded-lg" required>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Contraseña</label>
-        <input id="password-input" type="password" class="mt-1 block w-full p-2 border rounded-lg" required>
-      </div>
-      <div class="flex space-x-2">
-        <button id="login-btn" type="button" class="w-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Iniciar Sesión</button>
-        <button id="register-btn" type="button" class="w-1/2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Registrarse</button>
-      </div>
-      <p id="auth-error-message" class="text-red-500 text-sm mt-2 hidden"></p>
-    </form>
-  </div>
-</div>
-
-<!-- App Container -->
-<div id="app-container" class="hidden flex flex-col min-h-screen">
-  <header class="bg-white shadow p-4 flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
-    <div class="flex items-center space-x-4">
-      <span id="user-name" class="text-sm text-gray-600"></span>
-      <button id="signout-btn" class="text-red-500 hover:text-red-700"><i class="fas fa-sign-out-alt"></i></button>
-    </div>
-  </header>
-
-  <main class="p-4 flex-1 overflow-auto container mx-auto">
-    <div class="mb-4 flex flex-wrap gap-4">
-      <div class="bg-white p-4 rounded shadow w-full md:w-auto">
-        <p class="text-sm text-gray-500">Total General</p>
-        <p id="total-general" class="text-xl font-bold text-blue-600">$0.00</p>
-      </div>
-      <div class="bg-white p-4 rounded shadow w-full md:w-auto">
-        <p class="text-sm text-gray-500">Total Entregados</p>
-        <p id="total-delivered" class="text-xl font-bold text-green-600">$0.00</p>
-      </div>
-      <div class="bg-white p-4 rounded shadow w-full md:w-auto">
-        <p class="text-sm text-gray-500">Total Pendientes</p>
-        <p id="total-pending" class="text-xl font-bold text-red-600">$0.00</p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Orders -->
-      <section class="bg-white rounded-lg p-4 shadow">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-semibold">Pedidos</h2>
-          <button onclick="showOrderModal()" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm">Nuevo</button>
+        <!-- Totales -->
+        <div class="flex space-x-4 mb-4">
+            <div class="bg-white p-4 rounded shadow w-1/3 text-center">
+                <h2 class="font-bold text-gray-600">Total General</h2>
+                <p id="total-general" class="text-xl font-bold text-blue-600">$0.00</p>
+            </div>
+            <div class="bg-white p-4 rounded shadow w-1/3 text-center">
+                <h2 class="font-bold text-gray-600">Entregados</h2>
+                <p id="total-delivered" class="text-xl font-bold text-green-600">$0.00</p>
+            </div>
+            <div class="bg-white p-4 rounded shadow w-1/3 text-center">
+                <h2 class="font-bold text-gray-600">Pendientes</h2>
+                <p id="total-pending" class="text-xl font-bold text-red-600">$0.00</p>
+            </div>
         </div>
-        <div id="orders-list" class="space-y-3"></div>
-      </section>
 
-      <!-- Promotions -->
-      <section class="bg-white rounded-lg p-4 shadow">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-semibold">Promociones</h2>
-          <button onclick="showPromoModal()" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm">Nueva</button>
-        </div>
-        <div id="promotions-list" class="grid grid-cols-1 gap-3"></div>
-      </section>
-
-      <!-- Categories & Locations -->
-      <section class="bg-white rounded-lg p-4 shadow">
+        <!-- Pedidos -->
         <div class="mb-4">
-          <h3 class="font-semibold mb-2">Categorías</h3>
-          <div class="flex mb-2">
-            <input id="new-category-input" class="flex-grow p-2 border rounded-l" placeholder="Nueva categoría">
-            <button onclick="addCategory()" class="bg-blue-600 text-white px-4 rounded-r">Agregar</button>
-          </div>
-          <ul id="categories-list" class="space-y-2"></ul>
+            <h2 class="text-2xl font-bold mb-2">Pedidos</h2>
+            <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-2">Nuevo Pedido</button>
+            <div id="orders-list" class="space-y-2"></div>
         </div>
 
-        <div>
-          <h3 class="font-semibold mb-2">Localidades</h3>
-          <div class="flex mb-2">
-            <input id="new-location-input" class="flex-grow p-2 border rounded-l" placeholder="Nueva localidad">
-            <button onclick="addLocation()" class="bg-blue-600 text-white px-4 rounded-r">Agregar</button>
-          </div>
-          <ul id="locations-list" class="space-y-2"></ul>
+        <!-- Localidades -->
+        <div class="mb-4">
+            <h2 class="text-2xl font-bold mb-2">Localidades</h2>
+            <div class="flex mb-2">
+                <input type="text" id="new-location-input" placeholder="Nueva localidad" class="flex-grow p-2 border rounded">
+                <button onclick="addLocation()" class="bg-blue-600 text-white px-4 py-2 rounded ml-2 hover:bg-blue-700">Agregar</button>
+            </div>
+            <ul id="locations-list" class="space-y-1"></ul>
         </div>
-      </section>
+
+        <!-- Categorías -->
+        <div class="mb-4">
+            <h2 class="text-2xl font-bold mb-2">Categorías</h2>
+            <div class="flex mb-2">
+                <input type="text" id="new-category-input" placeholder="Nueva categoría" class="flex-grow p-2 border rounded">
+                <button onclick="addCategory()" class="bg-blue-600 text-white px-4 py-2 rounded ml-2 hover:bg-blue-700">Agregar</button>
+            </div>
+            <ul id="categories-list" class="space-y-1"></ul>
+        </div>
+
+        <!-- Promociones -->
+        <div class="mb-4">
+            <h2 class="text-2xl font-bold mb-2">Promociones</h2>
+            <button onclick="showPromoModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-2">Nueva Promoción</button>
+            <div id="promotions-list" class="space-y-2"></div>
+        </div>
     </div>
-  </main>
-</div>
 
-<!-- Modal -->
-<div id="modal-container" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
-  <div id="modal-content" class="bg-white rounded-lg shadow-lg p-6 w-11/12 md:w-2/3 max-h-[90vh] overflow-auto"></div>
-</div>
-
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.mjs';
-
-const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const bucketName = "promociones";
-const folders = { promotions: "promociones/", orders: "pedidos/" };
-
-const appState = {
-  userId: null,
-  userEmail: null,
-  promotions: {},
-  orders: {},
-  categories: {},
-  locations: {},
-  selectedOrder: null,
-  orderProducts: []
-};
-
-// ---- UI Helpers ----
-function showLoading(show = true, message = "Cargando...") {
-  const el = document.getElementById('loading-overlay');
-  document.getElementById('status-message').textContent = message;
-  if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
-}
-
-function showStatusMessage(msg, isError=false) {
-  alert(msg);
-}
-
-function showModal(html) {
-  const container = document.getElementById('modal-container');
-  document.getElementById('modal-content').innerHTML = html;
-  container.classList.remove('hidden'); container.classList.add('flex');
-}
-
-function closeModal() {
-  const container = document.getElementById('modal-container');
-  container.classList.add('hidden'); container.classList.remove('flex');
-  document.getElementById('modal-content').innerHTML = '';
-}
-
-// ---- AUTH ----
-const emailInput = document.getElementById('email-input');
-const passwordInput = document.getElementById('password-input');
-const loginBtn = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
-const authErrorMessage = document.getElementById('auth-error-message');
-
-loginBtn.addEventListener('click', async () => {
-  authErrorMessage.classList.add('hidden');
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-  if(!email || !password) { authErrorMessage.textContent="Ingresa correo y contraseña"; authErrorMessage.classList.remove('hidden'); return; }
-  try {
-    showLoading(true,"Iniciando sesión...");
-    const { data, error } = await supabase.auth.signInWithPassword({email,password});
-    if(error) throw error;
-  } catch(err) {
-    console.error(err);
-    authErrorMessage.textContent = err.message || "Error al iniciar sesión";
-    authErrorMessage.classList.remove('hidden');
-  } finally { showLoading(false); }
-});
-
-registerBtn.addEventListener('click', async () => {
-  authErrorMessage.classList.add('hidden');
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-  if(!email || !password) { authErrorMessage.textContent="Ingresa correo y contraseña"; authErrorMessage.classList.remove('hidden'); return; }
-  try {
-    showLoading(true,"Registrando...");
-    const { data, error } = await supabase.auth.signUp({email,password});
-    if(error) throw error;
-    showStatusMessage("Registro solicitado. Verifica tu correo si habilitaste confirmación.");
-  } catch(err) {
-    console.error(err);
-    authErrorMessage.textContent = err.message || "Error al registrarse";
-    authErrorMessage.classList.remove('hidden');
-  } finally { showLoading(false); }
-});
-
-document.getElementById('signout-btn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
-});
-
-supabase.auth.onAuthStateChange((event, session) => {
-  if(session?.user){
-    appState.userId = session.user.id; appState.userEmail=session.user.email;
-    document.getElementById('user-name').innerText=appState.userEmail;
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-    initData();
-  } else {
-    appState.userId=null; appState.userEmail=null;
-    document.getElementById('user-name').innerText='';
-    document.getElementById('auth-screen').classList.remove('hidden');
-    document.getElementById('app-container').classList.add('hidden');
-    showLoading(false);
-  }
-});
-
-// ---- Helpers ----
-function pathFromPublicUrl(publicUrl){
-  const prefix = `${SUPABASE_URL.replace(/\/$/,'')}/storage/v1/object/public/${bucketName}/`;
-  if(!publicUrl) return null;
-  if(publicUrl.startsWith(prefix)) return decodeURIComponent(publicUrl.substring(prefix.length));
-  const parts = publicUrl.split('/');
-  return parts.slice(-2).join('/');
-}
-
-// ---- Promotions CRUD con validación y progreso ----
-window.showPromoModal = async function(promoId=null){
-  const isEditing = !!promoId;
-  const promo = appState.promotions[promoId]||{};
-  const categoryOptions = Object.values(appState.categories).map(c=>`<option value="${c.id}" ${c.id===promo.category?'selected':''}>${c.name}</option>`).join('');
-  const locationOptions = Object.values(appState.locations).map(l=>`<option value="${l.id}" ${l.id===promo.location?'selected':''}>${l.name}</option>`).join('');
-
-  const html = `
-  <h2 class="text-xl font-semibold mb-4">${isEditing?'Editar':'Nueva'} Promoción</h2>
-  <div class="space-y-3">
-    <input id="promo-name" type="text" placeholder="Nombre" value="${promo.name||''}" class="w-full p-2 border rounded"/>
-    <input id="promo-price" type="number" placeholder="Precio" value="${promo.price||''}" class="w-full p-2 border rounded"/>
-    <input id="promo-stock" type="number" placeholder="Stock" value="${promo.stock||''}" class="w-full p-2 border rounded"/>
-    <select id="promo-category" class="w-full p-2 border rounded">${categoryOptions}</select>
-    <select id="promo-location" class="w-full p-2 border rounded">${locationOptions}</select>
-    <input type="file" id="promo-image" class="w-full p-2 border rounded" ${isEditing?'':'required'}/>
-    <div class="w-full bg-gray-200 rounded overflow-hidden mt-2"><div id="upload-progress" class="progress-bar w-0"></div></div>
-    <div class="flex justify-end space-x-2 mt-4">
-      <button onclick="closeModal()" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Cancelar</button>
-      <button id="save-promo-btn" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">${isEditing?'Actualizar':'Guardar'}</button>
+    <!-- Modal general -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden">
+        <div id="modal-content" class="bg-white p-6 rounded shadow w-full max-w-lg"></div>
     </div>
-  </div>`;
 
-  showModal(html);
+    <!-- Loading UI -->
+    <div id="loading-ui" class="fixed inset-0 flex justify-center items-center bg-black bg-opacity-40 hidden">
+        <div class="bg-white p-4 rounded flex items-center space-x-2">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span id="loading-text">Cargando...</span>
+        </div>
+    </div>
 
-  document.getElementById('save-promo-btn').addEventListener('click', async ()=>{
-    const name=document.getElementById('promo-name').value.trim();
-    const price=parseFloat(document.getElementById('promo-price').value);
-    const stock=parseInt(document.getElementById('promo-stock').value);
-    const category=document.getElementById('promo-category').value;
-    const location=document.getElementById('promo-location').value;
-    const file=document.getElementById('promo-image').files[0];
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    if(!name||isNaN(price)||isNaN(stock)||!category||!location){
-      return showStatusMessage("Completa todos los campos correctamente",true);
-    }
+        const supabase = createClient(
+            'https://ejbqlejlgprvwzrptojo.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8'
+        );
 
-    if(file){
-      const validTypes=['image/jpeg','image/png','image/jpg'];
-      if(!validTypes.includes(file.type)) return showStatusMessage("Formato de imagen no válido",true);
-      if(file.size>5*1024*1024) return showStatusMessage("La imagen no puede superar 5MB",true);
-    }
-
-    try{
-      showLoading(true,"Guardando...");
-      let imageUrl = promo.image||null;
-
-      if(file){
-        // Si ya existía imagen previa, eliminarla
-        if(imageUrl){
-          const path = pathFromPublicUrl(imageUrl);
-          await supabase.storage.from(bucketName).remove([path]);
+        const appState = {
+            promotions: {},
+            locations: {},
+            categories: {},
+            orders: {},
+            selectedOrder: null,
+            orderProducts: []
         }
-        const filename=`${Date.now()}_${file.name}`;
-        const { data, error } = await supabase.storage.from(bucketName)
-          .upload(`${folders.promotions}${filename}`, file, {
-            cacheControl: '3600',
-            upsert: true,
-            onUploadProgress: (progress)=>{ document.getElementById('upload-progress').style.width = `${progress*100}%`; }
-          });
-        if(error) throw error;
-        imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${folders.promotions}${filename}`;
-      }
 
-      const payload = { name, price, stock, category, location, image: imageUrl };
-      if(isEditing){
-        await supabase.from('promociones').update(payload).eq('id', promoId);
-      } else {
-        await supabase.from('promociones').insert(payload);
-      }
-      closeModal(); initData();
-    }catch(err){ console.error(err); showStatusMessage(err.message,true);}
-    finally{ showLoading(false); }
-  });
-}
+        // --- Modales ---
+        window.showModal = function(html){
+            document.getElementById('modal-content').innerHTML = html;
+            document.getElementById('modal-container').classList.remove('hidden');
+        }
+        window.closeModal = function(){
+            document.getElementById('modal-container').classList.add('hidden');
+        }
 
-// ---- Inicialización de datos ----
-async function initData(){
-  showLoading(true,"Cargando datos...");
-  try{
-    const { data: promos } = await supabase.from('promociones').select('*');
-    const { data: cats } = await supabase.from('categorias').select('*');
-    const { data: locs } = await supabase.from('localidades').select('*');
-    appState.promotions={}; appState.categories={}; appState.locations={};
-    promos.forEach(p=>appState.promotions[p.id]=p);
-    cats.forEach(c=>appState.categories[c.id]=c);
-    locs.forEach(l=>appState.locations[l.id]=l);
-    renderPromotions(); renderCategories(); renderLocations();
-  }catch(err){console.error(err);}
-  finally{showLoading(false);}
-}
+        // --- Loading UI ---
+        window.showLoading = function(show,text='Cargando...'){
+            const ui = document.getElementById('loading-ui');
+            document.getElementById('loading-text').innerText = text;
+            if(show) ui.classList.remove('hidden'); else ui.classList.add('hidden');
+        }
 
-// ---- Render ----
-function renderPromotions(){
-  const container=document.getElementById('promotions-list');
-  container.innerHTML='';
-  Object.values(appState.promotions).forEach(p=>{
-    const html=`<div class="p-2 border rounded flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        ${p.image?`<img src="${p.image}" class="w-12 h-12 object-cover rounded"/>`:''}
-        <div>
-          <p class="font-semibold">${p.name}</p>
-          <p class="text-sm text-gray-500">$${p.price} | Stock: ${p.stock}</p>
-        </div>
-      </div>
-      <div class="flex space-x-2">
-        <button onclick="showPromoModal(${p.id})" class="text-blue-500 hover:text-blue-700"><i class="fas fa-edit"></i></button>
-        <button onclick="deletePromotion(${p.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-      </div>
-    </div>`;
-    container.insertAdjacentHTML('beforeend', html);
-  });
-}
+        window.showStatusMessage = function(msg,error=false){
+            alert(msg);
+        }
 
-async function deletePromotion(id){
-  if(!confirm("Eliminar esta promoción?")) return;
-  try{
-    showLoading(true,"Eliminando...");
-    const promo=appState.promotions[id];
-    if(promo.image){
-      const path=pathFromPublicUrl(promo.image);
-      await supabase.storage.from(bucketName).remove([path]);
-    }
-    await supabase.from('promociones').delete().eq('id',id);
-    initData();
-  }catch(err){console.error(err);} finally{showLoading(false);}
-}
+        // --- Fetch inicial ---
+        async function fetchAllData(){
+            showLoading(true,'Cargando datos...');
+            try{
+                // Promociones
+                const { data: promos } = await supabase.from('promotions').select('*');
+                appState.promotions = {};
+                promos.forEach(p=>appState.promotions[p.id]=p);
 
-// ---- Categorías y localidades ----
-function renderCategories(){
-  const container=document.getElementById('categories-list'); container.innerHTML='';
-  Object.values(appState.categories).forEach(c=>{
-    const html=`<li class="flex justify-between items-center"><span>${c.name}</span>
-      <button onclick="deleteCategory(${c.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></li>`;
-    container.insertAdjacentHTML('beforeend',html);
-  });
-}
+                // Localidades
+                const { data: locs } = await supabase.from('locations').select('*');
+                appState.locations = {};
+                locs.forEach(l=>appState.locations[l.id]=l.name);
 
-function renderLocations(){
-  const container=document.getElementById('locations-list'); container.innerHTML='';
-  Object.values(appState.locations).forEach(l=>{
-    const html=`<li class="flex justify-between items-center"><span>${l.name}</span>
-      <button onclick="deleteLocation(${l.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></li>`;
-    container.insertAdjacentHTML('beforeend',html);
-  });
-}
+                // Categorías
+                const { data: cats } = await supabase.from('categories').select('*');
+                appState.categories = {};
+                cats.forEach(c=>appState.categories[c.id]=c.name);
 
-async function addCategory(){
-  const val=document.getElementById('new-category-input').value.trim(); if(!val)return;
-  await supabase.from('categorias').insert({name:val}); document.getElementById('new-category-input').value=''; initData();
-}
+                // Pedidos
+                const { data: orders } = await supabase.from('orders').select('*');
+                appState.orders = {};
+                orders.forEach(o=>appState.orders[o.id]=o);
 
-async function addLocation(){
-  const val=document.getElementById('new-location-input').value.trim(); if(!val)return;
-  await supabase.from('localidades').insert({name:val}); document.getElementById('new-location-input').value=''; initData();
-}
+                renderPromotions();
+                renderLocations();
+                renderCategories();
+                renderOrders();
+            }catch(e){ console.error(e); showStatusMessage('Error cargando datos',true);}
+            finally{ showLoading(false);}
+        }
 
-async function deleteCategory(id){ if(!confirm("Eliminar categoría?")) return; await supabase.from('categorias').delete().eq('id',id); initData(); }
-async function deleteLocation(id){ if(!confirm("Eliminar localidad?")) return; await supabase.from('localidades').delete().eq('id',id); initData(); }
+        fetchAllData();
 
-</script>
+        // --- Render functions ---
+        function renderOrders(){
+            const list = document.getElementById('orders-list');
+            list.innerHTML='';
+            let totalGeneral=0,totalDelivered=0,totalPending=0;
+
+            const sorted = Object.values(appState.orders).sort((a,b)=>b.id.localeCompare(a.id));
+            sorted.forEach(order=>{
+                totalGeneral+=order.total;
+                if(order.status==='Entregado') totalDelivered+=order.total;
+                else totalPending+=order.total;
+
+                const div = document.createElement('div');
+                div.className=`bg-white p-4 rounded shadow flex justify-between items-center hover:shadow-lg border-l-4 ${order.status==='Entregado'?'border-green-500':'border-red-500'}`;
+                const locName = appState.locations[order.locationId] || 'Localidad desconocida';
+                div.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="font-bold text-gray-800">Pedido #${order.id.substring(0,6)}</h3>
+                        <p class="text-sm text-gray-600">Cliente: ${order.clientName}</p>
+                        <p class="text-sm text-gray-600">Localidad: ${locName}</p>
+                        <p class="text-sm ${order.status==='Entregado'?'text-green-600':'text-red-600'}">${order.status}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-blue-600">$${order.total.toFixed(2)}</p>
+                        <div class="mt-2 flex space-x-2">
+                            <button onclick="showOrderModal('${order.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600">Ver</button>
+                            <button onclick="toggleOrderStatus('${order.id}','${order.status}')" class="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600">${order.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
+                            <button onclick="deleteOrder('${order.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            document.getElementById('total-general').innerText = `$${totalGeneral.toFixed(2)}`;
+            document.getElementById('total-delivered').innerText = `$${totalDelivered.toFixed(2)}`;
+            document.getElementById('total-pending').innerText = `$${totalPending.toFixed(2)}`;
+        }
+
+        function renderLocations(){
+            const list = document.getElementById('locations-list'); list.innerHTML='';
+            Object.entries(appState.locations).forEach(([id,name])=>{
+                const li = document.createElement('li');
+                li.className='flex justify-between items-center p-2 rounded bg-gray-50 hover:bg-gray-100';
+                li.innerHTML=`<span>${name}</span>
+                              <button onclick="deleteLocation('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
+                list.appendChild(li);
+            });
+        }
+
+        function renderCategories(){
+            const list = document.getElementById('categories-list'); list.innerHTML='';
+            Object.entries(appState.categories).forEach(([id,name])=>{
+                const li = document.createElement('li');
+                li.className='flex justify-between items-center p-2 rounded bg-gray-50 hover:bg-gray-100';
+                li.innerHTML=`<span>${name}</span>
+                              <button onclick="deleteCategory('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
+                list.appendChild(li);
+            });
+        }
+
+        function renderPromotions(){
+            const list = document.getElementById('promotions-list'); list.innerHTML='';
+            Object.values(appState.promotions).forEach(promo=>{
+                const div = document.createElement('div');
+                div.className='bg-white p-4 rounded shadow flex justify-between items-center hover:shadow-lg';
+                div.innerHTML = `
+                    <div>
+                        <h3 class="font-bold">${promo.name}</h3>
+                        <p class="text-sm">Precio: $${promo.price.toFixed(2)}</p>
+                        ${promo.originalPrice?`<p class="text-sm line-through text-gray-400">Original: $${promo.originalPrice.toFixed(2)}</p>`:''}
+                        <p class="text-sm">Stock: ${promo.stock}</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="showPromoModal('${promo.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600">Editar</button>
+                        <button onclick="deletePromo('${promo.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">Eliminar</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // --- CRUD Localidades ---
+        window.addLocation = async function(){
+            const name = document.getElementById('new-location-input').value.trim();
+            if(!name) return;
+            await supabase.from('locations').insert({name});
+            document.getElementById('new-location-input').value='';
+            fetchAllData();
+        }
+        window.deleteLocation = async function(id){
+            if(!confirm('Eliminar localidad?')) return;
+            await supabase.from('locations').delete().eq('id',id);
+            fetchAllData();
+        }
+
+        // --- CRUD Categorías ---
+        window.addCategory = async function(){
+            const name = document.getElementById('new-category-input').value.trim();
+            if(!name) return;
+            await supabase.from('categories').insert({name});
+            document.getElementById('new-category-input').value='';
+            fetchAllData();
+        }
+        window.deleteCategory = async function(id){
+            if(!confirm('Eliminar categoría?')) return;
+            await supabase.from('categories').delete().eq('id',id);
+            fetchAllData();
+        }
+
+        // --- CRUD Promociones ---
+        window.showPromoModal = function(promoId=null){
+            const isEditing = promoId!==null;
+            const promo = appState.promotions[promoId]||{};
+            const categoryOptions = Object.keys(appState.categories).map(id=>`<option value="${id}" ${promo.categoryId===id?'selected':''}>${appState.categories[id]}</option>`).join('');
+
+            const html = `
+                <h3 class="text-xl font-bold mb-4">${isEditing?'Editar Promoción':'Nueva Promoción'}</h3>
+                <form id="promo-form" class="space-y-4">
+                    <div><label class="block text-sm font-medium">Nombre</label><input type="text" id="promo-name" value="${promo.name||''}" required class="w-full p-2 border rounded"></div>
+                    <div><label class="block text-sm font-medium">Precio Original</label><input type="number" id="promo-original-price" value="${promo.originalPrice||''}" class="w-full p-2 border rounded"></div>
+                    <div><label class="block text-sm font-medium">Precio Final</label><input type="number" id="promo-price" value="${promo.price||''}" required class="w-full p-2 border rounded"></div>
+                    <div><label class="block text-sm font-medium">Stock</label><input type="number" id="promo-stock" value="${promo.stock||0}" required class="w-full p-2 border rounded"></div>
+                    <div><label class="block text-sm font-medium">Categoría</label>
+                        <select id="promo-category" class="w-full p-2 border rounded"><option value="">Sin Categoría</option>${categoryOptions}</select>
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">${isEditing?'Guardar':'Crear'}</button>
+                    </div>
+                </form>
+            `;
+            showModal(html);
+            document.getElementById('promo-form').onsubmit = async e=>{
+                e.preventDefault();
+                const name = document.getElementById('promo-name').value.trim();
+                const price = parseFloat(document.getElementById('promo-price').value);
+                const stock = parseInt(document.getElementById('promo-stock').value,10);
+                const originalPrice = document.getElementById('promo-original-price').value?parseFloat(document.getElementById('promo-original-price').value):null;
+                const categoryId = document.getElementById('promo-category').value||null;
+
+                if(!name||isNaN(price)||isNaN(stock)){ alert('Completa todos los campos obligatorios'); return; }
+                if(originalPrice!==null && price>originalPrice){ alert('El precio final no puede ser mayor que el original'); return; }
+
+                if(isEditing){
+                    await supabase.from('promotions').update({name,price,stock,originalPrice,categoryId}).eq('id',promoId);
+                }else{
+                    await supabase.from('promotions').insert({name,price,stock,originalPrice,categoryId});
+                }
+                closeModal();
+                fetchAllData();
+            }
+        }
+        window.deletePromo = async function(id){ if(!confirm('Eliminar promoción?')) return; await supabase.from('promotions').delete().eq('id',id); fetchAllData(); }
+
+        // --- CRUD Pedidos Completo con productos ---
+        window.showOrderModal = async function(orderId=null){
+            const isEditing = orderId!==null;
+            let order = isEditing?appState.orders[orderId]:{clientName:'',locationId:'',status:'Pendiente',total:0,products:[]};
+            let productsList = [...order.products];
+
+            const locationOptions = Object.keys(appState.locations).map(id=>`<option value="${id}" ${order.locationId===id?'selected':''}>${appState.locations[id]}</option>`).join('');
+            const promoOptions = Object.values(appState.promotions).map(p=>`<option value="${p.id}">${p.name} - $${p.price.toFixed(2)}</option>`).join('');
+
+            const html = `
+                <h3 class="text-xl font-bold mb-4">${isEditing?'Editar Pedido':'Nuevo Pedido'}</h3>
+                <form id="order-form" class="space-y-4">
+                    <div><label class="block text-sm font-medium">Cliente</label><input type="text" id="order-client" value="${order.clientName}" required class="w-full p-2 border rounded"></div>
+                    <div><label class="block text-sm font-medium">Localidad</label><select id="order-location" class="w-full p-2 border rounded">${locationOptions}</select></div>
+
+                    <div>
+                        <label class="block text-sm font-medium">Productos</label>
+                        <div class="flex space-x-2 mb-2">
+                            <select id="product-select" class="flex-grow p-2 border rounded">${promoOptions}</select>
+                            <input type="number" id="product-quantity" placeholder="Cantidad" class="w-24 p-2 border rounded">
+                            <button type="button" id="add-product-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Agregar</button>
+                        </div>
+                        <ul id="products-list" class="space-y-1"></ul>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <p>Total: $<span id="order-total">${order.total.toFixed(2)}</span></p>
+                        <div class="flex space-x-2 mt-2">
+                            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Cancelar</button>
+                            <button type="submit" class="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white">${isEditing?'Guardar':'Crear'}</button>
+                        </div>
+                    </div>
+                </form>
+            `;
+            showModal(html);
+
+            function renderProducts(){
+                const list = document.getElementById('products-list');
+                list.innerHTML='';
+                let total=0;
+                productsList.forEach((item,i)=>{
+                    const promo = appState.promotions[item.promoId];
+                    const subtotal = promo.price*item.quantity;
+                    total+=subtotal;
+                    const li = document.createElement('li');
+                    li.className='flex justify-between items-center p-2 rounded bg-gray-50 hover:bg-gray-100';
+                    li.innerHTML=`<span>${promo.name} x ${item.quantity} - $${subtotal.toFixed(2)}</span>
+                                  <button onclick="productsList.splice(${i},1); renderProducts();" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
+                    list.appendChild(li);
+                });
+                document.getElementById('order-total').innerText = total.toFixed(2);
+            }
+
+            renderProducts();
+
+            document.getElementById('add-product-btn').onclick = ()=>{
+                const promoId = document.getElementById('product-select').value;
+                const quantity = parseInt(document.getElementById('product-quantity').value,10);
+                if(!promoId||isNaN(quantity)||quantity<1) return;
+                productsList.push({promoId,quantity});
+                document.getElementById('product-quantity').value='';
+                renderProducts();
+            }
+
+            document.getElementById('order-form').onsubmit=async e=>{
+                e.preventDefault();
+                const clientName = document.getElementById('order-client').value.trim();
+                const locationId = document.getElementById('order-location').value;
+                if(!clientName||!locationId||productsList.length===0){ alert('Completa todos los campos'); return; }
+                const total = productsList.reduce((acc,item)=>acc+(appState.promotions[item.promoId].price*item.quantity),0);
+
+                if(isEditing){
+                    await supabase.from('orders').update({clientName,locationId,total,products:productsList}).eq('id',orderId);
+                }else{
+                    await supabase.from('orders').insert({clientName,locationId,total,status:'Pendiente',products:productsList});
+                }
+                closeModal();
+                fetchAllData();
+            }
+        }
+
+        window.deleteOrder = async function(id){
+            if(!confirm('Eliminar pedido?')) return;
+            await supabase.from('orders').delete().eq('id',id);
+            fetchAllData();
+        }
+
+        window.toggleOrderStatus = async function(id,status){
+            const newStatus = status==='Pendiente'?'Entregado':'Pendiente';
+            await supabase.from('orders').update({status:newStatus}).eq('id',id);
+            fetchAllData();
+        }
+
+    </script>
 </body>
 </html>
+
+
 
 
 
