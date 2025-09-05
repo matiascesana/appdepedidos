@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -77,9 +78,14 @@
             promotions: `
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">Catálogo de Promociones</h2>
-                    <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
-                        <i class="fas fa-plus mr-2"></i>Nueva Promoción
-                    </button>
+                    <div class="space-x-2">
+                        <button onclick="exportPromotionsToPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-md">
+                            <i class="fas fa-file-pdf mr-2"></i>Exportar a PDF
+                        </button>
+                        <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Nueva Promoción
+                        </button>
+                    </div>
                 </div>
                 <div id="promotions-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
             `,
@@ -311,10 +317,7 @@
                 showStatusMessage('Error crítico al configurar la base de datos. Verifique la consola de Supabase.', true);
             }
         }
-
-        // MODIFICACIÓN: Se elimina el listener de autenticación
         
-        // MODIFICACIÓN: La aplicación se carga directamente sin verificar sesión
         (async () => {
             showLoading(true, 'Iniciando aplicación...');
             try {
@@ -752,7 +755,6 @@
             }
         };
         
-        // FIX: CÓDIGO CORREGIDO PARA PRESERVAR CAMPOS DEL FORMULARIO
         function renderOrderModalContent() {
             const order = appState.selectedOrder;
             const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.location_id === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
@@ -944,7 +946,7 @@
         window.deleteOrder = async function(orderId) {
             showModal(`
                 <h3 class="font-bold text-xl text-red-600 mb-2">Confirmar Eliminación</h3>
-                <p class="text-gray-700 mb-4">¿Estás seguro de que quieres eliminar este pedido y todos sus productos?</p>
+                <p class="text-gray-700 mb-4">¿Estás seguro de que quieres eliminar este pedido y devolver todos sus productos al stock?</p>
                 <div class="flex justify-end space-x-2">
                     <button onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
                     <button onclick="confirmDeleteOrder('${orderId}')" class="bg-red-500 text-white px-4 py-2 rounded-lg">Eliminar</button>
@@ -952,20 +954,89 @@
             `);
         };
 
+        // NEW: Función para confirmar la eliminación y devolver el stock
         window.confirmDeleteOrder = async function(orderId) {
-            showLoading(true, 'Eliminando pedido...');
+            showLoading(true, 'Eliminando pedido y devolviendo stock...');
             try {
-                const { error } = await supabase.from('orders').delete().eq('id', orderId);
-                if (error) throw error;
+                // Paso 1: Obtener los productos del pedido
+                const { data: orderProducts, error: fetchError } = await supabase
+                    .from('order_products')
+                    .select('*')
+                    .eq('order_id', orderId);
+
+                if (fetchError) throw fetchError;
+
+                // Paso 2: Devolver el stock de cada producto
+                for (const product of orderProducts) {
+                    const { data: promo, error: fetchPromoError } = await supabase
+                        .from('promotions')
+                        .select('stock')
+                        .eq('id', product.promo_id)
+                        .single();
+                    
+                    if (fetchPromoError) throw fetchPromoError;
+
+                    const newStock = promo.stock + product.quantity;
+                    const { error: updateError } = await supabase
+                        .from('promotions')
+                        .update({ stock: newStock })
+                        .eq('id', product.promo_id);
+                        
+                    if (updateError) throw updateError;
+                }
+
+                // Paso 3: Eliminar el pedido
+                const { error: deleteError } = await supabase.from('orders').delete().eq('id', orderId);
+                if (deleteError) throw deleteError;
+
                 closeModal();
-                showStatusMessage('Pedido eliminado con éxito.');
+                showStatusMessage('Pedido eliminado y stock devuelto con éxito.');
+
             } catch (error) {
                 console.error("Error al eliminar el pedido:", error.message);
                 showStatusMessage('Error al eliminar el pedido. Revisa la consola.', true);
             } finally {
                 await fetchOrders();
+                await fetchPromotions(); // Asegurar que el stock se actualice en la vista
                 setTimeout(() => showLoading(false), 2000);
             }
+        };
+
+        // NEW: Función para exportar las promociones a PDF
+        window.exportPromotionsToPDF = async function() {
+            showLoading(true, 'Generando PDF...');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const promotionsArray = Object.values(appState.promotions).sort((a, b) => a.name.localeCompare(b.name));
+
+            const tableData = promotionsArray.map(promo => {
+                const categoryName = appState.categories[promo.category_id] || 'Sin Categoría';
+                return [
+                    promo.name,
+                    `$${promo.price.toFixed(2)}`,
+                    promo.stock,
+                    categoryName
+                ];
+            });
+
+            doc.text('Listado de Promociones', 14, 20);
+
+            doc.autoTable({
+                head: [['Nombre', 'Precio', 'Stock', 'Categoría']],
+                body: tableData,
+                startY: 30,
+                headStyles: { fillColor: [30, 144, 255] },
+                didDrawPage: function (data) {
+                    doc.text("Página " + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+                }
+            });
+
+            doc.save('promociones.pdf');
+            
+            showLoading(false);
+            showStatusMessage('PDF generado con éxito.');
         };
     </script>
 </body>
