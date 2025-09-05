@@ -1,342 +1,994 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>App de Pedidos</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Negocio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .loading-overlay {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 flex flex-col h-screen">
 
-<div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-4">App de Pedidos</h1>
-    <div class="mb-4">
-        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2 tab-btn" data-tab="promotions">Promociones</button>
-        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2 tab-btn" data-tab="orders">Pedidos</button>
-        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2 tab-btn" data-tab="locations">Localidades</button>
-        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg tab-btn" data-tab="categories">Categorías</button>
+    <div id="loading-overlay" class="fixed inset-0 flex flex-col items-center justify-center loading-overlay z-50">
+        <div id="spinner" class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p id="status-message" class="mt-4 text-gray-700 font-medium">Iniciando...</p>
     </div>
 
-    <!-- Tabs -->
-    <div id="promotions-tab" class="tab-content">
-        <div class="flex justify-between mb-2">
-            <h2 class="text-xl font-bold">Promociones</h2>
-            <button id="add-promo-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Nueva Promoción</button>
+    <div id="auth-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gray-100 p-4 z-40 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">Gestor de Negocio</h2>
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label for="email-input" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" id="email-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="password-input" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="password-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                </div>
+                <button type="button" id="login-btn" class="w-full bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-bold">
+                    Iniciar Sesión
+                </button>
+                <div class="text-center mt-4">
+                    <p class="text-sm text-gray-600">¿No tienes una cuenta?</p>
+                    <button type="button" id="register-btn" class="text-blue-600 font-bold hover:underline transition-colors mt-1">
+                        Regístrate
+                    </button>
+                </div>
+            </form>
+            <p id="auth-error-message" class="text-red-500 text-sm mt-4 text-center hidden"></p>
         </div>
-        <ul id="promotions-list" class="space-y-2"></ul>
     </div>
 
-    <div id="orders-tab" class="tab-content hidden">
-        <div class="flex justify-between mb-2">
-            <h2 class="text-xl font-bold">Pedidos</h2>
-            <button id="add-order-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Nuevo Pedido</button>
-        </div>
-        <ul id="orders-list" class="space-y-2"></ul>
-        <div class="mt-4 flex space-x-4">
-            <div>Total General: <span id="total-general">$0.00</span></div>
-            <div>Total Entregados: <span id="total-delivered">$0.00</span></div>
-            <div>Total Pendientes: <span id="total-pending">$0.00</span></div>
+    <div id="app-container" class="flex flex-col flex-grow hidden">
+        <header class="bg-white shadow-md p-4 flex items-center justify-between z-10">
+            <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
+            <div id="auth-status" class="text-sm text-gray-500 flex items-center space-x-2">
+                <span id="user-name" class="font-medium"></span>
+                <button onclick="signOutUser()" class="text-red-500 hover:text-red-700 transition-colors text-lg" title="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+            <nav id="nav-tabs" class="flex space-x-2">
+                <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
+                <button onclick="navigate('orders')" id="tab-orders" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Pedidos</button>
+                <button onclick="navigate('locations')" id="tab-locations" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Localidades</button>
+                <button onclick="navigate('categories')" id="tab-categories" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Categorías</button>
+            </nav>
+        </header>
+
+        <main id="main-content" class="p-4 flex-grow overflow-y-auto">
+        </main>
+    </div>
+
+    <div id="modal-container" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay">
+        <div id="modal-content" class="bg-white rounded-lg shadow-lg p-6 w-11/12 md:w-1/3">
         </div>
     </div>
 
-    <div id="locations-tab" class="tab-content hidden">
-        <div class="flex mb-2">
-            <input type="text" id="new-location-input" placeholder="Nueva localidad" class="flex-grow p-2 border rounded-lg mr-2">
-            <button id="add-location-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Agregar</button>
-        </div>
-        <ul id="locations-list" class="space-y-2"></ul>
-    </div>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    <div id="categories-tab" class="tab-content hidden">
-        <div class="flex mb-2">
-            <input type="text" id="new-category-input" placeholder="Nueva categoría" class="flex-grow p-2 border rounded-lg mr-2">
-            <button id="add-category-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Agregar</button>
-        </div>
-        <ul id="categories-list" class="space-y-2"></ul>
-    </div>
-</div>
+        // Reemplaza con tus credenciales de Supabase
+        const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-<!-- Modal -->
-<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white p-6 rounded-lg w-96 max-w-full relative">
-        <button onclick="closeModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
-        <div id="modal-content"></div>
-    </div>
-</div>
+        // Global app state
+        let appState = {
+            userId: null,
+            userName: null,
+            currentView: 'promotions',
+            promotions: {},
+            categories: {},
+            locations: {},
+            orders: {},
+            selectedOrder: null,
+            orderProducts: []
+        };
+        
+        // --- Utility Functions ---
+        const viewTemplates = {
+            promotions: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Catálogo de Promociones</h2>
+                    <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                        <i class="fas fa-plus mr-2"></i>Nueva Promoción
+                    </button>
+                </div>
+                <div id="promotions-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            `,
+            orders: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Pedidos</h2>
+                    <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Pedido
+                    </button>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md mb-4 flex justify-around flex-wrap text-center">
+                    <div>
+                        <p class="text-sm text-gray-500">Total General</p>
+                        <p id="total-general" class="text-xl font-bold text-blue-600">$0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Entregados</p>
+                        <p id="total-delivered" class="text-xl font-bold text-green-600">$0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Pendientes</p>
+                        <p id="total-pending" class="text-xl font-bold text-red-600">$0.00</p>
+                    </div>
+                </div>
+                <div id="orders-list" class="space-y-4"></div>
+            `,
+            locations: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Gestión de Localidades</h2>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex mb-4">
+                        <input type="text" id="new-location-input" placeholder="Nombre de la nueva localidad" class="flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="addLocation()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
+                    </div>
+                    <ul id="locations-list" class="space-y-2"></ul>
+                </div>
+            `,
+            categories: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Gestión de Categorías</h2>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex mb-4">
+                        <input type="text" id="new-category-input" placeholder="Nombre de la nueva categoría" class="flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="addCategory()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
+                    </div>
+                    <ul id="categories-list" class="space-y-2"></ul>
+                </div>
+            `
+        };
 
-<script>
-const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        window.showLoading = function(show, message = 'Cargando...') {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const appContainer = document.getElementById('app-container');
+            const statusMessage = document.getElementById('status-message');
+            const spinner = document.getElementById('spinner');
 
-const appState = {
-    promotions: {},
-    orders: {},
-    locations: {},
-    categories: {},
-    orderProducts: [],
-    selectedOrder: null
-};
+            loadingOverlay.classList.toggle('hidden', !show);
+            appContainer.classList.toggle('hidden', show);
+            statusMessage.innerText = message;
+            spinner.classList.toggle('hidden', !show);
+            statusMessage.classList.remove('text-red-600');
+            statusMessage.classList.add('text-gray-700');
+        };
 
-// --- UI Tabs ---
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
-        document.getElementById(`${tab}-tab`).classList.remove('hidden');
-    });
-});
+        window.showStatusMessage = function(message, isError = false) {
+            const statusMessage = document.getElementById('status-message');
+            const spinner = document.getElementById('spinner');
+            statusMessage.innerText = message;
+            spinner.classList.add('hidden');
+            if (isError) {
+                statusMessage.classList.remove('text-gray-700');
+                statusMessage.classList.add('text-red-600');
+            } else {
+                statusMessage.classList.remove('text-red-600');
+                statusMessage.classList.add('text-gray-700');
+            }
+        };
 
-// --- Modal ---
-function showModal(html) {
-    document.getElementById('modal-content').innerHTML = html;
-    document.getElementById('modal').classList.remove('hidden');
-}
-function closeModal() {
-    document.getElementById('modal').classList.add('hidden');
-}
+        window.showModal = function(contentHtml) {
+            const modalContainer = document.getElementById('modal-container');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = contentHtml;
+            modalContainer.classList.remove('hidden');
+        };
 
-// --- Fetch all data ---
-async function fetchAllData() {
-    // Promociones
-    let { data: promotions } = await supabase.from('promotions').select('*');
-    appState.promotions = {};
-    promotions.forEach(p => appState.promotions[p.id] = p);
+        window.closeModal = function() {
+            document.getElementById('modal-container').classList.add('hidden');
+        };
 
-    // Pedidos
-    let { data: orders } = await supabase.from('orders').select('*');
-    appState.orders = {};
-    orders.forEach(o => appState.orders[o.id] = o);
+        // --- Navigation ---
+        window.navigate = function(view) {
+            appState.currentView = view;
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = viewTemplates[view];
+            
+            // Highlight active tab
+            document.querySelectorAll('#nav-tabs button').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white');
+                btn.classList.add('text-gray-700', 'hover:bg-gray-200');
+            });
+            document.getElementById(`tab-${view}`).classList.remove('text-gray-700', 'hover:bg-gray-200');
+            document.getElementById(`tab-${view}`).classList.add('bg-blue-500', 'text-white');
 
-    // Localidades
-    let { data: locations } = await supabase.from('locations').select('*');
-    appState.locations = {};
-    locations.forEach(l => appState.locations[l.id] = l.name);
+            renderView();
+        };
 
-    // Categorías
-    let { data: categories } = await supabase.from('categories').select('*');
-    appState.categories = {};
-    categories.forEach(c => appState.categories[c.id] = c.name);
+        function renderView() {
+            switch(appState.currentView) {
+                case 'promotions':
+                    renderPromotions();
+                    break;
+                case 'orders':
+                    renderOrders();
+                    break;
+                case 'locations':
+                    renderLocations();
+                    break;
+                case 'categories':
+                    renderCategories();
+                    break;
+            }
+        }
 
-    renderPromotions();
-    renderOrders();
-    renderLocations();
-    renderCategories();
-}
+        // --- Authentication ---
+        const authForm = document.getElementById('auth-form');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const authErrorMessage = document.getElementById('auth-error-message');
 
-// --- Render functions ---
-function renderPromotions() {
-    const list = document.getElementById('promotions-list');
-    list.innerHTML = '';
-    Object.values(appState.promotions).forEach(p => {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
-        li.innerHTML = `
-            <div>
-                <h3 class="font-bold">${p.name}</h3>
-                <p>Precio Original: $${p.original_price || 0}</p>
-                <p>Precio: $${p.price || 0}</p>
-            </div>
-            <div class="flex space-x-2">
-                <button onclick="showPromotionModal('${p.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded">Editar</button>
-                <button onclick="deletePromotion('${p.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Eliminar</button>
-            </div>
-        `;
-        list.appendChild(li);
-    });
-}
+        function showAuthError(message) {
+            authErrorMessage.innerText = message;
+            authErrorMessage.classList.remove('hidden');
+        }
 
-function renderOrders() {
-    const list = document.getElementById('orders-list');
-    list.innerHTML = '';
-    let totalGeneral = 0, totalDelivered = 0, totalPending = 0;
-    Object.values(appState.orders).forEach(o => {
-        totalGeneral += o.total || 0;
-        if(o.status==='Entregado') totalDelivered+=o.total;
-        else totalPending+=o.total;
-        const li = document.createElement('li');
-        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
-        li.innerHTML = `
-            <div>
-                <h3 class="font-bold">#${o.id}</h3>
-                <p>Cliente: ${o.client_name}</p>
-                <p>Localidad: ${appState.locations[o.location_id]||'Desconocida'}</p>
-                <p>Status: ${o.status}</p>
-            </div>
-            <div class="flex space-x-2">
-                <button onclick="showOrderModal('${o.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded">Ver</button>
-                <button onclick="toggleOrderStatus('${o.id}')" class="bg-gray-500 text-white px-2 py-1 rounded">${o.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
-                <button onclick="deleteOrder('${o.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Eliminar</button>
-            </div>
-        `;
-        list.appendChild(li);
-    });
-    document.getElementById('total-general').innerText = `$${totalGeneral}`;
-    document.getElementById('total-delivered').innerText = `$${totalDelivered}`;
-    document.getElementById('total-pending').innerText = `$${totalPending}`;
-}
+        function hideAuthError() {
+            authErrorMessage.classList.add('hidden');
+        }
+        
+        loginBtn.addEventListener('click', async () => {
+            hideAuthError();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            if (!email || !password) {
+                showAuthError("Por favor, ingresa tu correo y contraseña.");
+                return;
+            }
+            try {
+                showLoading(true, 'Iniciando sesión...');
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error.message);
+                let message = "Error al iniciar sesión. Intenta de nuevo.";
+                if (error.message.includes('Invalid login credentials')) {
+                    message = "Correo o contraseña incorrectos.";
+                }
+                showStatusMessage(message, true);
+                setTimeout(() => showLoading(false), 3000);
+            }
+        });
 
-function renderLocations() {
-    const list = document.getElementById('locations-list');
-    list.innerHTML = '';
-    Object.keys(appState.locations).forEach(id => {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
-        li.innerHTML = `<span>${appState.locations[id]}</span><button onclick="deleteLocation('${id}')" class="text-red-500"><i class="fas fa-trash"></i></button>`;
-        list.appendChild(li);
-    });
-}
+        registerBtn.addEventListener('click', async () => {
+            hideAuthError();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            if (!email || !password) {
+                showAuthError("Por favor, ingresa un correo y contraseña para registrarte.");
+                return;
+            }
+            try {
+                showLoading(true, 'Registrando...');
+                const { error } = await supabase.auth.signUp({ email, password });
+                if (error) throw error;
+                showStatusMessage('Registro exitoso. Revisa tu correo para confirmar.');
+                setTimeout(() => showLoading(false), 3000);
+            } catch (error) {
+                console.error("Error al registrar:", error.message);
+                let message = "Error al registrar. Intenta de nuevo.";
+                if (error.message.includes('Email already registered')) {
+                    message = "Este correo ya está registrado.";
+                }
+                showStatusMessage(message, true);
+                setTimeout(() => showLoading(false), 3000);
+            }
+        });
 
-function renderCategories() {
-    const list = document.getElementById('categories-list');
-    list.innerHTML = '';
-    Object.keys(appState.categories).forEach(id => {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
-        li.innerHTML = `<span>${appState.categories[id]}</span><button onclick="deleteCategory('${id}')" class="text-red-500"><i class="fas fa-trash"></i></button>`;
-        list.appendChild(li);
-    });
-}
+        window.signOutUser = async function() {
+            showLoading(true, 'Cerrando sesión...');
+            const { error } = await supabase.auth.signOut();
+            if (error) console.error("Error al cerrar sesión:", error.message);
+            showLoading(false);
+        };
+        
+        supabase.auth.onAuthStateChange((event, session) => {
+            const authScreen = document.getElementById('auth-screen');
+            const appContainer = document.getElementById('app-container');
+            
+            if (session) {
+                appState.userId = session.user.id;
+                appState.userName = session.user.email;
+                document.getElementById('user-name').innerText = appState.userName;
+                authScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                listenForData();
+                navigate(appState.currentView);
+            } else {
+                appState.userId = null;
+                appState.userName = null;
+                authScreen.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                showLoading(false);
+            }
+        });
 
-// --- CRUD Promotions ---
-document.getElementById('add-promo-btn').addEventListener('click', ()=>showPromotionModal());
-async function showPromotionModal(promoId=null){
-    const promo = promoId ? appState.promotions[promoId]: {};
-    let html = `
-        <h3 class="text-xl font-bold mb-4">${promoId?'Editar':'Nueva'} Promoción</h3>
-        <div class="space-y-2">
-            <input id="promo-name" placeholder="Nombre" class="w-full p-2 border rounded" value="${promo.name||''}">
-            <input id="promo-original-price" type="number" placeholder="Precio Original" class="w-full p-2 border rounded" value="${promo.original_price||''}">
-            <input id="promo-price" type="number" placeholder="Precio" class="w-full p-2 border rounded" value="${promo.price||''}">
-            <input id="promo-image" type="file" accept="image/*" class="w-full p-2 border rounded">
-            <div class="flex justify-end space-x-2">
-                <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
-                <button onclick="savePromotion('${promoId||''}')" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar</button>
-            </div>
-        </div>
-    `;
-    showModal(html);
-}
+        // --- Data Fetching and Real-time Listeners ---
+        function listenForData() {
+            if (!appState.userId) return;
 
-async function savePromotion(promoId){
-    const name = document.getElementById('promo-name').value;
-    const price = parseFloat(document.getElementById('promo-price').value)||0;
-    const original_price = parseFloat(document.getElementById('promo-original-price').value)||0;
-    const file = document.getElementById('promo-image').files[0];
+            // Promotions Listener
+            supabase.from('promotions').on('*', payload => {
+                fetchPromotions();
+            }).subscribe();
 
-    if(!name) return alert('Nombre obligatorio');
+            // Categories Listener
+            supabase.from('categories').on('*', payload => {
+                fetchCategories();
+            }).subscribe();
 
-    let imageUrl = '';
-    if(file){
-        const { data, error } = await supabase.storage.from('images').upload(`promotions/${Date.now()}-${file.name}`, file);
-        if(error) return alert(error.message);
-        imageUrl = supabase.storage.from('images').getPublicUrl(data.path).publicUrl;
-    }
+            // Locations Listener
+            supabase.from('locations').on('*', payload => {
+                fetchLocations();
+            }).subscribe();
 
-    const payload = { name, price, original_price };
-    if(imageUrl) payload.image = imageUrl;
+            // Orders Listener
+            supabase.from('orders').on('*', payload => {
+                fetchOrders();
+            }).subscribe();
 
-    const { error } = promoId ?
-        await supabase.from('promotions').update(payload).eq('id',promoId) :
-        await supabase.from('promotions').insert([payload]);
+            fetchPromotions();
+            fetchCategories();
+            fetchLocations();
+            fetchOrders();
+            showLoading(false);
+        }
 
-    if(error) return alert(error.message);
-    closeModal();
-    fetchAllData();
-}
+        async function fetchPromotions() {
+            const { data, error } = await supabase.from('promotions').select('*');
+            if (error) {
+                console.error("Error fetching promotions:", error);
+                return;
+            }
+            appState.promotions = data.reduce((acc, promo) => {
+                acc[promo.id] = promo;
+                return acc;
+            }, {});
+            renderView();
+        }
 
-async function deletePromotion(id){
-    if(!confirm('Eliminar promoción?')) return;
-    await supabase.from('promotions').delete().eq('id',id);
-    fetchAllData();
-}
+        async function fetchCategories() {
+            const { data, error } = await supabase.from('categories').select('*');
+            if (error) {
+                console.error("Error fetching categories:", error);
+                return;
+            }
+            appState.categories = data.reduce((acc, cat) => {
+                acc[cat.id] = cat.name;
+                return acc;
+            }, {});
+            renderView();
+        }
 
-// --- CRUD Orders ---
-document.getElementById('add-order-btn').addEventListener('click', ()=>showOrderModal());
-async function showOrderModal(orderId=null){
-    const order = orderId ? appState.orders[orderId] : {};
-    let html = `
-        <h3 class="text-xl font-bold mb-4">${orderId?'Editar':'Nuevo'} Pedido</h3>
-        <div class="space-y-2">
-            <input id="order-client" placeholder="Cliente" class="w-full p-2 border rounded" value="${order.client_name||''}">
-            <select id="order-location" class="w-full p-2 border rounded mb-2">
-                <option value="">Seleccione localidad</option>
-                ${Object.keys(appState.locations).map(id=>`<option value="${id}" ${order.location_id==id?'selected':''}>${appState.locations[id]}</option>`).join('')}
-            </select>
-            <div class="flex justify-end space-x-2">
-                <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
-                <button onclick="saveOrder('${orderId||''}')" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar</button>
-            </div>
-        </div>
-    `;
-    showModal(html);
-}
+        async function fetchLocations() {
+            const { data, error } = await supabase.from('locations').select('*');
+            if (error) {
+                console.error("Error fetching locations:", error);
+                return;
+            }
+            appState.locations = data.reduce((acc, loc) => {
+                acc[loc.id] = loc.name;
+                return acc;
+            }, {});
+            renderView();
+        }
+        
+        async function fetchOrders() {
+            const { data, error } = await supabase.from('orders').select('*');
+            if (error) {
+                console.error("Error fetching orders:", error);
+                return;
+            }
+            appState.orders = data.reduce((acc, order) => {
+                acc[order.id] = order;
+                return acc;
+            }, {});
+            renderView();
+        }
 
-async function saveOrder(orderId){
-    const client_name = document.getElementById('order-client').value;
-    const location_id = document.getElementById('order-location').value;
-    if(!client_name || !location_id) return alert('Todos los campos son obligatorios');
+        // --- Render Functions (Same as before) ---
+        function renderPromotions() {
+            const listContainer = document.getElementById('promotions-list');
+            if (!listContainer) return;
 
-    const payload = { client_name, location_id, status:'Pendiente', total:0 };
+            listContainer.innerHTML = '';
+            const promosByCategory = Object.values(appState.promotions).reduce((acc, promo) => {
+                const categoryId = promo.category_id || 'sin-categoria';
+                if (!acc[categoryId]) {
+                    acc[categoryId] = { name: appState.categories[categoryId] || 'Sin Categoría', promos: [] };
+                }
+                acc[categoryId].promos.push(promo);
+                return acc;
+            }, {});
 
-    const { error } = orderId ?
-        await supabase.from('orders').update(payload).eq('id',orderId) :
-        await supabase.from('orders').insert([payload]);
-    
-    if(error) return alert(error.message);
-    closeModal();
-    fetchAllData();
-}
+            for (const categoryId in promosByCategory) {
+                const category = promosByCategory[categoryId];
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'col-span-full mb-4';
+                categoryDiv.innerHTML = `<h3 class="text-lg font-bold text-blue-600">${category.name}</h3>`;
+                listContainer.appendChild(categoryDiv);
 
-async function toggleOrderStatus(orderId){
-    const order = appState.orders[orderId];
-    const newStatus = order.status==='Pendiente'?'Entregado':'Pendiente';
-    await supabase.from('orders').update({status:newStatus}).eq('id',orderId);
-    fetchAllData();
-}
+                category.promos.forEach(promo => {
+                    const promoCard = document.createElement('div');
+                    promoCard.className = 'bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center transition-transform transform hover:scale-105';
+                    
+                    const promoImage = promo.image || 'https://placehold.co/150x150/d1d5db/374151?text=No+Image';
+                    promoCard.innerHTML = `
+                        <img src="${promoImage}" alt="${promo.name}" class="w-32 h-32 object-cover rounded-lg mb-2">
+                        <div class="flex-grow w-full">
+                            <h3 class="text-lg font-bold text-gray-800">${promo.name}</h3>
+                            <p class="text-sm text-gray-600">${promo.stock} en stock</p>
+                            ${promo.original_price ? `<p class="text-sm text-red-500 line-through">$${promo.original_price.toFixed(2)}</p>` : ''}
+                            <p class="text-xl font-bold text-green-600">$${promo.price.toFixed(2)}</p>
+                        </div>
+                        <div class="mt-4 flex space-x-2 w-full justify-center">
+                            <button onclick="showPromoModal('${promo.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded-lg hover:bg-yellow-600 transition-colors text-sm">Editar</button>
+                            <button onclick="deletePromo('${promo.id}')" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors text-sm">Eliminar</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(promoCard);
+                });
+            }
+        }
 
-async function deleteOrder(orderId){
-    if(!confirm('Eliminar pedido?')) return;
-    await supabase.from('orders').delete().eq('id',orderId);
-    fetchAllData();
-}
+        function renderOrders() {
+            const listContainer = document.getElementById('orders-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            let totalGeneral = 0, totalDelivered = 0, totalPending = 0;
 
-// --- CRUD Locations ---
-document.getElementById('add-location-btn').addEventListener('click', addLocation);
-async function addLocation(){
-    const name = document.getElementById('new-location-input').value.trim();
-    if(!name) return;
-    await supabase.from('locations').insert([{name}]);
-    document.getElementById('new-location-input').value='';
-    fetchAllData();
-}
-async function deleteLocation(id){
-    await supabase.from('locations').delete().eq('id',id);
-    fetchAllData();
-}
+            const sortedOrders = Object.values(appState.orders).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-// --- CRUD Categories ---
-document.getElementById('add-category-btn').addEventListener('click', addCategory);
-async function addCategory(){
-    const name = document.getElementById('new-category-input').value.trim();
-    if(!name) return;
-    await supabase.from('categories').insert([{name}]);
-    document.getElementById('new-category-input').value='';
-    fetchAllData();
-}
-async function deleteCategory(id){
-    await supabase.from('categories').delete().eq('id',id);
-    fetchAllData();
-}
+            sortedOrders.forEach(order => {
+                totalGeneral += order.total;
+                if (order.status === 'Entregado') totalDelivered += order.total;
+                else totalPending += order.total;
 
-// --- Inicialización ---
-fetchAllData();
-</script>
+                const orderCard = document.createElement('div');
+                orderCard.className = `bg-white p-4 rounded-lg shadow-md flex justify-between items-center transition-shadow hover:shadow-lg ${order.status === 'Entregado' ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`;
+                
+                const locationName = appState.locations[order.location_id] || 'Localidad desconocida';
+                const statusColor = order.status === 'Entregado' ? 'text-green-600' : 'text-red-600';
+                
+                orderCard.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="font-bold text-gray-800">Pedido #${order.id.substring(0, 6)}</h3>
+                        <p class="text-sm text-gray-600">Cliente: ${order.client_name}</p>
+                        <p class="text-sm text-gray-600">Localidad: ${locationName}</p>
+                        <p class="text-sm ${statusColor}">${order.status}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-blue-600">$${order.total.toFixed(2)}</p>
+                        <div class="mt-2 flex space-x-2">
+                            <button onclick="showOrderModal('${order.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-yellow-600 transition-colors">Ver</button>
+                            <button onclick="toggleOrderStatus('${order.id}', '${order.status}')" class="bg-gray-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-gray-600 transition-colors">${order.status === 'Pendiente' ? 'Marcar Entregado' : 'Marcar Pendiente'}</button>
+                            <button onclick="deleteOrder('${order.id}')" class="bg-red-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-red-600 transition-colors">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(orderCard);
+            });
+
+            document.getElementById('total-general').innerText = `$${totalGeneral.toFixed(2)}`;
+            document.getElementById('total-delivered').innerText = `$${totalDelivered.toFixed(2)}`;
+            document.getElementById('total-pending').innerText = `$${totalPending.toFixed(2)}`;
+        }
+
+        function renderLocations() {
+            const listContainer = document.getElementById('locations-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            const locationsArray = Object.keys(appState.locations).map(id => ({ id, name: appState.locations[id] }));
+            locationsArray.sort((a, b) => a.name.localeCompare(b.name));
+
+            locationsArray.forEach(location => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors';
+                li.innerHTML = `
+                    <span>${location.name}</span>
+                    <button onclick="deleteLocation('${location.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                listContainer.appendChild(li);
+            });
+        }
+
+        function renderCategories() {
+            const listContainer = document.getElementById('categories-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            const categoriesArray = Object.keys(appState.categories).map(id => ({ id, name: appState.categories[id] }));
+            categoriesArray.sort((a, b) => a.name.localeCompare(b.name));
+            
+            categoriesArray.forEach(category => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors';
+                li.innerHTML = `
+                    <span>${category.name}</span>
+                    <button onclick="deleteCategory('${category.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                listContainer.appendChild(li);
+            });
+        }
+        
+        // --- CRUD Operations ---
+
+        // Promotions
+        window.showPromoModal = async function(promoId = null) {
+            const isEditing = promoId !== null;
+            const promo = appState.promotions[promoId] || {};
+            const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*');
+            if (categoriesError) {
+                console.error('Error fetching categories:', categoriesError);
+                return;
+            }
+            const categoryOptions = categoriesData.map(cat => `<option value="${cat.id}" ${promo.category_id === cat.id ? 'selected' : ''}>${cat.name}</option>`).join('');
+
+            const modalHtml = `
+                <h3 class="text-xl font-bold mb-4">${isEditing ? 'Editar Promoción' : 'Nueva Promoción'}</h3>
+                <form id="promo-form" class="space-y-4">
+                    <div>
+                        <label for="promo-name" class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" id="promo-name" value="${promo.name || ''}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-original-price" class="block text-sm font-medium text-gray-700">Precio Original</label>
+                        <input type="number" id="promo-original-price" value="${promo.original_price || ''}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-price" class="block text-sm font-medium text-gray-700">Precio Final</label>
+                        <input type="number" id="promo-price" value="${promo.price || ''}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-stock" class="block text-sm font-medium text-gray-700">Stock</label>
+                        <input type="number" id="promo-stock" value="${promo.stock || 0}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="promo-category" class="block text-sm font-medium text-gray-700">Categoría</label>
+                        <select id="promo-category" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">Sin Categoría</option>
+                            ${categoryOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="promo-image" class="block text-sm font-medium text-gray-700">Imagen</label>
+                        <input type="file" id="promo-image" accept="image/*" class="mt-1 block w-full text-sm">
+                        ${promo.image ? `<img src="${promo.image}" class="mt-2 w-24 h-24 object-cover rounded-lg">` : ''}
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">${isEditing ? 'Guardar Cambios' : 'Crear Promoción'}</button>
+                    </div>
+                </form>
+            `;
+            showModal(modalHtml);
+
+            document.getElementById('promo-form').onsubmit = async (e) => {
+                e.preventDefault();
+                await savePromo(promoId);
+            };
+        };
+
+        window.savePromo = async function(promoId) {
+            showLoading(true, 'Guardando promoción...');
+            
+            const imageFile = document.getElementById('promo-image').files[0];
+
+            const name = document.getElementById('promo-name').value.trim();
+            const originalPriceInput = document.getElementById('promo-original-price').value;
+            const priceInput = document.getElementById('promo-price').value;
+            const stockInput = document.getElementById('promo-stock').value;
+            const categoryId = document.getElementById('promo-category').value || null;
+            let imageUrl = appState.promotions[promoId]?.image || null;
+
+            if (!name || !priceInput || !stockInput) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">Por favor, rellena todos los campos obligatorios.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
+
+            const originalPrice = originalPriceInput ? parseFloat(originalPriceInput) : null;
+            const price = parseFloat(priceInput);
+            const stock = parseInt(stockInput, 10);
+
+            if (isNaN(price) || isNaN(stock) || stock < 0) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">Por favor, introduce valores numéricos válidos para precio y stock.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
+
+            if (originalPrice !== null && price > originalPrice) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">El precio final no puede ser mayor que el precio original.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
+
+            try {
+                if (imageFile) {
+                    const filePath = `${appState.userId}/${Date.now()}_${imageFile.name}`;
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('promo_images')
+                        .upload(filePath, imageFile);
+                    if (uploadError) throw uploadError;
+                    const { data: publicUrl } = supabase.storage.from('promo_images').getPublicUrl(filePath);
+                    imageUrl = publicUrl.publicUrl;
+                }
+
+                const promoData = {
+                    name,
+                    original_price: originalPrice,
+                    price,
+                    stock,
+                    category_id: categoryId,
+                    image: imageUrl,
+                    user_id: appState.userId
+                };
+
+                if (promoId) {
+                    const { error } = await supabase.from('promotions').update(promoData).eq('id', promoId);
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabase.from('promotions').insert(promoData);
+                    if (error) throw error;
+                }
+                
+                closeModal();
+                showStatusMessage('Promoción guardada con éxito.');
+
+            } catch (error) {
+                console.error("Error al guardar promoción:", error.message);
+                showStatusMessage('Error al guardar promoción. Revisa la consola para más detalles.', true);
+            } finally {
+                await fetchPromotions();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+        window.deletePromo = async function(promoId) {
+            showModal(`
+                <h3 class="font-bold text-xl text-red-600 mb-2">Confirmar Eliminación</h3>
+                <p class="text-gray-700 mb-4">¿Estás seguro de que quieres eliminar esta promoción?</p>
+                <div class="flex justify-end space-x-2">
+                    <button onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                    <button onclick="confirmDeletePromo('${promoId}')" class="bg-red-500 text-white px-4 py-2 rounded-lg">Eliminar</button>
+                </div>
+            `);
+        };
+        
+        window.confirmDeletePromo = async function(promoId) {
+            showLoading(true, 'Eliminando promoción...');
+            try {
+                const { error } = await supabase.from('promotions').delete().eq('id', promoId);
+                if (error) throw error;
+                closeModal();
+                showStatusMessage('Promoción eliminada con éxito.');
+            } catch (error) {
+                console.error("Error deleting promotion:", error.message);
+                showStatusMessage('Error al eliminar promoción. Revisa la consola.', true);
+            } finally {
+                await fetchPromotions();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+        // Locations
+        window.addLocation = async function() {
+            const name = document.getElementById('new-location-input').value.trim();
+            if (!name) return;
+            try {
+                const { error } = await supabase.from('locations').insert({ name, user_id: appState.userId });
+                if (error) throw error;
+                document.getElementById('new-location-input').value = '';
+            } catch (e) {
+                console.error("Error adding location: ", e.message);
+            }
+        };
+
+        window.deleteLocation = async function(id) {
+            try {
+                const { error } = await supabase.from('locations').delete().eq('id', id);
+                if (error) throw error;
+            } catch (e) {
+                console.error("Error deleting location: ", e.message);
+            }
+        };
+
+        // Categories
+        window.addCategory = async function() {
+            const name = document.getElementById('new-category-input').value.trim();
+            if (!name) return;
+            try {
+                const { error } = await supabase.from('categories').insert({ name, user_id: appState.userId });
+                if (error) throw error;
+                document.getElementById('new-category-input').value = '';
+            } catch (e) {
+                console.error("Error adding category: ", e.message);
+            }
+        };
+
+        window.deleteCategory = async function(id) {
+            try {
+                const { error } = await supabase.from('categories').delete().eq('id', id);
+                if (error) throw error;
+            } catch (e) {
+                console.error("Error deleting category: ", e.message);
+            }
+        };
+
+        // Orders
+        window.showOrderModal = async function(orderId = null) {
+            if (orderId) {
+                showLoading(true, 'Cargando pedido...');
+                const { data: orderData, error: orderError } = await supabase.from('orders').select('*').eq('id', orderId).single();
+                if (orderError) {
+                    console.error("Error fetching order:", orderError);
+                    showStatusMessage('Error al cargar el pedido.', true);
+                    setTimeout(() => showLoading(false), 2000);
+                    return;
+                }
+                appState.selectedOrder = orderData;
+                
+                const { data: productsData, error: productsError } = await supabase.from('order_products').select('*').eq('order_id', orderId);
+                if (productsError) {
+                    console.error("Error fetching order products:", productsError);
+                    appState.orderProducts = [];
+                } else {
+                    appState.orderProducts = productsData;
+                }
+            } else {
+                appState.selectedOrder = {
+                    client_name: '',
+                    client_phone: '',
+                    location_id: '',
+                    total: 0,
+                    status: 'Pendiente'
+                };
+                appState.orderProducts = [];
+            }
+            
+            showLoading(false);
+            renderOrderModalContent();
+        };
+
+        function renderOrderModalContent() {
+            const order = appState.selectedOrder;
+            const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.location_id === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
+            const productOptions = Object.keys(appState.promotions).map(id => `<option value="${id}">${appState.promotions[id].name} - $${appState.promotions[id].price.toFixed(2)}</option>`).join('');
+            
+            const productListHtml = appState.orderProducts.map((item, index) => {
+                const promoName = appState.promotions[item.promo_id]?.name || 'Producto Desconocido';
+                return `
+                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded-lg mb-2">
+                        <span class="flex-grow">${item.quantity} x ${promoName}</span>
+                        <span>$${(item.quantity * item.price).toFixed(2)}</span>
+                        <button type="button" onclick="removeOrderProduct(${index})" class="ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            }).join('');
+
+            const modalHtml = `
+                <h3 class="text-xl font-bold mb-4">${order.id ? 'Ver Pedido' : 'Nuevo Pedido'}</h3>
+                <form id="order-form" class="space-y-4">
+                    <div>
+                        <label for="client-name" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                        <input type="text" id="client-name" value="${order.client_name}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="client-phone" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                        <input type="tel" id="client-phone" value="${order.client_phone}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="order-location" class="block text-sm font-medium text-gray-700">Localidad</label>
+                        <select id="order-location" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">Selecciona una localidad</option>
+                            ${locationOptions}
+                        </select>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="text-lg font-semibold mb-2">Productos</h4>
+                        <div id="order-products-list" class="max-h-48 overflow-y-auto mb-2">
+                            ${productListHtml}
+                        </div>
+                        <div class="flex items-end space-x-2">
+                            <div class="flex-grow">
+                                <label for="product-select" class="block text-sm font-medium text-gray-700">Añadir producto</label>
+                                <select id="product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                                    ${productOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="product-quantity" class="block text-sm font-medium text-gray-700">Cantidad</label>
+                                <input type="number" id="product-quantity" value="1" min="1" class="mt-1 w-20 p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <button type="button" onclick="addOrderProduct()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md flex-shrink-0">Añadir</button>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-gray-800">Total: $${appState.selectedOrder.total.toFixed(2)}</p>
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">${order.id ? 'Guardar Pedido' : 'Crear Pedido'}</button>
+                    </div>
+                </form>
+            `;
+            showModal(modalHtml);
+            
+            document.getElementById('order-form').onsubmit = async (e) => {
+                e.preventDefault();
+                await saveOrder(order.id);
+            };
+        };
+
+        window.addOrderProduct = function() {
+            const select = document.getElementById('product-select');
+            const quantityInput = document.getElementById('product-quantity');
+            const promoId = select.value;
+            const quantity = parseInt(quantityInput.value, 10);
+            
+            if (!promoId || quantity <= 0 || isNaN(quantity)) {
+                alert('Por favor, selecciona una promoción y una cantidad válida.');
+                return;
+            }
+
+            const promo = appState.promotions[promoId];
+            if (!promo) {
+                alert('Promoción no encontrada.');
+                return;
+            }
+
+            const existingItemIndex = appState.orderProducts.findIndex(item => item.promo_id === promoId);
+            if (existingItemIndex !== -1) {
+                appState.orderProducts[existingItemIndex].quantity += quantity;
+            } else {
+                appState.orderProducts.push({
+                    promo_id: promoId,
+                    quantity,
+                    price: promo.price
+                });
+            }
+
+            // Recalcular el total
+            appState.selectedOrder.total = appState.orderProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            renderOrderModalContent();
+        };
+
+        window.removeOrderProduct = function(index) {
+            appState.orderProducts.splice(index, 1);
+            appState.selectedOrder.total = appState.orderProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            renderOrderModalContent();
+        };
+
+        window.saveOrder = async function(orderId) {
+            showLoading(true, 'Guardando pedido...');
+            
+            const clientName = document.getElementById('client-name').value.trim();
+            const clientPhone = document.getElementById('client-phone').value.trim();
+            const locationId = document.getElementById('order-location').value;
+
+            if (!clientName || !locationId) {
+                showStatusMessage('Por favor, completa todos los campos obligatorios.', true);
+                setTimeout(() => showLoading(false), 2000);
+                return;
+            }
+
+            const orderData = {
+                client_name: clientName,
+                client_phone: clientPhone,
+                location_id: locationId,
+                total: appState.selectedOrder.total,
+                status: 'Pendiente',
+                user_id: appState.userId
+            };
+
+            try {
+                let orderResult;
+                if (orderId) {
+                    const { data, error } = await supabase.from('orders').update(orderData).eq('id', orderId).select();
+                    if (error) throw error;
+                    orderResult = data[0];
+                } else {
+                    const { data, error } = await supabase.from('orders').insert(orderData).select();
+                    if (error) throw error;
+                    orderResult = data[0];
+                }
+
+                // Guardar los productos de la orden en la tabla `order_products`
+                await supabase.from('order_products').delete().eq('order_id', orderResult.id); // Limpiar antiguos
+                if (appState.orderProducts.length > 0) {
+                    const productsWithOrderId = appState.orderProducts.map(p => ({ ...p, order_id: orderResult.id }));
+                    const { error } = await supabase.from('order_products').insert(productsWithOrderId);
+                    if (error) throw error;
+                }
+                
+                closeModal();
+                showStatusMessage('Pedido guardado con éxito.');
+
+            } catch (error) {
+                console.error("Error saving order:", error.message);
+                showStatusMessage('Error al guardar el pedido. Revisa la consola.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+        window.toggleOrderStatus = async function(orderId, currentStatus) {
+            showLoading(true, 'Actualizando estado...');
+            const newStatus = currentStatus === 'Entregado' ? 'Pendiente' : 'Entregado';
+            try {
+                const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+                if (error) throw error;
+                showStatusMessage('Estado actualizado con éxito.');
+            } catch (error) {
+                console.error("Error updating status:", error.message);
+                showStatusMessage('Error al actualizar el estado.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+        window.deleteOrder = async function(orderId) {
+            showLoading(true, 'Eliminando pedido...');
+            try {
+                // Supabase puede eliminar los productos de la orden si configuras una "cascada" en la base de datos
+                // Pero para mayor seguridad, los eliminamos primero
+                await supabase.from('order_products').delete().eq('order_id', orderId);
+                const { error } = await supabase.from('orders').delete().eq('id', orderId);
+                if (error) throw error;
+
+                showStatusMessage('Pedido eliminado con éxito.');
+            } catch (error) {
+                console.error("Error deleting order:", error.message);
+                showStatusMessage('Error al eliminar el pedido.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+    </script>
 </body>
 </html>
-
-
-
-
