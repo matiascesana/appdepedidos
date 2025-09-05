@@ -1048,9 +1048,43 @@
                 setTimeout(() => showLoading(false), 2000);
             }
         };
+
+        // Este código se ejecuta al cargar la página
+// Revisa si hay una sesión activa de Supabase
+(async () => {
+    try {
+        showLoading(true, 'Verificando sesión...');
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+            // Si hay una sesión, establece el estado y muestra la app
+            appState.userId = session.user.id;
+            appState.userName = session.user.email;
+            document.getElementById('user-name').innerText = appState.userName;
+
+            const authScreen = document.getElementById('auth-screen');
+            const appContainer = document.getElementById('app-container');
+            authScreen.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+
+            // Inicia la carga de datos y las escuchas en tiempo real
+            await initializeSupabaseSchema();
+            listenForData();
+            navigate(appState.currentView);
+        } else {
+            // Si no hay sesión, muestra la pantalla de inicio de sesión
+            showLoading(false);
+        }
+    } catch (error) {
+        console.error("Error en la verificación de sesión:", error);
+        showLoading(false);
+    }
+})();
+        
     </script>
 </body>
 </html>
+
 
 
 
