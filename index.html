@@ -53,14 +53,14 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        // Reemplaza con tus credenciales de Supabase
+        // ¡IMPORTANTE! Reemplaza con tus credenciales de Supabase
         const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // Global app state
         let appState = {
-            // El ID de usuario se establece a un valor fijo o null, ya no se usa auth.uid()
+            // MODIFICACIÓN: El ID de usuario se establece a un valor fijo
             userId: 'anonymous_user', 
             userName: null,
             currentView: 'promotions',
@@ -217,7 +217,6 @@
                     stock integer NOT NULL,
                     image text,
                     category_id uuid,
-                    -- La columna user_id ya no es NOT NULL porque no hay usuario
                     user_id uuid,
                     created_at timestamp with time zone DEFAULT now()
                 );
@@ -260,8 +259,7 @@
                 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
                 ALTER TABLE public.order_products ENABLE ROW LEVEL SECURITY;
 
-                -- Create RLS policies
-                -- Las políticas se cambian a USING (true) para permitir el acceso público
+                -- MODIFICACIÓN: Se cambian las políticas para permitir acceso público
                 -- Promotions
                 DROP POLICY IF EXISTS "Allow all users to read promotions" ON public.promotions;
                 DROP POLICY IF EXISTS "Allow user to manage their own promotions" ON public.promotions;
@@ -315,13 +313,12 @@
             }
         }
 
-        // Se elimina el listener onAuthStateChange ya que no se usa autenticación
+        // MODIFICACIÓN: Se elimina el listener de autenticación
         
-        // Se carga la aplicación directamente al inicio, sin verificar sesión
+        // MODIFICACIÓN: La aplicación se carga directamente sin verificar sesión
         (async () => {
             showLoading(true, 'Iniciando aplicación...');
             try {
-                // Se eliminan las llamadas a getSession() y la lógica de autenticación
                 await initializeSupabaseSchema();
                 listenForData();
                 navigate(appState.currentView);
@@ -336,7 +333,6 @@
 
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
-            // El check de userId se elimina ya que la app es pública
             supabase.channel('public:promotions').on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, payload => {
                 fetchPromotions();
             }).subscribe();
@@ -578,7 +574,6 @@
             showLoading(true, 'Guardando promoción...');
             
             const imageFile = document.getElementById('promo-image').files[0];
-
             const name = document.getElementById('promo-name').value.trim();
             const originalPriceInput = document.getElementById('promo-original-price').value;
             const priceInput = document.getElementById('promo-price').value;
@@ -622,7 +617,6 @@
 
             try {
                 if (imageFile) {
-                    // El path del archivo ya no usa el user ID
                     const filePath = `public_promos/${Date.now()}_${imageFile.name}`;
                     const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('promo_images')
@@ -639,7 +633,8 @@
                     stock,
                     category_id: categoryId,
                     image: imageUrl,
-                    // Se elimina el user_id del objeto
+                    // MODIFICACIÓN: Se incluye el user_id para la inserción
+                    user_id: appState.userId
                 };
 
                 if (promoId) {
@@ -694,7 +689,8 @@
             const name = document.getElementById('new-location-input').value.trim();
             if (!name) return;
             try {
-                const { error } = await supabase.from('locations').insert({ name });
+                // MODIFICACIÓN: Se incluye el user_id
+                const { error } = await supabase.from('locations').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-location-input').value = '';
                 await fetchLocations(); 
@@ -717,7 +713,8 @@
             const name = document.getElementById('new-category-input').value.trim();
             if (!name) return;
             try {
-                const { error } = await supabase.from('categories').insert({ name });
+                // MODIFICACIÓN: Se incluye el user_id
+                const { error } = await supabase.from('categories').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-category-input').value = '';
                 await fetchCategories();
@@ -883,6 +880,7 @@
                 client_name: clientName,
                 location_id: locationId,
                 total: appState.selectedOrder.total,
+                // MODIFICACIÓN: Se incluye el user_id
                 user_id: appState.userId
             };
 
@@ -964,4 +962,3 @@
     </script>
 </body>
 </html>
-
