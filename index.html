@@ -906,6 +906,16 @@
                 const { error: productsError } = await supabase.from('order_products').insert(productsToInsert);
                 if (productsError) throw productsError;
 
+                // Actualizar el stock de cada producto en el pedido
+                for (const product of appState.orderProducts) {
+                const { data: promo, error: fetchError } = await supabase.from('promotions').select('stock').eq('id', product.promo_id).single();
+                if (fetchError) throw fetchError;
+
+                const newStock = promo.stock - product.quantity;
+                const { error: updateError } = await supabase.from('promotions').update({ stock: newStock }).eq('id', product.promo_id);
+                if (updateError) throw updateError;
+}
+                
                 closeModal();
                 showStatusMessage('Pedido guardado con éxito.');
 
@@ -962,3 +972,4 @@
     </script>
 </body>
 </html>
+
