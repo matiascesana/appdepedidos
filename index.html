@@ -4,28 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>App de Pedidos</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100">
 
 <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">App de Pedidos</h1>
-
-    <!-- NAV TABS -->
-    <div class="flex space-x-2 mb-4">
-        <button onclick="showTab('promotions')" class="tab-btn px-4 py-2 bg-blue-500 text-white rounded">Promociones</button>
-        <button onclick="showTab('orders')" class="tab-btn px-4 py-2 bg-gray-200 rounded">Pedidos</button>
-        <button onclick="showTab('locations')" class="tab-btn px-4 py-2 bg-gray-200 rounded">Localidades</button>
-        <button onclick="showTab('categories')" class="tab-btn px-4 py-2 bg-gray-200 rounded">Categorías</button>
+    <h1 class="text-3xl font-bold mb-4">App de Pedidos</h1>
+    <div class="mb-4">
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2 tab-btn" data-tab="promotions">Promociones</button>
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2 tab-btn" data-tab="orders">Pedidos</button>
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2 tab-btn" data-tab="locations">Localidades</button>
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg tab-btn" data-tab="categories">Categorías</button>
     </div>
 
-    <!-- CONTENT TABS -->
+    <!-- Tabs -->
     <div id="promotions-tab" class="tab-content">
         <div class="flex justify-between mb-2">
             <h2 class="text-xl font-bold">Promociones</h2>
-            <button onclick="showPromoModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Nueva Promoción</button>
+            <button id="add-promo-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Nueva Promoción</button>
         </div>
         <ul id="promotions-list" class="space-y-2"></ul>
     </div>
@@ -33,261 +31,312 @@
     <div id="orders-tab" class="tab-content hidden">
         <div class="flex justify-between mb-2">
             <h2 class="text-xl font-bold">Pedidos</h2>
-            <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Nuevo Pedido</button>
+            <button id="add-order-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Nuevo Pedido</button>
         </div>
         <ul id="orders-list" class="space-y-2"></ul>
+        <div class="mt-4 flex space-x-4">
+            <div>Total General: <span id="total-general">$0.00</span></div>
+            <div>Total Entregados: <span id="total-delivered">$0.00</span></div>
+            <div>Total Pendientes: <span id="total-pending">$0.00</span></div>
+        </div>
     </div>
 
     <div id="locations-tab" class="tab-content hidden">
-        <div class="flex justify-between mb-2">
-            <h2 class="text-xl font-bold">Localidades</h2>
-            <input type="text" id="new-location-input" placeholder="Nueva localidad" class="p-2 border rounded">
-            <button onclick="addLocation()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+        <div class="flex mb-2">
+            <input type="text" id="new-location-input" placeholder="Nueva localidad" class="flex-grow p-2 border rounded-lg mr-2">
+            <button id="add-location-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Agregar</button>
         </div>
         <ul id="locations-list" class="space-y-2"></ul>
     </div>
 
     <div id="categories-tab" class="tab-content hidden">
-        <div class="flex justify-between mb-2">
-            <h2 class="text-xl font-bold">Categorías</h2>
-            <input type="text" id="new-category-input" placeholder="Nueva categoría" class="p-2 border rounded">
-            <button onclick="addCategory()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+        <div class="flex mb-2">
+            <input type="text" id="new-category-input" placeholder="Nueva categoría" class="flex-grow p-2 border rounded-lg mr-2">
+            <button id="add-category-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Agregar</button>
         </div>
         <ul id="categories-list" class="space-y-2"></ul>
     </div>
 </div>
 
-<!-- MODAL -->
-<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
-    <div id="modal-content" class="bg-white p-6 rounded-lg max-w-lg w-full relative"></div>
-</div>
-
-<!-- LOADING -->
-<div id="loading" class="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center hidden z-50">
-    <div class="bg-white p-4 rounded shadow">
-        <p id="loading-text">Cargando...</p>
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded-lg w-96 max-w-full relative">
+        <button onclick="closeModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+        <div id="modal-content"></div>
     </div>
 </div>
 
 <script>
-const supabase = supabase.createClient(
-    'https://ejbqlejlgprvwzrptojo.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8'
-);
+const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-const appState = { promotions:{}, locations:{}, categories:{}, orders:{}, selectedOrder:null, orderProducts:[] };
+const appState = {
+    promotions: {},
+    orders: {},
+    locations: {},
+    categories: {},
+    orderProducts: [],
+    selectedOrder: null
+};
 
-function showLoading(show, text='Cargando...'){
-    const l = document.getElementById('loading');
-    document.getElementById('loading-text').innerText = text;
-    if(show) l.classList.remove('hidden'); else l.classList.add('hidden');
-}
+// --- UI Tabs ---
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+        document.getElementById(`${tab}-tab`).classList.remove('hidden');
+    });
+});
 
-function showModal(html){ 
-    const m = document.getElementById('modal');
+// --- Modal ---
+function showModal(html) {
     document.getElementById('modal-content').innerHTML = html;
-    m.classList.remove('hidden');
+    document.getElementById('modal').classList.remove('hidden');
 }
-function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
-
-// Tabs
-function showTab(tab){
-    document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('bg-blue-500','text-white','bg-gray-200'));
-    document.getElementById(tab+'-tab').classList.remove('hidden');
-    document.querySelector(`.tab-btn[onclick="showTab('${tab}')"]`).classList.add('bg-blue-500','text-white');
+function closeModal() {
+    document.getElementById('modal').classList.add('hidden');
 }
 
-// --- FETCH DATA ---
-async function fetchAllData(){
-    showLoading(true,'Cargando datos...');
-    // PROMOCIONES
-    const { data: promos } = await supabase.from('promotions').select('*');
-    appState.promotions = {}; promos?.forEach(p=>appState.promotions[p.id]=p);
+// --- Fetch all data ---
+async function fetchAllData() {
+    // Promociones
+    let { data: promotions } = await supabase.from('promotions').select('*');
+    appState.promotions = {};
+    promotions.forEach(p => appState.promotions[p.id] = p);
+
+    // Pedidos
+    let { data: orders } = await supabase.from('orders').select('*');
+    appState.orders = {};
+    orders.forEach(o => appState.orders[o.id] = o);
+
+    // Localidades
+    let { data: locations } = await supabase.from('locations').select('*');
+    appState.locations = {};
+    locations.forEach(l => appState.locations[l.id] = l.name);
+
+    // Categorías
+    let { data: categories } = await supabase.from('categories').select('*');
+    appState.categories = {};
+    categories.forEach(c => appState.categories[c.id] = c.name);
+
     renderPromotions();
-    // LOCALIDADES
-    const { data: locs } = await supabase.from('locations').select('*');
-    appState.locations = {}; locs?.forEach(l=>appState.locations[l.id]=l.name);
-    renderLocations();
-    // CATEGORIAS
-    const { data: cats } = await supabase.from('categories').select('*');
-    appState.categories = {}; cats?.forEach(c=>appState.categories[c.id]=c.name);
-    renderCategories();
-    // PEDIDOS
-    const { data: ords } = await supabase.from('orders').select('*');
-    appState.orders = {}; ords?.forEach(o=>appState.orders[o.id]=o);
     renderOrders();
-    showLoading(false);
+    renderLocations();
+    renderCategories();
 }
 
-// --- RENDER FUNCTIONS ---
-function renderPromotions(){
-    const list = document.getElementById('promotions-list'); list.innerHTML='';
-    Object.values(appState.promotions).forEach(p=>{
-        const li=document.createElement('li');
-        li.className='flex justify-between items-center p-2 bg-white rounded shadow';
-        li.innerHTML=`<div>
-            <h3 class="font-bold">${p.name}</h3>
-            <p>Precio: $${p.price} ${p.original_price?`(Original: $${p.original_price})`:''}</p>
-            ${p.image?`<img src="${p.image}" class="w-24 h-24 mt-1 object-cover rounded-lg">`:''}
-        </div>
-        <div class="space-x-2">
-            <button onclick="showPromoModal('${p.id}')" class="bg-yellow-500 px-2 py-1 text-white rounded">Editar</button>
-            <button onclick="deletePromo('${p.id}')" class="bg-red-500 px-2 py-1 text-white rounded">Eliminar</button>
-        </div>`;
-        list.appendChild(li);
-    });
-}
-
-function renderLocations(){
-    const list = document.getElementById('locations-list'); list.innerHTML='';
-    Object.keys(appState.locations).forEach(id=>{
-        const li=document.createElement('li'); li.className='flex justify-between items-center p-2 bg-white rounded';
-        li.innerHTML=`<span>${appState.locations[id]}</span><button onclick="deleteLocation('${id}')" class="text-red-500">Eliminar</button>`;
-        list.appendChild(li);
-    });
-}
-
-function renderCategories(){
-    const list = document.getElementById('categories-list'); list.innerHTML='';
-    Object.keys(appState.categories).forEach(id=>{
-        const li=document.createElement('li'); li.className='flex justify-between items-center p-2 bg-white rounded';
-        li.innerHTML=`<span>${appState.categories[id]}</span><button onclick="deleteCategory('${id}')" class="text-red-500">Eliminar</button>`;
-        list.appendChild(li);
-    });
-}
-
-function renderOrders(){
-    const list = document.getElementById('orders-list'); list.innerHTML='';
-    Object.values(appState.orders).forEach(o=>{
-        const li=document.createElement('li'); li.className='flex justify-between items-center p-2 bg-white rounded';
-        li.innerHTML=`<div>
-            <h3 class="font-bold">${o.client_name}</h3>
-            <p>Total: $${o.total}</p>
-            <p>Estado: ${o.status}</p>
-        </div>
-        <div class="space-x-2">
-            <button onclick="showOrderModal('${o.id}')" class="bg-yellow-500 px-2 py-1 text-white rounded">Ver</button>
-            <button onclick="toggleOrderStatus('${o.id}')" class="bg-gray-500 px-2 py-1 text-white rounded">${o.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
-            <button onclick="deleteOrder('${o.id}')" class="bg-red-500 px-2 py-1 text-white rounded">Eliminar</button>
-        </div>`;
-        list.appendChild(li);
-    });
-}
-
-// --- CRUD OPERATIONS ---
-async function addLocation(){ const name=document.getElementById('new-location-input').value.trim(); if(!name) return; await supabase.from('locations').insert({name}); document.getElementById('new-location-input').value=''; fetchAllData();}
-async function deleteLocation(id){ await supabase.from('locations').delete().eq('id',id); fetchAllData();}
-async function addCategory(){ const name=document.getElementById('new-category-input').value.trim(); if(!name) return; await supabase.from('categories').insert({name}); document.getElementById('new-category-input').value=''; fetchAllData();}
-async function deleteCategory(id){ await supabase.from('categories').delete().eq('id',id); fetchAllData();}
-
-// --- PROMO MODAL ---
-function showPromoModal(promoId=null){
-    const isEdit=!!promoId; const p=appState.promotions[promoId]||{};
-    showModal(`<h3 class="font-bold text-xl mb-2">${isEdit?'Editar':'Nueva'} Promoción</h3>
-        <form id="promo-form" class="space-y-2">
-            <input type="text" id="promo-name" placeholder="Nombre" value="${p.name||''}" class="w-full p-2 border rounded" required>
-            <input type="number" id="promo-original" placeholder="Precio Original" value="${p.original_price||''}" class="w-full p-2 border rounded">
-            <input type="number" id="promo-price" placeholder="Precio Final" value="${p.price||''}" class="w-full p-2 border rounded" required>
-            <input type="file" id="promo-image" accept="image/*" class="w-full p-2 border rounded">
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Guardar</button>
+// --- Render functions ---
+function renderPromotions() {
+    const list = document.getElementById('promotions-list');
+    list.innerHTML = '';
+    Object.values(appState.promotions).forEach(p => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
+        li.innerHTML = `
+            <div>
+                <h3 class="font-bold">${p.name}</h3>
+                <p>Precio Original: $${p.original_price || 0}</p>
+                <p>Precio: $${p.price || 0}</p>
             </div>
-        </form>`);
-    document.getElementById('promo-form').onsubmit=async e=>{
-        e.preventDefault();
-        const name=document.getElementById('promo-name').value.trim();
-        const price=parseFloat(document.getElementById('promo-price').value);
-        const original=parseFloat(document.getElementById('promo-original').value)||null;
-        let imageUrl=p.image||null;
-        const file=document.getElementById('promo-image').files[0];
-        if(file){
-            const { data, error } = await supabase.storage.from('promo_images').upload(`public/${Date.now()}_${file.name}`, file);
-            if(!error) imageUrl=`https://ejbqlejlgprvwzrptojo.supabase.co/storage/v1/object/public/promo_images/${data.path}`;
-        }
-        const obj={name,price,original_price:original,image:imageUrl};
-        if(isEdit) await supabase.from('promotions').update(obj).eq('id',promoId);
-        else await supabase.from('promotions').insert(obj);
-        closeModal(); fetchAllData();
-    };
+            <div class="flex space-x-2">
+                <button onclick="showPromotionModal('${p.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded">Editar</button>
+                <button onclick="deletePromotion('${p.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Eliminar</button>
+            </div>
+        `;
+        list.appendChild(li);
+    });
 }
 
-async function deletePromo(id){ if(confirm('Eliminar promoción?')){ await supabase.from('promotions').delete().eq('id',id); fetchAllData(); }}
+function renderOrders() {
+    const list = document.getElementById('orders-list');
+    list.innerHTML = '';
+    let totalGeneral = 0, totalDelivered = 0, totalPending = 0;
+    Object.values(appState.orders).forEach(o => {
+        totalGeneral += o.total || 0;
+        if(o.status==='Entregado') totalDelivered+=o.total;
+        else totalPending+=o.total;
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
+        li.innerHTML = `
+            <div>
+                <h3 class="font-bold">#${o.id}</h3>
+                <p>Cliente: ${o.client_name}</p>
+                <p>Localidad: ${appState.locations[o.location_id]||'Desconocida'}</p>
+                <p>Status: ${o.status}</p>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="showOrderModal('${o.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded">Ver</button>
+                <button onclick="toggleOrderStatus('${o.id}')" class="bg-gray-500 text-white px-2 py-1 rounded">${o.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
+                <button onclick="deleteOrder('${o.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Eliminar</button>
+            </div>
+        `;
+        list.appendChild(li);
+    });
+    document.getElementById('total-general').innerText = `$${totalGeneral}`;
+    document.getElementById('total-delivered').innerText = `$${totalDelivered}`;
+    document.getElementById('total-pending').innerText = `$${totalPending}`;
+}
 
-// --- PEDIDOS MODAL Y CRUD ---
-function showOrderModal(orderId=null){
-    const isEdit=!!orderId; const o=appState.orders[orderId]||{client_name:'',total:0,status:'Pendiente'};
-    appState.orderProducts=o.items||[];
-    const productsOptions=Object.values(appState.promotions).map(p=>`<option value="${p.id}">${p.name} - $${p.price}</option>`).join('');
-    showModal(`<h3 class="font-bold text-xl mb-2">${isEdit?'Editar':'Nuevo'} Pedido</h3>
-        <form id="order-form" class="space-y-2">
-            <input type="text" id="order-client" placeholder="Cliente" value="${o.client_name||''}" class="w-full p-2 border rounded" required>
-            <select id="order-location" class="w-full p-2 border rounded" required>
+function renderLocations() {
+    const list = document.getElementById('locations-list');
+    list.innerHTML = '';
+    Object.keys(appState.locations).forEach(id => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
+        li.innerHTML = `<span>${appState.locations[id]}</span><button onclick="deleteLocation('${id}')" class="text-red-500"><i class="fas fa-trash"></i></button>`;
+        list.appendChild(li);
+    });
+}
+
+function renderCategories() {
+    const list = document.getElementById('categories-list');
+    list.innerHTML = '';
+    Object.keys(appState.categories).forEach(id => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow hover:shadow-md';
+        li.innerHTML = `<span>${appState.categories[id]}</span><button onclick="deleteCategory('${id}')" class="text-red-500"><i class="fas fa-trash"></i></button>`;
+        list.appendChild(li);
+    });
+}
+
+// --- CRUD Promotions ---
+document.getElementById('add-promo-btn').addEventListener('click', ()=>showPromotionModal());
+async function showPromotionModal(promoId=null){
+    const promo = promoId ? appState.promotions[promoId]: {};
+    let html = `
+        <h3 class="text-xl font-bold mb-4">${promoId?'Editar':'Nueva'} Promoción</h3>
+        <div class="space-y-2">
+            <input id="promo-name" placeholder="Nombre" class="w-full p-2 border rounded" value="${promo.name||''}">
+            <input id="promo-original-price" type="number" placeholder="Precio Original" class="w-full p-2 border rounded" value="${promo.original_price||''}">
+            <input id="promo-price" type="number" placeholder="Precio" class="w-full p-2 border rounded" value="${promo.price||''}">
+            <input id="promo-image" type="file" accept="image/*" class="w-full p-2 border rounded">
+            <div class="flex justify-end space-x-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+                <button onclick="savePromotion('${promoId||''}')" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar</button>
+            </div>
+        </div>
+    `;
+    showModal(html);
+}
+
+async function savePromotion(promoId){
+    const name = document.getElementById('promo-name').value;
+    const price = parseFloat(document.getElementById('promo-price').value)||0;
+    const original_price = parseFloat(document.getElementById('promo-original-price').value)||0;
+    const file = document.getElementById('promo-image').files[0];
+
+    if(!name) return alert('Nombre obligatorio');
+
+    let imageUrl = '';
+    if(file){
+        const { data, error } = await supabase.storage.from('images').upload(`promotions/${Date.now()}-${file.name}`, file);
+        if(error) return alert(error.message);
+        imageUrl = supabase.storage.from('images').getPublicUrl(data.path).publicUrl;
+    }
+
+    const payload = { name, price, original_price };
+    if(imageUrl) payload.image = imageUrl;
+
+    const { error } = promoId ?
+        await supabase.from('promotions').update(payload).eq('id',promoId) :
+        await supabase.from('promotions').insert([payload]);
+
+    if(error) return alert(error.message);
+    closeModal();
+    fetchAllData();
+}
+
+async function deletePromotion(id){
+    if(!confirm('Eliminar promoción?')) return;
+    await supabase.from('promotions').delete().eq('id',id);
+    fetchAllData();
+}
+
+// --- CRUD Orders ---
+document.getElementById('add-order-btn').addEventListener('click', ()=>showOrderModal());
+async function showOrderModal(orderId=null){
+    const order = orderId ? appState.orders[orderId] : {};
+    let html = `
+        <h3 class="text-xl font-bold mb-4">${orderId?'Editar':'Nuevo'} Pedido</h3>
+        <div class="space-y-2">
+            <input id="order-client" placeholder="Cliente" class="w-full p-2 border rounded" value="${order.client_name||''}">
+            <select id="order-location" class="w-full p-2 border rounded mb-2">
                 <option value="">Seleccione localidad</option>
-                ${Object.keys(appState.locations).map(id=>`<option value="${id}" ${o.location_id===id?'selected':''}>${appState.locations[id]}</option>`).join('')}
+                ${Object.keys(appState.locations).map(id=>`<option value="${id}" ${order.location_id==id?'selected':''}>${appState.locations[id]}</option>`).join('')}
             </select>
-            <div id="order-products-list" class="space-y-1">
-                ${appState.orderProducts.map((item,i)=>`<div class="flex justify-between items-center p-2 bg-gray-100 rounded">
-                    <span>${item.quantity} x ${appState.promotions[item.promo_id]?.name||'Desconocido'}</span>
-                    <span>$${item.quantity*item.price}</span>
-                    <button type="button" onclick="removeOrderProduct(${i})" class="text-red-500">Eliminar</button>
-                </div>`).join('')}
-            </div>
-            <div class="flex space-x-2 items-end">
-                <select id="product-select" class="flex-grow p-2 border rounded">${productsOptions}</select>
-                <input type="number" id="product-qty" value="1" min="1" class="w-20 p-2 border rounded">
-                <button type="button" onclick="addOrderProduct()" class="px-2 py-1 bg-blue-600 text-white rounded">Añadir</button>
-            </div>
-            <p class="text-right font-bold">Total: $<span id="order-total">${o.total}</span></p>
             <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Guardar</button>
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+                <button onclick="saveOrder('${orderId||''}')" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar</button>
             </div>
-        </form>`);
-    document.getElementById('order-form').onsubmit=async e=>{
-        e.preventDefault();
-        const client=document.getElementById('order-client').value.trim();
-        const loc=document.getElementById('order-location').value;
-        if(!client||!loc) return alert('Completar campos');
-        const obj={client_name:client,location_id:loc,total:appState.orderProducts.reduce((s,i)=>s+i.quantity*i.price,0),status:o.status,items:appState.orderProducts};
-        if(isEdit) await supabase.from('orders').update(obj).eq('id',orderId);
-        else await supabase.from('orders').insert(obj);
-        closeModal(); fetchAllData();
-    };
+        </div>
+    `;
+    showModal(html);
 }
 
-function addOrderProduct(){
-    const pid=document.getElementById('product-select').value;
-    const qty=parseInt(document.getElementById('product-qty').value);
-    if(!pid||qty<=0) return;
-    const promo=appState.promotions[pid];
-    const existing=appState.orderProducts.find(i=>i.promo_id===pid);
-    if(existing) existing.quantity+=qty;
-    else appState.orderProducts.push({promo_id:pid,quantity:qty,price:promo.price});
-    renderOrderProducts();
+async function saveOrder(orderId){
+    const client_name = document.getElementById('order-client').value;
+    const location_id = document.getElementById('order-location').value;
+    if(!client_name || !location_id) return alert('Todos los campos son obligatorios');
+
+    const payload = { client_name, location_id, status:'Pendiente', total:0 };
+
+    const { error } = orderId ?
+        await supabase.from('orders').update(payload).eq('id',orderId) :
+        await supabase.from('orders').insert([payload]);
+    
+    if(error) return alert(error.message);
+    closeModal();
+    fetchAllData();
 }
 
-function removeOrderProduct(index){ appState.orderProducts.splice(index,1); renderOrderProducts(); }
-
-function renderOrderProducts(){
-    const list=document.getElementById('order-products-list');
-    list.innerHTML=appState.orderProducts.map((item,i)=>`<div class="flex justify-between items-center p-2 bg-gray-100 rounded">
-        <span>${item.quantity} x ${appState.promotions[item.promo_id]?.name||'Desconocido'}</span>
-        <span>$${item.quantity*item.price}</span>
-        <button type="button" onclick="removeOrderProduct(${i})" class="text-red-500">Eliminar</button>
-    </div>`).join('');
-    document.getElementById('order-total').innerText=appState.orderProducts.reduce((s,i)=>s+i.quantity*i.price,0);
+async function toggleOrderStatus(orderId){
+    const order = appState.orders[orderId];
+    const newStatus = order.status==='Pendiente'?'Entregado':'Pendiente';
+    await supabase.from('orders').update({status:newStatus}).eq('id',orderId);
+    fetchAllData();
 }
 
-async function deleteOrder(id){ if(confirm('Eliminar pedido?')){ await supabase.from('orders').delete().eq('id',id); fetchAllData(); } }
-async function toggleOrderStatus(id){ const o=appState.orders[id]; const newStatus=o.status==='Pendiente'?'Entregado':'Pendiente'; await supabase.from('orders').update({status:newStatus}).eq('id',id); fetchAllData(); }
+async function deleteOrder(orderId){
+    if(!confirm('Eliminar pedido?')) return;
+    await supabase.from('orders').delete().eq('id',orderId);
+    fetchAllData();
+}
 
+// --- CRUD Locations ---
+document.getElementById('add-location-btn').addEventListener('click', addLocation);
+async function addLocation(){
+    const name = document.getElementById('new-location-input').value.trim();
+    if(!name) return;
+    await supabase.from('locations').insert([{name}]);
+    document.getElementById('new-location-input').value='';
+    fetchAllData();
+}
+async function deleteLocation(id){
+    await supabase.from('locations').delete().eq('id',id);
+    fetchAllData();
+}
+
+// --- CRUD Categories ---
+document.getElementById('add-category-btn').addEventListener('click', addCategory);
+async function addCategory(){
+    const name = document.getElementById('new-category-input').value.trim();
+    if(!name) return;
+    await supabase.from('categories').insert([{name}]);
+    document.getElementById('new-category-input').value='';
+    fetchAllData();
+}
+async function deleteCategory(id){
+    await supabase.from('categories').delete().eq('id',id);
+    fetchAllData();
+}
+
+// --- Inicialización ---
 fetchAllData();
-showTab('promotions');
 </script>
-
 </body>
 </html>
+
+
 
 
