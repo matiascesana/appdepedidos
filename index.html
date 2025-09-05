@@ -1,406 +1,420 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App de Pedidos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0am8iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1NzAyOTAyMiwiZXhwIjoyMDcyNjA1MDIyfQ.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+const appState = {
+  promotions: {},
+  orders: {},
+  locations: {},
+  categories: {},
+  selectedOrder: null,
+  orderProducts: []
+}
+
+// ------------------ Fetch Data ------------------
+async function fetchAllData() {
+  showLoading(true, 'Cargando datos...')
+  try {
+    const { data: promos } = await supabase.from('promotions').select('*')
+    appState.promotions = {}
+    (promos || []).forEach(p => appState.promotions[p.id] = p)
+
+    const { data: locs } = await supabase.from('locations').select('*')
+    appState.locations = {}
+    (locs || []).forEach(l => appState.locations[l.id] = l.name)
+
+    const { data: cats } = await supabase.from('categories').select('*')
+    appState.categories = {}
+    (cats || []).forEach(c => appState.categories[c.id] = c.name)
+
+    const { data: orders } = await supabase.from('orders').select('*')
+    appState.orders = {}
+    (orders || []).forEach(o => appState.orders[o.id] = o)
+
+    renderUI()
+  } catch (e) {
+    console.error(e)
+    alert('Error cargando datos.')
+  } finally {
+    showLoading(false)
+  }
+}
+
+// ------------------ Loading Overlay ------------------
+function showLoading(show, message = 'Cargando...') {
+  let overlay = document.getElementById('loading-overlay')
+  if (!overlay) {
+    overlay = document.createElement('div')
+    overlay.id = 'loading-overlay'
+    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xl z-50'
+    overlay.innerHTML = '<span id="loading-message"></span>'
+    document.body.appendChild(overlay)
+  }
+  overlay.style.display = show ? 'flex' : 'none'
+  document.getElementById('loading-message').innerText = message
+}
+
+// ------------------ Tabs ------------------
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'))
+  document.getElementById(tab).classList.remove('hidden')
+  document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('border-b-2', 'border-blue-500'))
+  document.getElementById('btn-' + tab).classList.add('border-b-2', 'border-blue-500')
+}
+
+// ------------------ Render UI ------------------
+function renderUI() {
+  renderPromotions()
+  renderOrders()
+  renderLocations()
+  renderCategories()
+}
+
+// ------------------ Render Promotions ------------------
+function renderPromotions() {
+  const container = document.getElementById('promotions-list')
+  container.innerHTML = ''
+  Object.values(appState.promotions).sort((a,b)=>b.id.localeCompare(a.id)).forEach(p => {
+    const div = document.createElement('div')
+    div.className = 'flex justify-between p-2 rounded-lg bg-gray-50 mb-2 hover:bg-gray-100'
+    div.innerHTML = `
+      <span>${p.name} - $${p.price}</span>
+      <div class="space-x-2">
+        <button onclick="openPromoModal('${p.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-xs">Editar</button>
+        <button onclick="deletePromo('${p.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs">Eliminar</button>
+      </div>
+    `
+    container.appendChild(div)
+  })
+}
+
+async function openPromoModal(id = null) {
+  const promo = id ? appState.promotions[id] : { name: '', price: '', stock: 0, categoryId: null }
+  const modalContent = `
+    <h3 class="text-xl font-bold mb-4">${id?'Editar':'Nueva'} Promoción</h3>
+    <form id="promo-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium">Nombre</label>
+        <input type="text" id="promo-name" value="${promo.name || ''}" required class="mt-1 block w-full p-2 border rounded"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Precio</label>
+        <input type="number" id="promo-price" value="${promo.price || ''}" required class="mt-1 block w-full p-2 border rounded"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Stock</label>
+        <input type="number" id="promo-stock" value="${promo.stock || 0}" required class="mt-1 block w-full p-2 border rounded"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Categoría</label>
+        <select id="promo-category" class="mt-1 block w-full p-2 border rounded">
+          <option value="">Sin categoría</option>
+          ${Object.entries(appState.categories).map(([id,name])=>`<option value="${id}" ${promo.categoryId===id?'selected':''}>${name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="flex justify-end space-x-2 mt-4">
+        <button type="button" onclick="closeModal()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancelar</button>
+        <button type="submit" class="bg-blue-600 px-4 py-2 rounded text-white hover:bg-blue-700">Guardar</button>
+      </div>
+    </form>
+  `
+  showModal(modalContent)
+  document.getElementById('promo-form').onsubmit = async e => {
+    e.preventDefault()
+    await savePromo(id)
+  }
+}
+
+async function savePromo(id = null) {
+  const name = document.getElementById('promo-name').value.trim()
+  const price = parseFloat(document.getElementById('promo-price').value)
+  const stock = parseInt(document.getElementById('promo-stock').value)
+  const categoryId = document.getElementById('promo-category').value || null
+  if(!name || isNaN(price) || isNaN(stock)) return alert('Completa todos los campos válidos')
+  showLoading(true,'Guardando promoción...')
+  try {
+    if(id){
+      await supabase.from('promotions').update({name,price,stock,categoryId}).eq('id',id)
+    } else {
+      await supabase.from('promotions').insert([{name,price,stock,categoryId}])
+    }
+    fetchAllData()
+    closeModal()
+  } catch(e){
+    console.error(e)
+    alert('Error al guardar promoción')
+  } finally{showLoading(false)}
+}
+
+async function deletePromo(id){
+  if(!confirm('Eliminar promoción?')) return
+  showLoading(true,'Eliminando promoción...')
+  try{
+    await supabase.from('promotions').delete().eq('id',id)
+    fetchAllData()
+  } catch(e){console.error(e); alert('Error al eliminar')} finally{showLoading(false)}
+}
+
+// ------------------ Render Orders ------------------
+function renderOrders() {
+  const container = document.getElementById('orders-list')
+  container.innerHTML = ''
+  Object.values(appState.orders).sort((a,b)=>b.id.localeCompare(a.id)).forEach(o=>{
+    const loc = appState.locations[o.location_id] || 'Desconocida'
+    const div = document.createElement('div')
+    div.className = 'flex justify-between p-2 rounded-lg bg-gray-50 mb-2 hover:bg-gray-100'
+    div.innerHTML = `
+      <span>${o.client_name} - ${loc} - $${o.total}</span>
+      <div class="space-x-2">
+        <button onclick="openOrderModal('${o.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-xs">Ver/Editar</button>
+        <button onclick="deleteOrder('${o.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs">Eliminar</button>
+      </div>
+    `
+    container.appendChild(div)
+  })
+}
+
+async function openOrderModal(id=null){
+  // Creamos un modal de pedido completo
+  const order = id ? {...appState.orders[id]} : { client_name:'', client_phone:'', location_id:'', total:0 }
+  const orderItems = id ? (await supabase.from('order_items').select('*').eq('order_id',id)).data || [] : []
+  appState.selectedOrder = order
+  appState.orderProducts = orderItems.map(it => ({promo_id: it.promo_id, quantity: it.quantity, price: it.price}))
+
+  renderOrderModal()
+}
+
+function renderOrderModal(){
+  const order = appState.selectedOrder
+  const locationOptions = Object.entries(appState.locations).map(([id,name])=>`<option value="${id}" ${order.location_id===id?'selected':''}>${name}</option>`).join('')
+  const productOptions = Object.entries(appState.promotions).map(([id,p])=>`<option value="${id}">${p.name} - $${p.price}</option>`).join('')
+  const productsHtml = appState.orderProducts.map((item,index)=>{
+    const promo = appState.promotions[item.promo_id] || {name:'Desconocido'}
+    return `<div class="flex justify-between p-2 bg-gray-100 rounded mb-2">
+      <span>${item.quantity} x ${promo.name}</span>
+      <span>$${(item.quantity*item.price).toFixed(2)}</span>
+      <button onclick="removeOrderProduct(${index})" class="ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+    </div>`
+  }).join('')
+  const modalContent = `
+    <h3 class="text-xl font-bold mb-4">${order.id?'Editar Pedido':'Nuevo Pedido'}</h3>
+    <form id="order-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium">Cliente</label>
+        <input type="text" id="client-name" value="${order.client_name || ''}" required class="mt-1 block w-full p-2 border rounded"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Teléfono</label>
+        <input type="tel" id="client-phone" value="${order.client_phone || ''}" class="mt-1 block w-full p-2 border rounded"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Localidad</label>
+        <select id="order-location" required class="mt-1 block w-full p-2 border rounded">
+          <option value="">Selecciona localidad</option>${locationOptions}
+        </select>
+      </div>
+      <div class="border-t pt-4">
+        <h4 class="text-lg font-semibold mb-2">Productos</h4>
+        <div id="order-products-list" class="max-h-48 overflow-y-auto mb-2">${productsHtml}</div>
+        <div class="flex items-end space-x-2">
+          <div class="flex-grow">
+            <label class="block text-sm font-medium">Añadir producto</label>
+            <select id="product-select" class="mt-1 block w-full p-2 border rounded">${productOptions}</select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Cantidad</label>
+            <input type="number" id="product-quantity" value="1" min="1" class="mt-1 block w-20 p-2 border rounded"/>
+          </div>
+          <button type="button" onclick="addOrderProduct()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+        </div>
+      </div>
+      <div class="flex justify-between mt-4">
+        <span class="font-bold text-lg">Total: $<span id="order-total">${calculateOrderTotal().toFixed(2)}</span></span>
+        <div class="space-x-2">
+          <button type="button" onclick="closeModal()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancelar</button>
+          <button type="submit" class="bg-blue-600 px-4 py-2 rounded text-white hover:bg-blue-700">Guardar</button>
+        </div>
+      </div>
+    </form>
+  `
+  showModal(modalContent)
+  document.getElementById('order-form').onsubmit = async e=>{
+    e.preventDefault()
+    await saveOrder()
+  }
+}
+
+function addOrderProduct(){
+  const promoId = document.getElementById('product-select').value
+  const quantity = parseInt(document.getElementById('product-quantity').value)
+  if(!promoId || isNaN(quantity) || quantity<1) return
+  const promo = appState.promotions[promoId]
+  appState.orderProducts.push({promo_id: promoId, quantity, price: promo.price})
+  renderOrderModal()
+}
+
+function removeOrderProduct(index){
+  appState.orderProducts.splice(index,1)
+  renderOrderModal()
+}
+
+function calculateOrderTotal(){
+  return appState.orderProducts.reduce((sum,item)=>sum+item.quantity*item.price,0)
+}
+
+async function saveOrder(){
+  const client_name = document.getElementById('client-name').value.trim()
+  const client_phone = document.getElementById('client-phone').value.trim()
+  const location_id = document.getElementById('order-location').value
+  if(!client_name || !location_id || appState.orderProducts.length===0) return alert('Completa todos los campos y agrega al menos un producto')
+  const total = calculateOrderTotal()
+  showLoading(true,'Guardando pedido...')
+  try{
+    let orderId = appState.selectedOrder.id
+    if(orderId){
+      await supabase.from('orders').update({client_name,client_phone,location_id,total}).eq('id',orderId)
+      await supabase.from('order_items').delete().eq('order_id',orderId)
+    } else {
+      const { data } = await supabase.from('orders').insert([{client_name,client_phone,location_id,total}]).select('id')
+      orderId = data[0].id
+    }
+    const itemsToInsert = appState.orderProducts.map(p=>({order_id:orderId, promo_id:p.promo_id, quantity:p.quantity, price:p.price}))
+    await supabase.from('order_items').insert(itemsToInsert)
+    fetchAllData()
+    closeModal()
+  } catch(e){console.error(e); alert('Error guardando pedido')} finally{showLoading(false)}
+}
+
+async function deleteOrder(id){
+  if(!confirm('Eliminar pedido?')) return
+  showLoading(true,'Eliminando pedido...')
+  try{
+    await supabase.from('order_items').delete().eq('order_id',id)
+    await supabase.from('orders').delete().eq('id',id)
+    fetchAllData()
+  } catch(e){console.error(e); alert('Error al eliminar')} finally{showLoading(false)}
+}
+
+// ------------------ Render Locations ------------------
+function renderLocations() {
+  const container = document.getElementById('locations-list')
+  container.innerHTML = ''
+  Object.entries(appState.locations).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([id,name])=>{
+    const li = document.createElement('li')
+    li.className = 'flex justify-between p-2 rounded bg-gray-50 mb-1 hover:bg-gray-100'
+    li.innerHTML = `<span>${name}</span>
+      <button onclick="deleteLocation('${id}')" class="text-red-500 hover:text-red-700">Eliminar</button>`
+    container.appendChild(li)
+  })
+}
+async function deleteLocation(id){
+  if(!confirm('Eliminar localidad?')) return
+  showLoading(true,'Eliminando localidad...')
+  try{await supabase.from('locations').delete().eq('id',id); fetchAllData()}catch(e){console.error(e)}finally{showLoading(false)}
+}
+async function addLocation(){
+  const name = document.getElementById('new-location').value.trim()
+  if(!name) return
+  showLoading(true,'Agregando localidad...')
+  try{await supabase.from('locations').insert([{name}]); document.getElementById('new-location').value=''; fetchAllData()}catch(e){console.error(e)}finally{showLoading(false)}
+}
+
+// ------------------ Render Categories ------------------
+function renderCategories() {
+  const container = document.getElementById('categories-list')
+  container.innerHTML = ''
+  Object.entries(appState.categories).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([id,name])=>{
+    const li = document.createElement('li')
+    li.className = 'flex justify-between p-2 rounded bg-gray-50 mb-1 hover:bg-gray-100'
+    li.innerHTML = `<span>${name}</span>
+      <button onclick="deleteCategory('${id}')" class="text-red-500 hover:text-red-700">Eliminar</button>`
+    container.appendChild(li)
+  })
+}
+async function deleteCategory(id){
+  if(!confirm('Eliminar categoría?')) return
+  showLoading(true,'Eliminando categoría...')
+  try{await supabase.from('categories').delete().eq('id',id); fetchAllData()}catch(e){console.error(e)}finally{showLoading(false)}
+}
+async function addCategory(){
+  const name = document.getElementById('new-category').value.trim()
+  if(!name) return
+  showLoading(true,'Agregando categoría...')
+  try{await supabase.from('categories').insert([{name}]); document.getElementById('new-category').value=''; fetchAllData()}catch(e){console.error(e)}finally{showLoading(false)}
+}
+
+// ------------------ Modal ------------------
+function showModal(content){
+  let modal = document.getElementById('modal')
+  if(!modal){
+    modal = document.createElement('div')
+    modal.id='modal'
+    modal.className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+    modal.innerHTML='<div id="modal-content" class="bg-white p-6 rounded-lg w-96 max-h-[90vh] overflow-y-auto"></div>'
+    document.body.appendChild(modal)
+  }
+  document.getElementById('modal-content').innerHTML=content
+  modal.style.display='flex'
+}
+function closeModal(){
+  const modal = document.getElementById('modal')
+  if(modal) modal.style.display='none'
+}
+
+window.onload = fetchAllData
+</script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 p-6">
+<h1 class="text-2xl font-bold mb-4">App de Pedidos</h1>
 
-    <div class="container mx-auto p-4">
-        <h1 class="text-3xl font-bold mb-4">Panel de Administración</h1>
+<!-- Tabs -->
+<div class="flex space-x-4 mb-6 border-b">
+  <button id="btn-promotions" class="tab-button border-b-2 border-blue-500 pb-2" onclick="switchTab('promotions')">Promociones</button>
+  <button id="btn-orders" class="tab-button pb-2" onclick="switchTab('orders')">Pedidos</button>
+  <button id="btn-locations" class="tab-button pb-2" onclick="switchTab('locations')">Localidades</button>
+  <button id="btn-categories" class="tab-button pb-2" onclick="switchTab('categories')">Categorías</button>
+</div>
 
-        <!-- Totales -->
-        <div class="flex space-x-4 mb-4">
-            <div class="bg-white p-4 rounded shadow w-1/3 text-center">
-                <h2 class="font-bold text-gray-600">Total General</h2>
-                <p id="total-general" class="text-xl font-bold text-blue-600">$0.00</p>
-            </div>
-            <div class="bg-white p-4 rounded shadow w-1/3 text-center">
-                <h2 class="font-bold text-gray-600">Entregados</h2>
-                <p id="total-delivered" class="text-xl font-bold text-green-600">$0.00</p>
-            </div>
-            <div class="bg-white p-4 rounded shadow w-1/3 text-center">
-                <h2 class="font-bold text-gray-600">Pendientes</h2>
-                <p id="total-pending" class="text-xl font-bold text-red-600">$0.00</p>
-            </div>
-        </div>
+<!-- Tab Contents -->
+<div id="promotions" class="tab-content">
+  <div class="flex justify-end mb-2">
+    <button onclick="openPromoModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Nueva Promoción</button>
+  </div>
+  <div id="promotions-list"></div>
+</div>
 
-        <!-- Pedidos -->
-        <div class="mb-4">
-            <h2 class="text-2xl font-bold mb-2">Pedidos</h2>
-            <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-2">Nuevo Pedido</button>
-            <div id="orders-list" class="space-y-2"></div>
-        </div>
+<div id="orders" class="tab-content hidden">
+  <div class="flex justify-end mb-2">
+    <button onclick="openOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Nuevo Pedido</button>
+  </div>
+  <div id="orders-list"></div>
+</div>
 
-        <!-- Localidades -->
-        <div class="mb-4">
-            <h2 class="text-2xl font-bold mb-2">Localidades</h2>
-            <div class="flex mb-2">
-                <input type="text" id="new-location-input" placeholder="Nueva localidad" class="flex-grow p-2 border rounded">
-                <button onclick="addLocation()" class="bg-blue-600 text-white px-4 py-2 rounded ml-2 hover:bg-blue-700">Agregar</button>
-            </div>
-            <ul id="locations-list" class="space-y-1"></ul>
-        </div>
+<div id="locations" class="tab-content hidden">
+  <div class="flex mb-2 space-x-2">
+    <input id="new-location" type="text" placeholder="Nueva localidad" class="p-2 border rounded flex-grow"/>
+    <button onclick="addLocation()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+  </div>
+  <ul id="locations-list"></ul>
+</div>
 
-        <!-- Categorías -->
-        <div class="mb-4">
-            <h2 class="text-2xl font-bold mb-2">Categorías</h2>
-            <div class="flex mb-2">
-                <input type="text" id="new-category-input" placeholder="Nueva categoría" class="flex-grow p-2 border rounded">
-                <button onclick="addCategory()" class="bg-blue-600 text-white px-4 py-2 rounded ml-2 hover:bg-blue-700">Agregar</button>
-            </div>
-            <ul id="categories-list" class="space-y-1"></ul>
-        </div>
-
-        <!-- Promociones -->
-        <div class="mb-4">
-            <h2 class="text-2xl font-bold mb-2">Promociones</h2>
-            <button onclick="showPromoModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-2">Nueva Promoción</button>
-            <div id="promotions-list" class="space-y-2"></div>
-        </div>
-    </div>
-
-    <!-- Modal general -->
-    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden">
-        <div id="modal-content" class="bg-white p-6 rounded shadow w-full max-w-lg"></div>
-    </div>
-
-    <!-- Loading UI -->
-    <div id="loading-ui" class="fixed inset-0 flex justify-center items-center bg-black bg-opacity-40 hidden">
-        <div class="bg-white p-4 rounded flex items-center space-x-2">
-            <i class="fas fa-spinner fa-spin"></i>
-            <span id="loading-text">Cargando...</span>
-        </div>
-    </div>
-
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-
-        const supabase = createClient(
-            'https://ejbqlejlgprvwzrptojo.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8'
-        );
-
-        const appState = {
-            promotions: {},
-            locations: {},
-            categories: {},
-            orders: {},
-            selectedOrder: null,
-            orderProducts: []
-        }
-
-        // --- Modales ---
-        window.showModal = function(html){
-            document.getElementById('modal-content').innerHTML = html;
-            document.getElementById('modal-container').classList.remove('hidden');
-        }
-        window.closeModal = function(){
-            document.getElementById('modal-container').classList.add('hidden');
-        }
-
-        // --- Loading UI ---
-        window.showLoading = function(show,text='Cargando...'){
-            const ui = document.getElementById('loading-ui');
-            document.getElementById('loading-text').innerText = text;
-            if(show) ui.classList.remove('hidden'); else ui.classList.add('hidden');
-        }
-
-        window.showStatusMessage = function(msg,error=false){
-            alert(msg);
-        }
-
-        // --- Fetch inicial ---
-        async function fetchAllData(){
-            showLoading(true,'Cargando datos...');
-            try{
-                // Promociones
-                const { data: promos } = await supabase.from('promotions').select('*');
-                appState.promotions = {};
-                promos.forEach(p=>appState.promotions[p.id]=p);
-
-                // Localidades
-                const { data: locs } = await supabase.from('locations').select('*');
-                appState.locations = {};
-                locs.forEach(l=>appState.locations[l.id]=l.name);
-
-                // Categorías
-                const { data: cats } = await supabase.from('categories').select('*');
-                appState.categories = {};
-                cats.forEach(c=>appState.categories[c.id]=c.name);
-
-                // Pedidos
-                const { data: orders } = await supabase.from('orders').select('*');
-                appState.orders = {};
-                orders.forEach(o=>appState.orders[o.id]=o);
-
-                renderPromotions();
-                renderLocations();
-                renderCategories();
-                renderOrders();
-            }catch(e){ console.error(e); showStatusMessage('Error cargando datos',true);}
-            finally{ showLoading(false);}
-        }
-
-        fetchAllData();
-
-        // --- Render functions ---
-        function renderOrders(){
-            const list = document.getElementById('orders-list');
-            list.innerHTML='';
-            let totalGeneral=0,totalDelivered=0,totalPending=0;
-
-            const sorted = Object.values(appState.orders).sort((a,b)=>b.id.localeCompare(a.id));
-            sorted.forEach(order=>{
-                totalGeneral+=order.total;
-                if(order.status==='Entregado') totalDelivered+=order.total;
-                else totalPending+=order.total;
-
-                const div = document.createElement('div');
-                div.className=`bg-white p-4 rounded shadow flex justify-between items-center hover:shadow-lg border-l-4 ${order.status==='Entregado'?'border-green-500':'border-red-500'}`;
-                const locName = appState.locations[order.locationId] || 'Localidad desconocida';
-                div.innerHTML = `
-                    <div class="flex-grow">
-                        <h3 class="font-bold text-gray-800">Pedido #${order.id.substring(0,6)}</h3>
-                        <p class="text-sm text-gray-600">Cliente: ${order.clientName}</p>
-                        <p class="text-sm text-gray-600">Localidad: ${locName}</p>
-                        <p class="text-sm ${order.status==='Entregado'?'text-green-600':'text-red-600'}">${order.status}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xl font-bold text-blue-600">$${order.total.toFixed(2)}</p>
-                        <div class="mt-2 flex space-x-2">
-                            <button onclick="showOrderModal('${order.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600">Ver</button>
-                            <button onclick="toggleOrderStatus('${order.id}','${order.status}')" class="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600">${order.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
-                            <button onclick="deleteOrder('${order.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">Eliminar</button>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-
-            document.getElementById('total-general').innerText = `$${totalGeneral.toFixed(2)}`;
-            document.getElementById('total-delivered').innerText = `$${totalDelivered.toFixed(2)}`;
-            document.getElementById('total-pending').innerText = `$${totalPending.toFixed(2)}`;
-        }
-
-        function renderLocations(){
-            const list = document.getElementById('locations-list'); list.innerHTML='';
-            Object.entries(appState.locations).forEach(([id,name])=>{
-                const li = document.createElement('li');
-                li.className='flex justify-between items-center p-2 rounded bg-gray-50 hover:bg-gray-100';
-                li.innerHTML=`<span>${name}</span>
-                              <button onclick="deleteLocation('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
-                list.appendChild(li);
-            });
-        }
-
-        function renderCategories(){
-            const list = document.getElementById('categories-list'); list.innerHTML='';
-            Object.entries(appState.categories).forEach(([id,name])=>{
-                const li = document.createElement('li');
-                li.className='flex justify-between items-center p-2 rounded bg-gray-50 hover:bg-gray-100';
-                li.innerHTML=`<span>${name}</span>
-                              <button onclick="deleteCategory('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
-                list.appendChild(li);
-            });
-        }
-
-        function renderPromotions(){
-            const list = document.getElementById('promotions-list'); list.innerHTML='';
-            Object.values(appState.promotions).forEach(promo=>{
-                const div = document.createElement('div');
-                div.className='bg-white p-4 rounded shadow flex justify-between items-center hover:shadow-lg';
-                div.innerHTML = `
-                    <div>
-                        <h3 class="font-bold">${promo.name}</h3>
-                        <p class="text-sm">Precio: $${promo.price.toFixed(2)}</p>
-                        ${promo.originalPrice?`<p class="text-sm line-through text-gray-400">Original: $${promo.originalPrice.toFixed(2)}</p>`:''}
-                        <p class="text-sm">Stock: ${promo.stock}</p>
-                    </div>
-                    <div class="flex space-x-2">
-                        <button onclick="showPromoModal('${promo.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600">Editar</button>
-                        <button onclick="deletePromo('${promo.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">Eliminar</button>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        // --- CRUD Localidades ---
-        window.addLocation = async function(){
-            const name = document.getElementById('new-location-input').value.trim();
-            if(!name) return;
-            await supabase.from('locations').insert({name});
-            document.getElementById('new-location-input').value='';
-            fetchAllData();
-        }
-        window.deleteLocation = async function(id){
-            if(!confirm('Eliminar localidad?')) return;
-            await supabase.from('locations').delete().eq('id',id);
-            fetchAllData();
-        }
-
-        // --- CRUD Categorías ---
-        window.addCategory = async function(){
-            const name = document.getElementById('new-category-input').value.trim();
-            if(!name) return;
-            await supabase.from('categories').insert({name});
-            document.getElementById('new-category-input').value='';
-            fetchAllData();
-        }
-        window.deleteCategory = async function(id){
-            if(!confirm('Eliminar categoría?')) return;
-            await supabase.from('categories').delete().eq('id',id);
-            fetchAllData();
-        }
-
-        // --- CRUD Promociones ---
-        window.showPromoModal = function(promoId=null){
-            const isEditing = promoId!==null;
-            const promo = appState.promotions[promoId]||{};
-            const categoryOptions = Object.keys(appState.categories).map(id=>`<option value="${id}" ${promo.categoryId===id?'selected':''}>${appState.categories[id]}</option>`).join('');
-
-            const html = `
-                <h3 class="text-xl font-bold mb-4">${isEditing?'Editar Promoción':'Nueva Promoción'}</h3>
-                <form id="promo-form" class="space-y-4">
-                    <div><label class="block text-sm font-medium">Nombre</label><input type="text" id="promo-name" value="${promo.name||''}" required class="w-full p-2 border rounded"></div>
-                    <div><label class="block text-sm font-medium">Precio Original</label><input type="number" id="promo-original-price" value="${promo.originalPrice||''}" class="w-full p-2 border rounded"></div>
-                    <div><label class="block text-sm font-medium">Precio Final</label><input type="number" id="promo-price" value="${promo.price||''}" required class="w-full p-2 border rounded"></div>
-                    <div><label class="block text-sm font-medium">Stock</label><input type="number" id="promo-stock" value="${promo.stock||0}" required class="w-full p-2 border rounded"></div>
-                    <div><label class="block text-sm font-medium">Categoría</label>
-                        <select id="promo-category" class="w-full p-2 border rounded"><option value="">Sin Categoría</option>${categoryOptions}</select>
-                    </div>
-                    <div class="flex justify-end space-x-2 mt-4">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">${isEditing?'Guardar':'Crear'}</button>
-                    </div>
-                </form>
-            `;
-            showModal(html);
-            document.getElementById('promo-form').onsubmit = async e=>{
-                e.preventDefault();
-                const name = document.getElementById('promo-name').value.trim();
-                const price = parseFloat(document.getElementById('promo-price').value);
-                const stock = parseInt(document.getElementById('promo-stock').value,10);
-                const originalPrice = document.getElementById('promo-original-price').value?parseFloat(document.getElementById('promo-original-price').value):null;
-                const categoryId = document.getElementById('promo-category').value||null;
-
-                if(!name||isNaN(price)||isNaN(stock)){ alert('Completa todos los campos obligatorios'); return; }
-                if(originalPrice!==null && price>originalPrice){ alert('El precio final no puede ser mayor que el original'); return; }
-
-                if(isEditing){
-                    await supabase.from('promotions').update({name,price,stock,originalPrice,categoryId}).eq('id',promoId);
-                }else{
-                    await supabase.from('promotions').insert({name,price,stock,originalPrice,categoryId});
-                }
-                closeModal();
-                fetchAllData();
-            }
-        }
-        window.deletePromo = async function(id){ if(!confirm('Eliminar promoción?')) return; await supabase.from('promotions').delete().eq('id',id); fetchAllData(); }
-
-        // --- CRUD Pedidos Completo con productos ---
-        window.showOrderModal = async function(orderId=null){
-            const isEditing = orderId!==null;
-            let order = isEditing?appState.orders[orderId]:{clientName:'',locationId:'',status:'Pendiente',total:0,products:[]};
-            let productsList = [...order.products];
-
-            const locationOptions = Object.keys(appState.locations).map(id=>`<option value="${id}" ${order.locationId===id?'selected':''}>${appState.locations[id]}</option>`).join('');
-            const promoOptions = Object.values(appState.promotions).map(p=>`<option value="${p.id}">${p.name} - $${p.price.toFixed(2)}</option>`).join('');
-
-            const html = `
-                <h3 class="text-xl font-bold mb-4">${isEditing?'Editar Pedido':'Nuevo Pedido'}</h3>
-                <form id="order-form" class="space-y-4">
-                    <div><label class="block text-sm font-medium">Cliente</label><input type="text" id="order-client" value="${order.clientName}" required class="w-full p-2 border rounded"></div>
-                    <div><label class="block text-sm font-medium">Localidad</label><select id="order-location" class="w-full p-2 border rounded">${locationOptions}</select></div>
-
-                    <div>
-                        <label class="block text-sm font-medium">Productos</label>
-                        <div class="flex space-x-2 mb-2">
-                            <select id="product-select" class="flex-grow p-2 border rounded">${promoOptions}</select>
-                            <input type="number" id="product-quantity" placeholder="Cantidad" class="w-24 p-2 border rounded">
-                            <button type="button" id="add-product-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Agregar</button>
-                        </div>
-                        <ul id="products-list" class="space-y-1"></ul>
-                    </div>
-
-                    <div class="flex justify-between items-center">
-                        <p>Total: $<span id="order-total">${order.total.toFixed(2)}</span></p>
-                        <div class="flex space-x-2 mt-2">
-                            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Cancelar</button>
-                            <button type="submit" class="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white">${isEditing?'Guardar':'Crear'}</button>
-                        </div>
-                    </div>
-                </form>
-            `;
-            showModal(html);
-
-            function renderProducts(){
-                const list = document.getElementById('products-list');
-                list.innerHTML='';
-                let total=0;
-                productsList.forEach((item,i)=>{
-                    const promo = appState.promotions[item.promoId];
-                    const subtotal = promo.price*item.quantity;
-                    total+=subtotal;
-                    const li = document.createElement('li');
-                    li.className='flex justify-between items-center p-2 rounded bg-gray-50 hover:bg-gray-100';
-                    li.innerHTML=`<span>${promo.name} x ${item.quantity} - $${subtotal.toFixed(2)}</span>
-                                  <button onclick="productsList.splice(${i},1); renderProducts();" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
-                    list.appendChild(li);
-                });
-                document.getElementById('order-total').innerText = total.toFixed(2);
-            }
-
-            renderProducts();
-
-            document.getElementById('add-product-btn').onclick = ()=>{
-                const promoId = document.getElementById('product-select').value;
-                const quantity = parseInt(document.getElementById('product-quantity').value,10);
-                if(!promoId||isNaN(quantity)||quantity<1) return;
-                productsList.push({promoId,quantity});
-                document.getElementById('product-quantity').value='';
-                renderProducts();
-            }
-
-            document.getElementById('order-form').onsubmit=async e=>{
-                e.preventDefault();
-                const clientName = document.getElementById('order-client').value.trim();
-                const locationId = document.getElementById('order-location').value;
-                if(!clientName||!locationId||productsList.length===0){ alert('Completa todos los campos'); return; }
-                const total = productsList.reduce((acc,item)=>acc+(appState.promotions[item.promoId].price*item.quantity),0);
-
-                if(isEditing){
-                    await supabase.from('orders').update({clientName,locationId,total,products:productsList}).eq('id',orderId);
-                }else{
-                    await supabase.from('orders').insert({clientName,locationId,total,status:'Pendiente',products:productsList});
-                }
-                closeModal();
-                fetchAllData();
-            }
-        }
-
-        window.deleteOrder = async function(id){
-            if(!confirm('Eliminar pedido?')) return;
-            await supabase.from('orders').delete().eq('id',id);
-            fetchAllData();
-        }
-
-        window.toggleOrderStatus = async function(id,status){
-            const newStatus = status==='Pendiente'?'Entregado':'Pendiente';
-            await supabase.from('orders').update({status:newStatus}).eq('id',id);
-            fetchAllData();
-        }
-
-    </script>
+<div id="categories" class="tab-content hidden">
+  <div class="flex mb-2 space-x-2">
+    <input id="new-category" type="text" placeholder="Nueva categoría" class="p-2 border rounded flex-grow"/>
+    <button onclick="addCategory()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+  </div>
+  <ul id="categories-list"></ul>
+</div>
 </body>
 </html>
-
-
-
-
-
-
