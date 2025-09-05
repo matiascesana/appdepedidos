@@ -783,17 +783,9 @@
                 const { error } = await supabase.from('locations').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-location-input').value = '';
+                await fetchLocations(); // <-- Llama a la función para recargar la lista
             } catch (e) {
                 console.error("Error adding location: ", e.message);
-            }
-        };
-
-        window.deleteLocation = async function(id) {
-            try {
-                const { error } = await supabase.from('locations').delete().eq('id', id);
-                if (error) throw error;
-            } catch (e) {
-                console.error("Error deleting location: ", e.message);
             }
         };
 
@@ -805,11 +797,12 @@
                 const { error } = await supabase.from('categories').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-category-input').value = '';
+                await fetchCategories(); // <-- Llama a la función para recargar la lista
             } catch (e) {
                 console.error("Error adding category: ", e.message);
             }
         };
-
+        
         window.deleteCategory = async function(id) {
             try {
                 const { error } = await supabase.from('categories').delete().eq('id', id);
@@ -1083,6 +1076,7 @@
     </script>
 </body>
 </html>
+
 
 
 
