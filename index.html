@@ -260,46 +260,22 @@
             if (!email || !password) {
                 showAuthError("Por favor, ingresa tu correo y contraseña.");
                 return;
-            }
-            try {
-                showLoading(true, 'Iniciando sesión...');
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) throw error;
-            } catch (error) {
-                console.error("Error al iniciar sesión:", error.message);
-                let message = "Error al iniciar sesión. Intenta de nuevo.";
-                if (error.message.includes('Invalid login credentials')) {
-                    message = "Correo o contraseña incorrectos.";
-                }
-                showStatusMessage(message, true);
-                setTimeout(() => showLoading(false), 3000);
-            }
-        });
-
-        registerBtn.addEventListener('click', async () => {
-            hideAuthError();
-            const email = emailInput.value.trim();
-            const password = passwordInput.value.trim();
-            if (!email || !password) {
-                showAuthError("Por favor, ingresa un correo y contraseña para registrarte.");
-                return;
-            }
-            try {
-                showLoading(true, 'Registrando...');
-                const { error } = await supabase.auth.signUp({ email, password });
-                if (error) throw error;
-                showStatusMessage('Registro exitoso. Revisa tu correo para confirmar.');
-                setTimeout(() => showLoading(false), 3000);
-            } catch (error) {
-                console.error("Error al registrar:", error.message);
-                let message = "Error al registrar. Intenta de nuevo.";
-                if (error.message.includes('Email already registered')) {
-                    message = "Este correo ya está registrado.";
-                }
-                showStatusMessage(message, true);
-                setTimeout(() => showLoading(false), 3000);
-            }
-        });
+    }
+    
+    showLoading(true, 'Iniciando sesión...');
+    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+        let message = "Error al iniciar sesión. Intenta de nuevo.";
+        if (error.message.includes('Invalid login credentials')) {
+            message = "Correo o contraseña incorrectos.";
+        }
+        showStatusMessage(message, true);
+        setTimeout(() => showLoading(false), 3000);
+    }
+    // Si no hay error, el evento onAuthStateChange se encargará de la transición.
+});
 
         window.signOutUser = async function() {
             showLoading(true, 'Cerrando sesión...');
@@ -1067,4 +1043,5 @@
     </script>
 </body>
 </html>
+
 
