@@ -1022,26 +1022,39 @@
             
             const promotionsArray = Object.values(appState.promotions).sort((a, b) => a.name.localeCompare(b.name));
 
-            const tableData = promotionsArray.map(promo => {
-                const categoryName = appState.categories[promo.category_id] || 'Sin Categoría';
-                return [
-                    promo.name,
-                    `$${promo.price.toFixed(2)}`,
-                    promo.stock,
-                    categoryName
-                ];
-            });
+            doc.text('Catálogo de Promociones', 14, 20);
 
-            doc.text('Listado de Promociones', 14, 20);
+            let yPos = 30;
+            const lineHeight = 10;
+            const pageHeight = doc.internal.pageSize.height;
+            const margin = 14;
 
-            doc.autoTable({
-                head: [['Nombre', 'Precio', 'Stock', 'Categoría']],
-                body: tableData,
-                startY: 30,
-                headStyles: { fillColor: [30, 144, 255] },
-                didDrawPage: function (data) {
-                    doc.text("Página " + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+            promotionsArray.forEach((promo, index) => {
+                if (yPos + 3 * lineHeight > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
                 }
+
+                doc.setFontSize(14);
+                doc.setTextColor(40);
+                doc.text(promo.name, margin, yPos);
+                yPos += lineHeight;
+
+                if (promo.original_price) {
+                    const originalPriceText = `$${promo.original_price.toFixed(2)}`;
+                    doc.setFontSize(10);
+                    doc.setTextColor(255, 0, 0);
+                    doc.text(originalPriceText, margin, yPos);
+                    const textWidth = doc.getStringUnitWidth(originalPriceText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+                    doc.setDrawColor(255, 0, 0);
+                    doc.line(margin, yPos - 3, margin + textWidth, yPos - 3);
+                    yPos += lineHeight / 2;
+                }
+
+                doc.setFontSize(16);
+                doc.setTextColor(0, 128, 0); // Verde para el precio actual
+                doc.text(`$${promo.price.toFixed(2)}`, margin, yPos);
+                yPos += lineHeight * 1.5;
             });
 
             doc.save('promociones.pdf');
@@ -1111,8 +1124,4 @@
 
             doc.save('pedidos.pdf');
             showLoading(false);
-            showStatusMessage('PDF de pedidos generado con éxito.');
-        };
-    </script>
-</body>
-</html>
+            showStatusMessage('PDF
