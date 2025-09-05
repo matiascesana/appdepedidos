@@ -30,41 +30,9 @@
         <p id="status-message" class="mt-4 text-gray-700 font-medium">Iniciando...</p>
     </div>
 
-    <div id="auth-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gray-100 p-4 z-40 hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">Gestor de Negocio</h2>
-            <form id="auth-form" class="space-y-4">
-                <div>
-                    <label for="email-input" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
-                    <input type="email" id="email-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
-                </div>
-                <div>
-                    <label for="password-input" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                    <input type="password" id="password-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
-                </div>
-                <button type="button" id="login-btn" class="w-full bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-bold">
-                    Iniciar Sesión
-                </button>
-                <div class="text-center mt-4">
-                    <p class="text-sm text-gray-600">¿No tienes una cuenta?</p>
-                    <button type="button" id="register-btn" class="text-blue-600 font-bold hover:underline transition-colors mt-1">
-                        Regístrate
-                    </button>
-                </div>
-            </form>
-            <p id="auth-error-message" class="text-red-500 text-sm mt-4 text-center hidden"></p>
-        </div>
-    </div>
-
-    <div id="app-container" class="flex flex-col flex-grow hidden">
+    <div id="app-container" class="flex flex-col flex-grow">
         <header class="bg-white shadow-md p-4 flex items-center justify-between z-10">
             <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
-            <div id="auth-status" class="text-sm text-gray-500 flex items-center space-x-2">
-                <span id="user-name" class="font-medium"></span>
-                <button onclick="signOutUser()" class="text-red-500 hover:text-red-700 transition-colors text-lg" title="Cerrar sesión">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
             <nav id="nav-tabs" class="flex space-x-2">
                 <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
                 <button onclick="navigate('orders')" id="tab-orders" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Pedidos</button>
@@ -92,7 +60,8 @@
 
         // Global app state
         let appState = {
-            userId: null,
+            // El ID de usuario se establece a un valor fijo o null, ya no se usa auth.uid()
+            userId: 'anonymous_user', 
             userName: null,
             currentView: 'promotions',
             promotions: {},
@@ -235,77 +204,6 @@
                     break;
             }
         }
-
-        // --- Authentication ---
-        const authForm = document.getElementById('auth-form');
-        const emailInput = document.getElementById('email-input');
-        const passwordInput = document.getElementById('password-input');
-        const loginBtn = document.getElementById('login-btn');
-        const registerBtn = document.getElementById('register-btn');
-        const authErrorMessage = document.getElementById('auth-error-message');
-
-        function showAuthError(message) {
-            authErrorMessage.innerText = message;
-            authErrorMessage.classList.remove('hidden');
-        }
-
-        function hideAuthError() {
-            authErrorMessage.classList.add('hidden');
-        }
-        
-        loginBtn.addEventListener('click', async () => {
-            hideAuthError();
-            const email = emailInput.value.trim();
-            const password = passwordInput.value.trim();
-            if (!email || !password) {
-                showAuthError("Por favor, ingresa tu correo y contraseña.");
-                return;
-            }
-            try {
-                showLoading(true, 'Iniciando sesión...');
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) throw error;
-            } catch (error) {
-                console.error("Error al iniciar sesión:", error.message);
-                let message = "Error al iniciar sesión. Intenta de nuevo.";
-                if (error.message.includes('Invalid login credentials')) {
-                    message = "Correo o contraseña incorrectos.";
-                }
-                showStatusMessage(message, true);
-                setTimeout(() => showLoading(false), 3000);
-            }
-        });
-
-        registerBtn.addEventListener('click', async () => {
-            hideAuthError();
-            const email = emailInput.value.trim();
-            const password = passwordInput.value.trim();
-            if (!email || !password) {
-                showAuthError("Por favor, ingresa un correo y contraseña para registrarte.");
-                return;
-            }
-            try {
-                showLoading(true, 'Registrando...');
-                const { error } = await supabase.auth.signUp({ email, password });
-                if (error) throw error;
-                showStatusMessage('Registro exitoso. Revisa tu correo para confirmar.');
-                setTimeout(() => showLoading(false), 3000);
-            } catch (error) {
-                console.error("Error al registrar:", error.message);
-                let message = "Error al registrar. Intenta de nuevo.";
-                if (error.message.includes('Email already registered')) {
-                    message = "Este correo ya está registrado.";
-                }
-                showStatusMessage(message, true);
-                setTimeout(() => showLoading(false), 3000);
-            }
-        });
-
-        window.signOutUser = async function() {
-            showLoading(true, 'Cerrando sesión...');
-            const { error } = await supabase.auth.signOut();
-            if (error) console.error("Error al cerrar sesión:", error.message);
-        };
         
         // --- Database Schema Initialization ---
         async function initializeSupabaseSchema() {
@@ -319,30 +217,30 @@
                     stock integer NOT NULL,
                     image text,
                     category_id uuid,
-                    user_id uuid NOT NULL,
+                    -- La columna user_id ya no es NOT NULL porque no hay usuario
+                    user_id uuid,
                     created_at timestamp with time zone DEFAULT now()
                 );
 
                 CREATE TABLE IF NOT EXISTS public.categories (
                     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                     name text NOT NULL,
-                    user_id uuid NOT NULL
+                    user_id uuid
                 );
                 
                 CREATE TABLE IF NOT EXISTS public.locations (
                     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                     name text NOT NULL,
-                    user_id uuid NOT NULL
+                    user_id uuid
                 );
                 
                 CREATE TABLE IF NOT EXISTS public.orders (
                     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                     client_name text NOT NULL,
-                    -- TELÉFONO ELIMINADO: se ha quitado la columna client_phone
                     location_id uuid,
                     total double precision NOT NULL,
                     status text NOT NULL DEFAULT 'Pendiente',
-                    user_id uuid NOT NULL,
+                    user_id uuid,
                     created_at timestamp with time zone DEFAULT now(),
                     updated_at timestamp with time zone DEFAULT now()
                 );
@@ -363,35 +261,36 @@
                 ALTER TABLE public.order_products ENABLE ROW LEVEL SECURITY;
 
                 -- Create RLS policies
+                -- Las políticas se cambian a USING (true) para permitir el acceso público
                 -- Promotions
                 DROP POLICY IF EXISTS "Allow all users to read promotions" ON public.promotions;
                 DROP POLICY IF EXISTS "Allow user to manage their own promotions" ON public.promotions;
-                CREATE POLICY "Allow all users to read promotions" ON public.promotions FOR SELECT TO authenticated USING ( true );
-                CREATE POLICY "Allow user to manage their own promotions" ON public.promotions FOR ALL TO authenticated USING ( auth.uid() = user_id );
+                CREATE POLICY "Allow all users to read promotions" ON public.promotions FOR SELECT USING ( true );
+                CREATE POLICY "Allow public to manage promotions" ON public.promotions FOR ALL USING ( true );
 
                 -- Categories
                 DROP POLICY IF EXISTS "Allow all users to read categories" ON public.categories;
                 DROP POLICY IF EXISTS "Allow user to manage their own categories" ON public.categories;
-                CREATE POLICY "Allow all users to read categories" ON public.categories FOR SELECT TO authenticated USING ( true );
-                CREATE POLICY "Allow user to manage their own categories" ON public.categories FOR ALL TO authenticated USING ( auth.uid() = user_id );
+                CREATE POLICY "Allow all users to read categories" ON public.categories FOR SELECT USING ( true );
+                CREATE POLICY "Allow public to manage categories" ON public.categories FOR ALL USING ( true );
 
                 -- Locations
                 DROP POLICY IF EXISTS "Allow all users to read locations" ON public.locations;
                 DROP POLICY IF EXISTS "Allow user to manage their own locations" ON public.locations;
-                CREATE POLICY "Allow all users to read locations" ON public.locations FOR SELECT TO authenticated USING ( true );
-                CREATE POLICY "Allow user to manage their own locations" ON public.locations FOR ALL TO authenticated USING ( auth.uid() = user_id );
+                CREATE POLICY "Allow all users to read locations" ON public.locations FOR SELECT USING ( true );
+                CREATE POLICY "Allow public to manage locations" ON public.locations FOR ALL USING ( true );
 
                 -- Orders
                 DROP POLICY IF EXISTS "Allow user to read their own orders" ON public.orders;
                 DROP POLICY IF EXISTS "Allow user to manage their own orders" ON public.orders;
-                CREATE POLICY "Allow user to read their own orders" ON public.orders FOR SELECT TO authenticated USING ( auth.uid() = user_id );
-                CREATE POLICY "Allow user to manage their own orders" ON public.orders FOR ALL TO authenticated USING ( auth.uid() = user_id );
+                CREATE POLICY "Allow all users to read orders" ON public.orders FOR SELECT USING ( true );
+                CREATE POLICY "Allow public to manage orders" ON public.orders FOR ALL USING ( true );
 
                 -- Order Products
                 DROP POLICY IF EXISTS "Allow user to read their order products" ON public.order_products;
                 DROP POLICY IF EXISTS "Allow user to manage their order products" ON public.order_products;
-                CREATE POLICY "Allow user to read their order products" ON public.order_products FOR SELECT TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
-                CREATE POLICY "Allow user to manage their order products" ON public.order_products FOR ALL TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
+                CREATE POLICY "Allow all users to read order_products" ON public.order_products FOR SELECT USING ( true );
+                CREATE POLICY "Allow public to manage order_products" ON public.order_products FOR ALL USING ( true );
             `;
 
             try {
@@ -416,54 +315,19 @@
             }
         }
 
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            const authScreen = document.getElementById('auth-screen');
-            const appContainer = document.getElementById('app-container');
-            
-            if (session) {
-                appState.userId = session.user.id;
-                appState.userName = session.user.email;
-                document.getElementById('user-name').innerText = appState.userName;
-                authScreen.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-
+        // Se elimina el listener onAuthStateChange ya que no se usa autenticación
+        
+        // Se carga la aplicación directamente al inicio, sin verificar sesión
+        (async () => {
+            showLoading(true, 'Iniciando aplicación...');
+            try {
+                // Se eliminan las llamadas a getSession() y la lógica de autenticación
                 await initializeSupabaseSchema();
-
                 listenForData();
                 navigate(appState.currentView);
-            } else {
-                appState.userId = null;
-                appState.userName = null;
-                authScreen.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-                showLoading(false);
-            }
-        });
-
-        // Este código se ejecuta al cargar la página
-        (async () => {
-            showLoading(true, 'Verificando sesión...');
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                
-                if (session) {
-                    appState.userId = session.user.id;
-                    appState.userName = session.user.email;
-                    document.getElementById('user-name').innerText = appState.userName;
-
-                    const authScreen = document.getElementById('auth-screen');
-                    const appContainer = document.getElementById('app-container');
-                    authScreen.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-
-                    await initializeSupabaseSchema();
-                    listenForData();
-                    navigate(appState.currentView);
-                } else {
-                    // Si no hay sesión, simplemente no se hace nada
-                }
             } catch (error) {
-                console.error("Error en la verificación de sesión:", error);
+                console.error("Error al iniciar la aplicación:", error);
+                showStatusMessage('Error crítico al iniciar la aplicación. Revise la consola.', true);
             } finally {
                 showLoading(false);
             }
@@ -472,25 +336,20 @@
 
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
-            if (!appState.userId) return;
-
-            // Promotions Listener
-            supabase.channel('promotions_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, payload => {
+            // El check de userId se elimina ya que la app es pública
+            supabase.channel('public:promotions').on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, payload => {
                 fetchPromotions();
             }).subscribe();
 
-            // Categories Listener
-            supabase.channel('categories_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, payload => {
+            supabase.channel('public:categories').on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, payload => {
                 fetchCategories();
             }).subscribe();
 
-            // Locations Listener
-            supabase.channel('locations_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, payload => {
+            supabase.channel('public:locations').on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, payload => {
                 fetchLocations();
             }).subscribe();
 
-            // Orders Listener
-            supabase.channel('orders_channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
+            supabase.channel('public:orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
                 fetchOrders();
             }).subscribe();
 
@@ -763,7 +622,8 @@
 
             try {
                 if (imageFile) {
-                    const filePath = `${appState.userId}/${Date.now()}_${imageFile.name}`;
+                    // El path del archivo ya no usa el user ID
+                    const filePath = `public_promos/${Date.now()}_${imageFile.name}`;
                     const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('promo_images')
                         .upload(filePath, imageFile);
@@ -779,7 +639,7 @@
                     stock,
                     category_id: categoryId,
                     image: imageUrl,
-                    user_id: appState.userId
+                    // Se elimina el user_id del objeto
                 };
 
                 if (promoId) {
@@ -834,10 +694,273 @@
             const name = document.getElementById('new-location-input').value.trim();
             if (!name) return;
             try {
-                const { error } = await supabase.from('locations').insert({ name, user_id: appState.userId });
+                const { error } = await supabase.from('locations').insert({ name });
                 if (error) throw error;
                 document.getElementById('new-location-input').value = '';
-                await fetchLocations(); // <-- Llama a la función para recargar la lista
+                await fetchLocations(); 
             } catch (e) {
-                console.error("Error
+                console.error("Error adding location: ", e.message);
+            }
+        };
 
+        window.deleteLocation = async function(id) {
+            try {
+                const { error } = await supabase.from('locations').delete().eq('id', id);
+                if (error) throw error;
+            } catch (e) {
+                console.error("Error deleting location: ", e.message);
+            }
+        };
+
+        // Categories
+        window.addCategory = async function() {
+            const name = document.getElementById('new-category-input').value.trim();
+            if (!name) return;
+            try {
+                const { error } = await supabase.from('categories').insert({ name });
+                if (error) throw error;
+                document.getElementById('new-category-input').value = '';
+                await fetchCategories();
+            } catch (e) {
+                console.error("Error adding category: ", e.message);
+            }
+        };
+
+        window.deleteCategory = async function(id) {
+            try {
+                const { error } = await supabase.from('categories').delete().eq('id', id);
+                if (error) throw error;
+            } catch (e) {
+                console.error("Error deleting category: ", e.message);
+            }
+        };
+
+        // Orders
+        window.showOrderModal = function(orderId = null) {
+            const isEditing = orderId !== null;
+            if (isEditing) {
+                appState.selectedOrder = appState.orders[orderId];
+                // Fetch products for the specific order
+                supabase.from('order_products').select('*').eq('order_id', orderId)
+                    .then(({ data, error }) => {
+                        if (error) throw error;
+                        appState.orderProducts = data;
+                        renderOrderModalContent();
+                    }).catch(e => console.error('Error fetching order products:', e.message));
+            } else {
+                appState.selectedOrder = {
+                    client_name: '',
+                    location_id: null,
+                    total: 0,
+                    status: 'Pendiente',
+                    products: [],
+                };
+                appState.orderProducts = [];
+                renderOrderModalContent();
+            }
+        };
+        
+        function renderOrderModalContent() {
+            const clientNameInput = document.getElementById('client-name');
+            if (clientNameInput) {
+                appState.selectedOrder.client_name = clientNameInput.value;
+            }
+            const order = appState.selectedOrder;
+            const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.location_id === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
+            const productOptions = Object.keys(appState.promotions).map(id => `<option value="${id}">${appState.promotions[id].name} - $${appState.promotions[id].price.toFixed(2)}</option>`).join('');
+            
+            const productListHtml = appState.orderProducts.map((item, index) => {
+                const promoName = appState.promotions[item.promo_id]?.name || 'Producto Desconocido';
+                return `
+                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded-lg mb-2">
+                        <span class="flex-grow">${item.quantity} x ${promoName}</span>
+                        <span>$${(item.quantity * item.price).toFixed(2)}</span>
+                        <button type="button" onclick="removeOrderProduct(${index})" class="ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            }).join('');
+
+            const modalHtml = `
+                <h3 class="text-xl font-bold mb-4">${order.id ? 'Ver Pedido' : 'Nuevo Pedido'}</h3>
+                <form id="order-form" class="space-y-4">
+                    <div>
+                        <label for="client-name" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                        <input type="text" id="client-name" value="${order.client_name}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="order-location" class="block text-sm font-medium text-gray-700">Localidad</label>
+                        <select id="order-location" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">Selecciona una localidad</option>
+                            ${locationOptions}
+                        </select>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="text-lg font-semibold mb-2">Productos</h4>
+                        <div id="order-products-list" class="max-h-48 overflow-y-auto mb-2">
+                            ${productListHtml}
+                        </div>
+                        <div class="flex items-end space-x-2">
+                            <div class="flex-grow">
+                                <label for="product-select" class="block text-sm font-medium text-gray-700">Añadir producto</label>
+                                <select id="product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                                    ${productOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="product-quantity" class="block text-sm font-medium text-gray-700">Cantidad</label>
+                                <input type="number" id="product-quantity" value="1" min="1" class="mt-1 w-20 p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <button type="button" onclick="addOrderProduct()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md flex-shrink-0">Añadir</button>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-gray-800">Total: $${appState.selectedOrder.total.toFixed(2)}</p>
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">${order.id ? 'Guardar Pedido' : 'Crear Pedido'}</button>
+                    </div>
+                </form>
+            `;
+            showModal(modalHtml);
+            
+            document.getElementById('order-form').onsubmit = async (e) => {
+                e.preventDefault();
+                await saveOrder(order.id);
+            };
+        };
+
+        window.addOrderProduct = function() {
+            const productSelect = document.getElementById('product-select');
+            const quantityInput = document.getElementById('product-quantity');
+            const promoId = productSelect.value;
+            const quantity = parseInt(quantityInput.value, 10);
+            
+            if (!promoId || isNaN(quantity) || quantity <= 0) return;
+
+            const promo = appState.promotions[promoId];
+            if (!promo) return;
+
+            const existingItem = appState.orderProducts.find(item => item.promo_id === promoId);
+            if (existingItem) {
+                existingItem.quantity += quantity;
+            } else {
+                appState.orderProducts.push({
+                    promo_id: promo.id,
+                    quantity: quantity,
+                    price: promo.price
+                });
+            }
+
+            appState.selectedOrder.total = appState.orderProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            
+            renderOrderModalContent();
+        };
+
+        window.removeOrderProduct = function(index) {
+            appState.orderProducts.splice(index, 1);
+            appState.selectedOrder.total = appState.orderProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            renderOrderModalContent();
+        };
+
+        window.saveOrder = async function(orderId) {
+            showLoading(true, 'Guardando pedido...');
+            
+            const clientName = document.getElementById('client-name').value.trim();
+            const locationId = document.getElementById('order-location').value;
+            
+            if (!clientName || !locationId || appState.orderProducts.length === 0) {
+                showModal(`
+                    <h3 class="font-bold text-xl text-red-600 mb-2">Error de Validación</h3>
+                    <p class="text-gray-700 mb-4">Por favor, completa todos los campos y añade al menos un producto.</p>
+                    <button onclick="closeModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg">Aceptar</button>
+                `);
+                showLoading(false);
+                return;
+            }
+            
+            const orderData = {
+                client_name: clientName,
+                location_id: locationId,
+                total: appState.selectedOrder.total,
+                user_id: appState.userId
+            };
+
+            try {
+                let orderResult;
+                if (orderId) {
+                    orderResult = await supabase.from('orders').update(orderData).eq('id', orderId).select();
+                } else {
+                    orderResult = await supabase.from('orders').insert(orderData).select();
+                }
+
+                if (orderResult.error) throw orderResult.error;
+
+                const newOrderId = orderResult.data[0].id;
+                
+                await supabase.from('order_products').delete().eq('order_id', newOrderId);
+
+                const productsToInsert = appState.orderProducts.map(p => ({
+                    ...p,
+                    order_id: newOrderId
+                }));
+                
+                const { error: productsError } = await supabase.from('order_products').insert(productsToInsert);
+                if (productsError) throw productsError;
+
+                closeModal();
+                showStatusMessage('Pedido guardado con éxito.');
+
+            } catch (error) {
+                console.error("Error al guardar el pedido:", error.message);
+                showStatusMessage('Error al guardar el pedido. Revisa la consola para más detalles.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+        window.toggleOrderStatus = async function(orderId, currentStatus) {
+            const newStatus = currentStatus === 'Pendiente' ? 'Entregado' : 'Pendiente';
+            showLoading(true, `Cambiando estado a ${newStatus}...`);
+            try {
+                const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+                if (error) throw error;
+            } catch (error) {
+                console.error("Error al cambiar el estado del pedido:", error.message);
+                showStatusMessage('Error al cambiar el estado del pedido. Revisa la consola.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+
+        window.deleteOrder = async function(orderId) {
+            showModal(`
+                <h3 class="font-bold text-xl text-red-600 mb-2">Confirmar Eliminación</h3>
+                <p class="text-gray-700 mb-4">¿Estás seguro de que quieres eliminar este pedido y todos sus productos?</p>
+                <div class="flex justify-end space-x-2">
+                    <button onclick="closeModal()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                    <button onclick="confirmDeleteOrder('${orderId}')" class="bg-red-500 text-white px-4 py-2 rounded-lg">Eliminar</button>
+                </div>
+            `);
+        };
+
+        window.confirmDeleteOrder = async function(orderId) {
+            showLoading(true, 'Eliminando pedido...');
+            try {
+                const { error } = await supabase.from('orders').delete().eq('id', orderId);
+                if (error) throw error;
+                closeModal();
+                showStatusMessage('Pedido eliminado con éxito.');
+            } catch (error) {
+                console.error("Error al eliminar el pedido:", error.message);
+                showStatusMessage('Error al eliminar el pedido. Revisa la consola.', true);
+            } finally {
+                await fetchOrders();
+                setTimeout(() => showLoading(false), 2000);
+            }
+        };
+    </script>
+</body>
+</html>
