@@ -93,9 +93,14 @@
             orders: `
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">Pedidos</h2>
-                    <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
-                        <i class="fas fa-plus mr-2"></i>Nuevo Pedido
-                    </button>
+                    <div class="space-x-2">
+                        <button onclick="exportOrdersToPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-md">
+                            <i class="fas fa-file-pdf mr-2"></i>Exportar a PDF
+                        </button>
+                        <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Nuevo Pedido
+                        </button>
+                    </div>
                 </div>
                 <div class="bg-white p-4 rounded-lg shadow-md mb-4 flex justify-around flex-wrap text-center">
                     <div>
@@ -1043,6 +1048,70 @@
             
             showLoading(false);
             showStatusMessage('PDF generado con éxito.');
+        };
+        
+        // NEW: Función para exportar los pedidos a PDF
+        window.exportOrdersToPDF = async function() {
+            showLoading(true, 'Generando PDF de pedidos...');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text('Listado de Pedidos por Localidad', 14, 20);
+            
+            const ordersByLocation = {};
+            Object.values(appState.orders).forEach(order => {
+                const locationName = appState.locations[order.location_id] || 'Sin Localidad';
+                if (!ordersByLocation[locationName]) {
+                    ordersByLocation[locationName] = [];
+                }
+                ordersByLocation[locationName].push(order);
+            });
+
+            let startY = 30;
+
+            for (const locationName in ordersByLocation) {
+                const orders = ordersByLocation[locationName].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                doc.addPage();
+                startY = 20;
+
+                doc.setFontSize(14);
+                doc.setTextColor(40);
+                doc.text(`Localidad: ${locationName}`, 14, startY);
+
+                const tableData = orders.map(order => [
+                    `#${order.id.substring(0, 6)}`,
+                    order.client_name,
+                    `$${order.total.toFixed(2)}`,
+                    new Date(order.created_at).toLocaleDateString(),
+                    order.status
+                ]);
+
+                doc.autoTable({
+                    head: [['ID', 'Cliente', 'Total', 'Fecha', 'Estado']],
+                    body: tableData,
+                    startY: startY + 10,
+                    headStyles: { fillColor: [30, 144, 255] },
+                    didParseCell: function(data) {
+                        const statusColumnIndex = 4;
+                        if (data.column.index === statusColumnIndex) {
+                            const status = data.cell.raw;
+                            if (status === 'Entregado') {
+                                data.cell.styles.fillColor = [0, 128, 0]; // Verde
+                            } else if (status === 'Pendiente') {
+                                data.cell.styles.fillColor = [255, 0, 0]; // Rojo
+                            }
+                        }
+                    },
+                    didDrawPage: function (data) {
+                        doc.text("Página " + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+                    }
+                });
+            }
+
+            doc.save('pedidos.pdf');
+            showLoading(false);
+            showStatusMessage('PDF de pedidos generado con éxito.');
         };
     </script>
 </body>
