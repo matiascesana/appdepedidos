@@ -6,337 +6,389 @@
 <title>App de Pedidos</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
 
-<div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-6">App de Pedidos</h1>
+<div class="w-full max-w-6xl">
 
-    <!-- Tabs -->
-    <div class="mb-4">
-        <button class="tab-btn px-4 py-2 bg-blue-500 text-white rounded-l-lg" data-tab="promotions">Promociones</button>
-        <button class="tab-btn px-4 py-2 bg-gray-200 text-gray-700" data-tab="orders">Pedidos</button>
-        <button class="tab-btn px-4 py-2 bg-gray-200 text-gray-700" data-tab="locations">Localidades</button>
-        <button class="tab-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-r-lg" data-tab="categories">Categorías</button>
+  <!-- Tabs -->
+  <div class="mb-4 flex border-b border-gray-300">
+    <button id="tab-promotions" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">Promociones</button>
+    <button id="tab-orders" class="px-4 py-2 font-semibold text-gray-600 hover:text-blue-600">Pedidos</button>
+    <button id="tab-locations" class="px-4 py-2 font-semibold text-gray-600 hover:text-blue-600">Localidades</button>
+    <button id="tab-categories" class="px-4 py-2 font-semibold text-gray-600 hover:text-blue-600">Categorías</button>
+  </div>
+
+  <!-- Content -->
+  <div id="tab-content" class="bg-white rounded-lg shadow p-4">
+
+    <!-- Promociones -->
+    <div id="promotions-tab" class="tab-panel">
+      <div class="flex justify-between mb-4">
+        <h2 class="text-xl font-bold">Promociones</h2>
+        <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Nueva Promoción</button>
+      </div>
+      <div id="promotions-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </div>
 
-    <!-- Tab Contents -->
-    <div id="promotions-tab" class="tab-content">
-        <div class="mb-4 flex justify-end">
-            <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Nueva Promoción</button>
-        </div>
-        <div id="promotions-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    <!-- Pedidos -->
+    <div id="orders-tab" class="tab-panel hidden">
+      <div class="flex justify-between mb-4">
+        <h2 class="text-xl font-bold">Pedidos</h2>
+        <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Nuevo Pedido</button>
+      </div>
+      <div id="orders-list" class="space-y-4"></div>
     </div>
 
-    <div id="orders-tab" class="tab-content hidden">
-        <div class="mb-4 flex justify-end">
-            <button onclick="showOrderModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Nuevo Pedido</button>
-        </div>
-        <div id="orders-list" class="space-y-4"></div>
-        <div class="mt-4 text-right space-y-1">
-            <p>Total General: <span id="total-general">$0.00</span></p>
-            <p>Total Entregados: <span id="total-delivered">$0.00</span></p>
-            <p>Total Pendientes: <span id="total-pending">$0.00</span></p>
-        </div>
+    <!-- Localidades -->
+    <div id="locations-tab" class="tab-panel hidden">
+      <div class="flex justify-between mb-4">
+        <input type="text" id="new-location-input" placeholder="Nueva localidad" class="border p-2 rounded w-full max-w-xs">
+        <button onclick="addLocation()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ml-2">Agregar</button>
+      </div>
+      <ul id="locations-list" class="space-y-2"></ul>
     </div>
 
-    <div id="locations-tab" class="tab-content hidden">
-        <div class="mb-4 flex space-x-2">
-            <input type="text" id="new-location-input" placeholder="Nueva Localidad" class="border rounded-lg p-2 flex-grow">
-            <button onclick="addLocation()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Agregar</button>
-        </div>
-        <ul id="locations-list" class="space-y-2"></ul>
+    <!-- Categorías -->
+    <div id="categories-tab" class="tab-panel hidden">
+      <div class="flex justify-between mb-4">
+        <input type="text" id="new-category-input" placeholder="Nueva categoría" class="border p-2 rounded w-full max-w-xs">
+        <button onclick="addCategory()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ml-2">Agregar</button>
+      </div>
+      <ul id="categories-list" class="space-y-2"></ul>
     </div>
 
-    <div id="categories-tab" class="tab-content hidden">
-        <div class="mb-4 flex space-x-2">
-            <input type="text" id="new-category-input" placeholder="Nueva Categoría" class="border rounded-lg p-2 flex-grow">
-            <button onclick="addCategory()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Agregar</button>
-        </div>
-        <ul id="categories-list" class="space-y-2"></ul>
-    </div>
+  </div>
 </div>
 
 <!-- Modal -->
-<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-    <div id="modal-content" class="bg-white rounded-lg p-6 w-full max-w-lg relative"></div>
+<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+  <div id="modal-content" class="bg-white rounded-lg p-6 max-w-lg w-full relative"></div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-    <div class="bg-white p-6 rounded-lg flex items-center space-x-2">
-        <i class="fas fa-spinner fa-spin text-2xl"></i>
-        <span id="loading-text">Cargando...</span>
-    </div>
+<!-- Loading -->
+<div id="loading" class="fixed inset-0 bg-black bg-opacity-30 hidden items-center justify-center z-50">
+  <div class="bg-white p-6 rounded shadow flex items-center space-x-2">
+    <i class="fas fa-spinner fa-spin text-blue-600 text-xl"></i>
+    <span>Cargando...</span>
+  </div>
 </div>
 
 <script>
-const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0am8iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1NzAyOTAyMiwiZXhwIjoyMDcyNjA1MDIyfQ.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  // --- Supabase ---
+  const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-const appState = {
+  let appState = {
     promotions: {},
     orders: {},
     locations: {},
     categories: {},
     selectedOrder: null,
     orderProducts: []
-};
+  };
 
-// --- Tabs ---
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('bg-blue-500','bg-gray-200') || b.classList.replace('text-white','text-gray-700'));
-        btn.classList.replace('bg-gray-200','bg-blue-500');
-        btn.classList.replace('text-gray-700','text-white');
-        const tab = btn.dataset.tab;
-        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
-        document.getElementById(`${tab}-tab`).classList.remove('hidden');
+  // --- Tabs ---
+  const tabs = ['promotions', 'orders', 'locations', 'categories'];
+  tabs.forEach(tab => {
+    document.getElementById('tab-' + tab).addEventListener('click', () => {
+      tabs.forEach(t => {
+        document.getElementById('tab-' + t).classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+        document.getElementById('tab-' + t).classList.add('text-gray-600');
+        document.getElementById(t + '-tab').classList.add('hidden');
+      });
+      document.getElementById('tab-' + tab).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+      document.getElementById(tab + '-tab').classList.remove('hidden');
     });
-});
+  });
 
-// --- Loading UI ---
-function showLoading(show, text='Cargando...') {
-    document.getElementById('loading').classList.toggle('hidden', !show);
-    document.getElementById('loading-text').innerText = text;
-}
-
-// --- Modal ---
-function showModal(html) {
-    document.getElementById('modal-content').innerHTML = html;
+  // --- UI Helpers ---
+  function showModal(contentHtml) {
+    document.getElementById('modal-content').innerHTML = contentHtml;
     document.getElementById('modal').classList.remove('hidden');
-}
-function closeModal() {
+  }
+  function closeModal() {
     document.getElementById('modal').classList.add('hidden');
-}
+  }
+  function showLoading(show) {
+    const loading = document.getElementById('loading');
+    if(show) loading.classList.remove('hidden');
+    else loading.classList.add('hidden');
+  }
+  function showStatusMessage(msg, error=false) {
+    alert(msg); // Simple alert, se puede reemplazar por Toast
+  }
 
-// --- Fetch Data ---
-async function fetchAllData() {
-    showLoading(true, 'Cargando datos...');
+  // --- Fetch All Data ---
+  async function fetchAllData() {
+    showLoading(true);
     try {
-        const { data: promotions } = await supabase.from('promotions').select('*');
-        const { data: orders } = await supabase.from('orders').select('*');
-        const { data: locations } = await supabase.from('locations').select('*');
-        const { data: categories } = await supabase.from('categories').select('*');
+      const { data: promotions } = await supabaseClient.from('promotions').select('*');
+      const { data: orders } = await supabaseClient.from('orders').select('*');
+      const { data: locations } = await supabaseClient.from('locations').select('*');
+      const { data: categories } = await supabaseClient.from('categories').select('*');
 
-        appState.promotions = {};
-        promotions.forEach(p => appState.promotions[p.id] = p);
-        appState.orders = {};
-        orders.forEach(o => appState.orders[o.id] = o);
-        appState.locations = {};
-        locations.forEach(l => appState.locations[l.id] = l.name);
-        appState.categories = {};
-        categories.forEach(c => appState.categories[c.id] = c.name);
+      appState.promotions = {};
+      promotions.forEach(p => appState.promotions[p.id] = p);
 
-        renderPromotions();
-        renderOrders();
-        renderLocations();
-        renderCategories();
-    } catch (e) {
-        console.error('Error fetching data:', e);
-        alert('Error al cargar datos.');
+      appState.orders = {};
+      orders.forEach(o => appState.orders[o.id] = o);
+
+      appState.locations = {};
+      locations.forEach(l => appState.locations[l.id] = l.name);
+
+      appState.categories = {};
+      categories.forEach(c => appState.categories[c.id] = c.name);
+
+      renderPromotions();
+      renderOrders();
+      renderLocations();
+      renderCategories();
+    } catch (err) {
+      console.error(err);
+      showStatusMessage('Error cargando datos', true);
     } finally {
-        showLoading(false);
+      showLoading(false);
     }
-}
+  }
 
-// --- Render Functions ---
-function renderPromotions() {
+  // --- Render Functions ---
+  function renderPromotions() {
     const container = document.getElementById('promotions-list');
     container.innerHTML = '';
-    Object.values(appState.promotions).forEach(promo => {
-        const card = document.createElement('div');
-        card.className = 'bg-white p-4 rounded-lg shadow-md flex flex-col';
-        card.innerHTML = `
-            <h3 class="font-bold">${promo.name}</h3>
-            <p>Precio: $${promo.price.toFixed(2)}</p>
-            <p>Stock: ${promo.stock}</p>
-            ${promo.image ? `<img src="${promo.image}" class="mt-2 w-full h-32 object-cover rounded-lg">` : ''}
-            <div class="mt-2 flex space-x-2">
-                <button onclick="showPromoModal('${promo.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Editar</button>
-                <button onclick="deletePromo('${promo.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Eliminar</button>
-            </div>
-        `;
-        container.appendChild(card);
+    Object.values(appState.promotions).forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'bg-gray-50 p-4 rounded shadow flex flex-col justify-between';
+      div.innerHTML = `
+        <h3 class="font-bold">${p.name}</h3>
+        <p>Precio: $${p.price}</p>
+        <p>Stock: ${p.stock}</p>
+        <div class="mt-2 flex space-x-2">
+          <button onclick="showPromoModal('${p.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-xs">Editar</button>
+          <button onclick="deletePromo('${p.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs">Eliminar</button>
+        </div>
+      `;
+      container.appendChild(div);
     });
-}
+  }
 
-function renderOrders() {
+  function renderOrders() {
     const container = document.getElementById('orders-list');
     container.innerHTML = '';
-    let totalGeneral = 0, totalDelivered = 0, totalPending = 0;
-
-    Object.values(appState.orders).sort((a,b)=>b.id.localeCompare(a.id)).forEach(order => {
-        totalGeneral += order.total;
-        if(order.status==='Entregado') totalDelivered+=order.total;
-        else totalPending+=order.total;
-
-        const card = document.createElement('div');
-        card.className = `bg-white p-4 rounded-lg shadow-md flex justify-between items-center border-l-4 ${order.status==='Entregado'?'border-green-500':'border-red-500'}`;
-        const locationName = appState.locations[order.locationId] || 'Desconocida';
-        const statusColor = order.status==='Entregado'?'text-green-600':'text-red-600';
-
-        card.innerHTML = `
-            <div class="flex-grow">
-                <h3 class="font-bold">Pedido #${order.id.substring(0,6)}</h3>
-                <p>Cliente: ${order.clientName}</p>
-                <p>Localidad: ${locationName}</p>
-                <p class="${statusColor}">${order.status}</p>
-            </div>
-            <div class="text-right">
-                <p class="font-bold text-blue-600">$${order.total.toFixed(2)}</p>
-                <div class="mt-2 flex space-x-2">
-                    <button onclick="showOrderModal('${order.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Ver</button>
-                    <button onclick="toggleOrderStatus('${order.id}')" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">${order.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
-                    <button onclick="deleteOrder('${order.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Eliminar</button>
-                </div>
-            </div>
-        `;
-        container.appendChild(card);
+    Object.values(appState.orders).forEach(o => {
+      const div = document.createElement('div');
+      div.className = `bg-white p-4 rounded shadow flex justify-between items-center ${o.status==='Entregado'?'border-l-4 border-green-500':'border-l-4 border-red-500'}`;
+      const locationName = appState.locations[o.locationId] || 'Localidad desconocida';
+      div.innerHTML = `
+        <div>
+          <h3 class="font-bold">Pedido #${o.id.substring(0,6)}</h3>
+          <p>Cliente: ${o.clientName}</p>
+          <p>Localidad: ${locationName}</p>
+          <p class="${o.status==='Entregado'?'text-green-600':'text-red-600'}">${o.status}</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold">$${o.total}</p>
+          <div class="flex space-x-2 mt-2">
+            <button onclick="showOrderModal('${o.id}')" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-xs">Ver</button>
+            <button onclick="toggleOrderStatus('${o.id}')" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 text-xs">${o.status==='Pendiente'?'Marcar Entregado':'Marcar Pendiente'}</button>
+            <button onclick="deleteOrder('${o.id}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs">Eliminar</button>
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
     });
+  }
 
-    document.getElementById('total-general').innerText = `$${totalGeneral.toFixed(2)}`;
-    document.getElementById('total-delivered').innerText = `$${totalDelivered.toFixed(2)}`;
-    document.getElementById('total-pending').innerText = `$${totalPending.toFixed(2)}`;
-}
-
-function renderLocations() {
+  function renderLocations() {
     const container = document.getElementById('locations-list');
     container.innerHTML = '';
-    Object.keys(appState.locations).forEach(id => {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between p-2 bg-gray-50 rounded hover:bg-gray-100';
-        li.innerHTML = `<span>${appState.locations[id]}</span>
-                        <button onclick="deleteLocation('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
-        container.appendChild(li);
+    Object.entries(appState.locations).forEach(([id,name])=>{
+      const li = document.createElement('li');
+      li.className = 'flex justify-between p-2 bg-gray-50 rounded hover:bg-gray-100';
+      li.innerHTML = `${name} <button onclick="deleteLocation('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
+      container.appendChild(li);
     });
-}
+  }
 
-function renderCategories() {
+  function renderCategories() {
     const container = document.getElementById('categories-list');
     container.innerHTML = '';
-    Object.keys(appState.categories).forEach(id => {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between p-2 bg-gray-50 rounded hover:bg-gray-100';
-        li.innerHTML = `<span>${appState.categories[id]}</span>
-                        <button onclick="deleteCategory('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
-        container.appendChild(li);
+    Object.entries(appState.categories).forEach(([id,name])=>{
+      const li = document.createElement('li');
+      li.className = 'flex justify-between p-2 bg-gray-50 rounded hover:bg-gray-100';
+      li.innerHTML = `${name} <button onclick="deleteCategory('${id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
+      container.appendChild(li);
     });
-}
+  }
 
-// --- CRUD ---
-async function addLocation() {
-    const input = document.getElementById('new-location-input');
-    if(!input.value.trim()) return;
-    await supabase.from('locations').insert({name: input.value.trim()});
-    input.value='';
-    fetchAllData();
-}
-async function addCategory() {
-    const input = document.getElementById('new-category-input');
-    if(!input.value.trim()) return;
-    await supabase.from('categories').insert({name: input.value.trim()});
-    input.value='';
-    fetchAllData();
-}
-async function deleteLocation(id) {
-    if(!confirm('Eliminar localidad?')) return;
-    await supabase.from('locations').delete().eq('id',id);
-    fetchAllData();
-}
-async function deleteCategory(id) {
-    if(!confirm('Eliminar categoría?')) return;
-    await supabase.from('categories').delete().eq('id',id);
-    fetchAllData();
-}
-async function toggleOrderStatus(orderId){
-    const order = appState.orders[orderId];
-    const newStatus = order.status==='Entregado'?'Pendiente':'Entregado';
-    await supabase.from('orders').update({status:newStatus}).eq('id',orderId);
-    fetchAllData();
-}
-async function deleteOrder(orderId){
-    if(!confirm('Eliminar pedido?')) return;
-    await supabase.from('orders').delete().eq('id',orderId);
-    fetchAllData();
-}
-
-// --- Modales para crear/editar Promociones y Pedidos ---
-function showPromoModal(promoId=null){
-    const promo = promoId ? appState.promotions[promoId] : {name:'', price:0, stock:0, image:''};
+  // --- CRUD Functions ---
+  async function showPromoModal(promoId=null){
+    const p = promoId ? appState.promotions[promoId] : {};
     showModal(`
-        <h3 class="text-xl font-bold mb-4">${promoId?'Editar':'Nueva'} Promoción</h3>
-        <form id="promo-form" class="space-y-4">
-            <input type="text" id="promo-name" placeholder="Nombre" class="border rounded p-2 w-full" value="${promo.name}" required>
-            <input type="number" id="promo-price" placeholder="Precio" class="border rounded p-2 w-full" value="${promo.price}" required min="0" step="0.01">
-            <input type="number" id="promo-stock" placeholder="Stock" class="border rounded p-2 w-full" value="${promo.stock}" required min="0">
-            <input type="text" id="promo-image" placeholder="URL de imagen" class="border rounded p-2 w-full" value="${promo.image}">
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${promoId?'Actualizar':'Crear'}</button>
-            </div>
-        </form>
+      <h3 class="text-xl font-bold mb-4">${promoId?'Editar Promoción':'Nueva Promoción'}</h3>
+      <form id="promo-form" class="space-y-4">
+        <input id="promo-name" type="text" placeholder="Nombre" value="${p.name||''}" class="border p-2 rounded w-full" required/>
+        <input id="promo-price" type="number" placeholder="Precio" value="${p.price||''}" class="border p-2 rounded w-full" required/>
+        <input id="promo-stock" type="number" placeholder="Stock" value="${p.stock||0}" class="border p-2 rounded w-full" required/>
+        <div class="flex justify-end space-x-2">
+          <button type="button" onclick="closeModal()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancelar</button>
+          <button type="submit" class="bg-blue-600 px-4 py-2 rounded text-white hover:bg-blue-700">Guardar</button>
+        </div>
+      </form>
     `);
     document.getElementById('promo-form').onsubmit = async e=>{
-        e.preventDefault();
-        const name = document.getElementById('promo-name').value.trim();
-        const price = parseFloat(document.getElementById('promo-price').value);
-        const stock = parseInt(document.getElementById('promo-stock').value);
-        const image = document.getElementById('promo-image').value.trim();
-        if(!name || price<0 || stock<0){ alert('Complete los campos correctamente'); return; }
-        if(promoId){
-            await supabase.from('promotions').update({name, price, stock, image}).eq('id',promoId);
-        }else{
-            await supabase.from('promotions').insert({name, price, stock, image});
-        }
-        closeModal();
-        fetchAllData();
+      e.preventDefault();
+      const name = document.getElementById('promo-name').value.trim();
+      const price = parseFloat(document.getElementById('promo-price').value);
+      const stock = parseInt(document.getElementById('promo-stock').value);
+      if(!name || isNaN(price) || isNaN(stock)){
+        alert('Rellena todos los campos correctamente');
+        return;
+      }
+      showLoading(true);
+      if(promoId){
+        await supabaseClient.from('promotions').update({name,price,stock}).eq('id',promoId);
+      }else{
+        await supabaseClient.from('promotions').insert({name,price,stock});
+      }
+      closeModal();
+      fetchAllData();
     };
-}
+  }
 
-function showOrderModal(orderId=null){
-    const order = orderId ? appState.orders[orderId] : {clientName:'', locationId:'', status:'Pendiente', total:0};
-    const locationsOptions = Object.entries(appState.locations).map(([id,name])=>`<option value="${id}" ${id===order.locationId?'selected':''}>${name}</option>`).join('');
+  async function deletePromo(promoId){
+    if(confirm('Eliminar promoción?')){
+      showLoading(true);
+      await supabaseClient.from('promotions').delete().eq('id',promoId);
+      fetchAllData();
+    }
+  }
+
+  async function addLocation(){
+    const input = document.getElementById('new-location-input');
+    const name = input.value.trim();
+    if(!name) return;
+    showLoading(true);
+    await supabaseClient.from('locations').insert({name});
+    input.value='';
+    fetchAllData();
+  }
+  async function deleteLocation(id){
+    if(confirm('Eliminar localidad?')){
+      showLoading(true);
+      await supabaseClient.from('locations').delete().eq('id',id);
+      fetchAllData();
+    }
+  }
+
+  async function addCategory(){
+    const input = document.getElementById('new-category-input');
+    const name = input.value.trim();
+    if(!name) return;
+    showLoading(true);
+    await supabaseClient.from('categories').insert({name});
+    input.value='';
+    fetchAllData();
+  }
+  async function deleteCategory(id){
+    if(confirm('Eliminar categoría?')){
+      showLoading(true);
+      await supabaseClient.from('categories').delete().eq('id',id);
+      fetchAllData();
+    }
+  }
+
+  // --- Pedidos Modal Completo ---
+  async function showOrderModal(orderId=null){
+    let order = orderId ? appState.orders[orderId] : {clientName:'',locationId:'',products:[],total:0,status:'Pendiente'};
     showModal(`
-        <h3 class="text-xl font-bold mb-4">${orderId?'Editar':'Nuevo'} Pedido</h3>
-        <form id="order-form" class="space-y-4">
-            <input type="text" id="order-client" placeholder="Nombre del Cliente" class="border rounded p-2 w-full" value="${order.clientName}" required>
-            <select id="order-location" class="border rounded p-2 w-full" required>
-                <option value="">Seleccione Localidad</option>
-                ${locationsOptions}
-            </select>
-            <input type="number" id="order-total" placeholder="Total" class="border rounded p-2 w-full" value="${order.total}" required min="0" step="0.01">
-            <select id="order-status" class="border rounded p-2 w-full">
-                <option value="Pendiente" ${order.status==='Pendiente'?'selected':''}>Pendiente</option>
-                <option value="Entregado" ${order.status==='Entregado'?'selected':''}>Entregado</option>
-            </select>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">${orderId?'Actualizar':'Crear'}</button>
-            </div>
-        </form>
+      <h3 class="text-xl font-bold mb-4">${orderId?'Editar Pedido':'Nuevo Pedido'}</h3>
+      <form id="order-form" class="space-y-4">
+        <input id="order-client" type="text" placeholder="Nombre del cliente" value="${order.clientName}" class="border p-2 rounded w-full" required/>
+        <select id="order-location" class="border p-2 rounded w-full" required>
+          <option value="">Selecciona localidad</option>
+          ${Object.entries(appState.locations).map(([id,name])=>`<option value="${id}" ${order.locationId==id?'selected':''}>${name}</option>`).join('')}
+        </select>
+        <div id="order-products-container" class="space-y-2">
+          ${order.products.map((p,i)=>`<div class="flex space-x-2">
+            <select class="border p-2 rounded w-full product-select">${Object.values(appState.promotions).map(pr=>`<option value="${pr.id}" ${p.id==pr.id?'selected':''}>${pr.name}</option>`).join('')}</select>
+            <input type="number" min="1" class="border p-2 rounded w-20 product-qty" value="${p.quantity}" required/>
+            <button type="button" class="bg-red-500 text-white px-2 rounded" onclick="removeProductRow(this)">X</button>
+          </div>`).join('')}
+        </div>
+        <button type="button" onclick="addProductRow()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Agregar Producto</button>
+        <div class="flex justify-end space-x-2 mt-4">
+          <button type="button" onclick="closeModal()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancelar</button>
+          <button type="submit" class="bg-green-600 px-4 py-2 rounded text-white hover:bg-green-700">Guardar</button>
+        </div>
+      </form>
     `);
-    document.getElementById('order-form').onsubmit = async e=>{
-        e.preventDefault();
-        const clientName = document.getElementById('order-client').value.trim();
-        const locationId = document.getElementById('order-location').value;
-        const total = parseFloat(document.getElementById('order-total').value);
-        const status = document.getElementById('order-status').value;
-        if(!clientName || !locationId || total<0){ alert('Complete los campos correctamente'); return; }
-        if(orderId){
-            await supabase.from('orders').update({clientName, locationId, total, status}).eq('id',orderId);
-        }else{
-            await supabase.from('orders').insert({clientName, locationId, total, status});
-        }
-        closeModal();
-        fetchAllData();
-    };
-}
 
-// --- Inicial ---
-fetchAllData();
+    function collectProducts(){
+      const rows = document.querySelectorAll('#order-products-container > div');
+      let products = [];
+      rows.forEach(r=>{
+        const prodId = r.querySelector('.product-select').value;
+        const qty = parseInt(r.querySelector('.product-qty').value);
+        if(prodId && qty>0) products.push({id:prodId,quantity:qty});
+      });
+      return products;
+    }
+
+    document.getElementById('order-form').onsubmit = async e=>{
+      e.preventDefault();
+      const clientName = document.getElementById('order-client').value.trim();
+      const locationId = document.getElementById('order-location').value;
+      const products = collectProducts();
+      if(!clientName || !locationId || products.length==0){
+        alert('Rellena todos los campos y agrega al menos un producto');
+        return;
+      }
+      let total = products.reduce((sum,p)=>sum + appState.promotions[p.id].price*p.quantity,0);
+      showLoading(true);
+      if(orderId){
+        await supabaseClient.from('orders').update({clientName,locationId,products,total}).eq('id',orderId);
+      }else{
+        await supabaseClient.from('orders').insert({clientName,locationId,products,total,status:'Pendiente'});
+      }
+      closeModal();
+      fetchAllData();
+    };
+  }
+
+  function addProductRow(){
+    const container = document.getElementById('order-products-container');
+    const div = document.createElement('div');
+    div.className = 'flex space-x-2';
+    div.innerHTML = `
+      <select class="border p-2 rounded w-full product-select">
+        ${Object.values(appState.promotions).map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <input type="number" min="1" class="border p-2 rounded w-20 product-qty" value="1" required/>
+      <button type="button" class="bg-red-500 text-white px-2 rounded" onclick="removeProductRow(this)">X</button>
+    `;
+    container.appendChild(div);
+  }
+  function removeProductRow(btn){ btn.parentElement.remove(); }
+
+  async function deleteOrder(orderId){
+    if(confirm('Eliminar pedido?')){
+      showLoading(true);
+      await supabaseClient.from('orders').delete().eq('id',orderId);
+      fetchAllData();
+    }
+  }
+  async function toggleOrderStatus(orderId){
+    const order = appState.orders[orderId];
+    const newStatus = order.status==='Entregado'?'Pendiente':'Entregado';
+    showLoading(true);
+    await supabaseClient.from('orders').update({status:newStatus}).eq('id',orderId);
+    fetchAllData();
+  }
+
+  fetchAllData();
 </script>
 
 </body>
