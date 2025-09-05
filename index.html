@@ -86,7 +86,7 @@
         import { createClient } from '@supabase/supabase-js'
 
         const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co'
-        const supabaseKey = process.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8
+        const supabaseKey = process.env.SUPABASE_KEY
         const supabase = createClient(supabaseUrl, supabaseKey)
         
         // Global app state
@@ -1096,6 +1096,7 @@
     </script>
 </body>
 </html>
+
 
 
 
