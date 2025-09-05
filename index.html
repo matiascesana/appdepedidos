@@ -310,139 +310,113 @@
             showLoading(false);
         };
         
+        
+        
         // --- Database Schema Initialization ---
         async function initializeSupabaseSchema() {
             const sql = `
-                -- Create tables if they don't exist
-                CREATE TABLE IF NOT EXISTS public.promotions (
-                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                    name text NOT NULL,
-                    original_price double precision,
-                    price double precision NOT NULL,
-                    stock integer NOT NULL,
-                    image text,
-                    category_id uuid,
-                    user_id uuid NOT NULL,
-                    created_at timestamp with time zone DEFAULT now()
-                );
+        -- Create tables if they don't exist
+        CREATE TABLE IF NOT EXISTS public.promotions (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            name text NOT NULL,
+            original_price double precision,
+            price double precision NOT NULL,
+            stock integer NOT NULL,
+            image text,
+            category_id uuid,
+            user_id uuid NOT NULL,
+            created_at timestamp with time zone DEFAULT now()
+        );
 
-                CREATE TABLE IF NOT EXISTS public.categories (
-                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                    name text NOT NULL,
-                    user_id uuid NOT NULL
-                );
-                
-                CREATE TABLE IF NOT EXISTS public.locations (
-                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                    name text NOT NULL,
-                    user_id uuid NOT NULL
-                );
-                
-                CREATE TABLE IF NOT EXISTS public.orders (
-                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                    client_name text NOT NULL,
-                    client_phone text,
-                    location_id uuid,
-                    total double precision NOT NULL,
-                    status text NOT NULL DEFAULT 'Pendiente',
-                    user_id uuid NOT NULL,
-                    created_at timestamp with time zone DEFAULT now(),
-                    updated_at timestamp with time zone DEFAULT now()
-                );
-                
-                CREATE TABLE IF NOT EXISTS public.order_products (
-                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                    order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE,
-                    promo_id uuid,
-                    quantity integer NOT NULL,
-                    price double precision NOT NULL
-                );
+        CREATE TABLE IF NOT EXISTS public.categories (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            name text NOT NULL,
+            user_id uuid NOT NULL
+        );
+        
+        CREATE TABLE IF NOT EXISTS public.locations (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            name text NOT NULL,
+            user_id uuid NOT NULL
+        );
+        
+        CREATE TABLE IF NOT EXISTS public.orders (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            client_name text NOT NULL,
+            client_phone text,
+            location_id uuid,
+            total double precision NOT NULL,
+            status text NOT NULL DEFAULT 'Pendiente',
+            user_id uuid NOT NULL,
+            created_at timestamp with time zone DEFAULT now(),
+            updated_at timestamp with time zone DEFAULT now()
+        );
+        
+        CREATE TABLE IF NOT EXISTS public.order_products (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE,
+            promo_id uuid,
+            quantity integer NOT NULL,
+            price double precision NOT NULL
+        );
 
-                -- Enable RLS for all tables
-                ALTER TABLE public.promotions ENABLE ROW LEVEL SECURITY;
-                ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-                ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
-                ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-                ALTER TABLE public.order_products ENABLE ROW LEVEL SECURITY;
+        -- Enable RLS for all tables
+        ALTER TABLE public.promotions ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE public.order_products ENABLE ROW LEVEL SECURITY;
 
-                -- Create RLS policies
-                -- Promotions
-                DROP POLICY IF EXISTS "Allow all users to read promotions" ON public.promotions;
-                DROP POLICY IF EXISTS "Allow user to manage their own promotions" ON public.promotions;
-                CREATE POLICY "Allow all users to read promotions" ON public.promotions FOR SELECT TO authenticated USING ( true );
-                CREATE POLICY "Allow user to manage their own promotions" ON public.promotions FOR ALL TO authenticated USING ( auth.uid() = user_id );
+        -- Create RLS policies
+        DROP POLICY IF EXISTS "Allow all users to read promotions" ON public.promotions;
+        DROP POLICY IF EXISTS "Allow user to manage their own promotions" ON public.promotions;
+        CREATE POLICY "Allow all users to read promotions" ON public.promotions FOR SELECT TO authenticated USING ( true );
+        CREATE POLICY "Allow user to manage their own promotions" ON public.promotions FOR ALL TO authenticated USING ( auth.uid() = user_id );
 
-                -- Categories
-                DROP POLICY IF EXISTS "Allow all users to read categories" ON public.categories;
-                DROP POLICY IF EXISTS "Allow user to manage their own categories" ON public.categories;
-                CREATE POLICY "Allow all users to read categories" ON public.categories FOR SELECT TO authenticated USING ( true );
-                CREATE POLICY "Allow user to manage their own categories" ON public.categories FOR ALL TO authenticated USING ( auth.uid() = user_id );
+        DROP POLICY IF EXISTS "Allow all users to read categories" ON public.categories;
+        DROP POLICY IF EXISTS "Allow user to manage their own categories" ON public.categories;
+        CREATE POLICY "Allow all users to read categories" ON public.categories FOR SELECT TO authenticated USING ( true );
+        CREATE POLICY "Allow user to manage their own categories" ON public.categories FOR ALL TO authenticated USING ( auth.uid() = user_id );
 
-                -- Locations
-                DROP POLICY IF EXISTS "Allow all users to read locations" ON public.locations;
-                DROP POLICY IF EXISTS "Allow user to manage their own locations" ON public.locations;
-                CREATE POLICY "Allow all users to read locations" ON public.locations FOR SELECT TO authenticated USING ( true );
-                CREATE POLICY "Allow user to manage their own locations" ON public.locations FOR ALL TO authenticated USING ( auth.uid() = user_id );
+        DROP POLICY IF EXISTS "Allow all users to read locations" ON public.locations;
+        DROP POLICY IF EXISTS "Allow user to manage their own locations" ON public.locations;
+        CREATE POLICY "Allow all users to read locations" ON public.locations FOR SELECT TO authenticated USING ( true );
+        CREATE POLICY "Allow user to manage their own locations" ON public.locations FOR ALL TO authenticated USING ( auth.uid() = user_id );
 
-                -- Orders
-                DROP POLICY IF EXISTS "Allow user to read their own orders" ON public.orders;
-                DROP POLICY IF EXISTS "Allow user to manage their own orders" ON public.orders;
-                CREATE POLICY "Allow user to read their own orders" ON public.orders FOR SELECT TO authenticated USING ( auth.uid() = user_id );
-                CREATE POLICY "Allow user to manage their own orders" ON public.orders FOR ALL TO authenticated USING ( auth.uid() = user_id );
+        DROP POLICY IF EXISTS "Allow user to read their own orders" ON public.orders;
+        DROP POLICY IF EXISTS "Allow user to manage their own orders" ON public.orders;
+        CREATE POLICY "Allow user to read their own orders" ON public.orders FOR SELECT TO authenticated USING ( auth.uid() = user_id );
+        CREATE POLICY "Allow user to manage their own orders" ON public.orders FOR ALL TO authenticated USING ( auth.uid() = user_id );
 
-                -- Order Products
-                DROP POLICY IF EXISTS "Allow user to read their order products" ON public.order_products;
-                DROP POLICY IF EXISTS "Allow user to manage their order products" ON public.order_products;
-                CREATE POLICY "Allow user to read their order products" ON public.order_products FOR SELECT TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
-                CREATE POLICY "Allow user to manage their order products" ON public.order_products FOR ALL TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
+        DROP POLICY IF EXISTS "Allow user to read their order products" ON public.order_products;
+        DROP POLICY IF EXISTS "Allow user to manage their order products" ON public.order_products;
+        CREATE POLICY "Allow user to read their order products" ON public.order_products FOR SELECT TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
+        CREATE POLICY "Allow user to manage their order products" ON public.order_products FOR ALL TO authenticated USING ( auth.uid() = (SELECT user_id FROM public.orders WHERE orders.id = order_id) );
+    `;
 
-                -- Storage Bucket and Policies (optional, but recommended)
-                -- CREATE BUCKET IF NOT EXISTS promo_images WITH public AS false;
-                -- CREATE POLICY IF NOT EXISTS "Allow authenticated users to upload and read their files" ON storage.objects
-                -- FOR ALL
-                -- TO authenticated
-                -- USING (auth.uid() = owner);
-            `;
-
-            try {
-                // Try to get data from a table. If the table doesn't exist, it will throw a '42P01' error.
-                const { error } = await supabase.from('promotions').select('id').limit(1);
-                
-                if (error && error.code === '42P01') {
-                    showStatusMessage('Configurando la base de datos por primera vez. Esto puede tardar unos segundos...');
-                    
-                    // We must create a new function in Supabase's SQL editor to run a batch of SQL queries.
-                    // This is a more robust way to run schema migrations from the client.
-                    // Go to the SQL editor in Supabase and run this once:
-                    //
-                    // CREATE OR REPLACE FUNCTION public.execute_sql(sql_query text)
-                    // RETURNS void
-                    // LANGUAGE plpgsql
-                    // SECURITY DEFINER
-                    // AS $$
-                    // BEGIN
-                    //   EXECUTE sql_query;
-                    // END;
-                    // $$;
-                    //
-                    // GRANT EXECUTE ON FUNCTION public.execute_sql(text) TO authenticated;
-                    
-                    // After creating the above function, call it from here:
-                    const { error: queryError } = await supabase.rpc('execute_sql', { sql_query: sql });
-                    
-                    if (queryError) {
-                        console.error('Error al ejecutar script SQL:', queryError);
-                        throw queryError;
-                    }
-                    
-                    showStatusMessage('Base de datos configurada. ¡Listo para usar!');
-                }
-            } catch (e) {
-                console.error("Error al inicializar la base de datos:", e);
-                showStatusMessage('Error crítico al configurar la base de datos. Verifique la consola de Supabase.', true);
+    try {
+        // Try to get data from a table. If the table doesn't exist, it will throw a '42P01' error.
+        const { error } = await supabase.from('promotions').select('id').limit(1);
+        
+        if (error && error.code === '42P01') {
+            showStatusMessage('Configurando la base de datos por primera vez. Esto puede tardar unos segundos...');
+            
+            // This requires the 'execute_sql' function to be created in the Supabase SQL Editor
+            const { error: queryError } = await supabase.rpc('execute_sql', { sql_query: sql });
+            
+            if (queryError) {
+                console.error('Error al ejecutar script SQL:', queryError);
+                throw queryError;
             }
+            
+            showStatusMessage('Base de datos configurada. ¡Listo para usar!');
         }
-
+    } catch (e) {
+        console.error("Error al inicializar la base de datos:", e);
+        showStatusMessage('Error crítico al configurar la base de datos. Verifique la consola de Supabase.', true);
+    }
+}
+        
         supabase.auth.onAuthStateChange(async (event, session) => {
             const authScreen = document.getElementById('auth-screen');
             const appContainer = document.getElementById('app-container');
@@ -1099,6 +1073,7 @@
     </script>
 </body>
 </html>
+
 
 
 
