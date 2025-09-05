@@ -217,20 +217,20 @@
                     stock integer NOT NULL,
                     image text,
                     category_id uuid,
-                    user_id uuid,
+                    user_id text,
                     created_at timestamp with time zone DEFAULT now()
                 );
 
                 CREATE TABLE IF NOT EXISTS public.categories (
                     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                     name text NOT NULL,
-                    user_id uuid
+                    user_id text
                 );
                 
                 CREATE TABLE IF NOT EXISTS public.locations (
                     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                     name text NOT NULL,
-                    user_id uuid
+                    user_id text
                 );
                 
                 CREATE TABLE IF NOT EXISTS public.orders (
@@ -239,7 +239,7 @@
                     location_id uuid,
                     total double precision NOT NULL,
                     status text NOT NULL DEFAULT 'Pendiente',
-                    user_id uuid,
+                    user_id text,
                     created_at timestamp with time zone DEFAULT now(),
                     updated_at timestamp with time zone DEFAULT now()
                 );
@@ -292,7 +292,6 @@
             `;
 
             try {
-                // Try to get data from a table. If the table doesn't exist, it will throw a '42P01' error.
                 const { error } = await supabase.from('promotions').select('id').limit(1);
                 
                 if (error && error.code === '42P01') {
@@ -633,7 +632,6 @@
                     stock,
                     category_id: categoryId,
                     image: imageUrl,
-                    // MODIFICACIÓN: Se incluye el user_id para la inserción
                     user_id: appState.userId
                 };
 
@@ -689,7 +687,6 @@
             const name = document.getElementById('new-location-input').value.trim();
             if (!name) return;
             try {
-                // MODIFICACIÓN: Se incluye el user_id
                 const { error } = await supabase.from('locations').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-location-input').value = '';
@@ -713,7 +710,6 @@
             const name = document.getElementById('new-category-input').value.trim();
             if (!name) return;
             try {
-                // MODIFICACIÓN: Se incluye el user_id
                 const { error } = await supabase.from('categories').insert({ name, user_id: appState.userId });
                 if (error) throw error;
                 document.getElementById('new-category-input').value = '';
@@ -737,7 +733,6 @@
             const isEditing = orderId !== null;
             if (isEditing) {
                 appState.selectedOrder = appState.orders[orderId];
-                // Fetch products for the specific order
                 supabase.from('order_products').select('*').eq('order_id', orderId)
                     .then(({ data, error }) => {
                         if (error) throw error;
@@ -757,13 +752,8 @@
             }
         };
         
+        // FIX: CÓDIGO CORREGIDO PARA PRESERVAR CAMPOS DEL FORMULARIO
         function renderOrderModalContent() {
-            const clientNameInput = document.getElementById('client-name');
-            const locationSelect = document.getElementById('order-location');
-
-            const currentClientName = clientNameInput ? clientNameInput.value : '';
-            const currentLocationId = locationSelect ? locationSelect.value : '';
-
             const order = appState.selectedOrder;
             const locationOptions = Object.keys(appState.locations).map(id => `<option value="${id}" ${order.location_id === id ? 'selected' : ''}>${appState.locations[id]}</option>`).join('');
             const productOptions = Object.keys(appState.promotions).map(id => `<option value="${id}">${appState.promotions[id].name} - $${appState.promotions[id].price.toFixed(2)}</option>`).join('');
@@ -784,7 +774,7 @@
                 <form id="order-form" class="space-y-4">
                     <div>
                         <label for="client-name" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
-                        <input type="text" id="client-name" value="${currentClientName}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                        <input type="text" id="client-name" value="${order.client_name}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
                     </div>
                     <div>
                         <label for="order-location" class="block text-sm font-medium text-gray-700">Localidad</label>
@@ -823,10 +813,7 @@
             `;
             showModal(modalHtml);
             
-            // Restaura los valores de localidad y cliente después de renderizar el modal
-            document.getElementById('client-name').value = currentClientName;
-            document.getElementById('order-location').value = currentLocationId;
-
+            // Event listener for form submission
             document.getElementById('order-form').onsubmit = async (e) => {
                 e.preventDefault();
                 await saveOrder(order.id);
@@ -834,6 +821,12 @@
         };
 
         window.addOrderProduct = function() {
+            // FIX: Guardar el estado de los campos del formulario antes de añadir el producto
+            const clientNameInput = document.getElementById('client-name');
+            const locationSelect = document.getElementById('order-location');
+            appState.selectedOrder.client_name = clientNameInput.value;
+            appState.selectedOrder.location_id = locationSelect.value;
+            
             const productSelect = document.getElementById('product-select');
             const quantityInput = document.getElementById('product-quantity');
             const promoId = productSelect.value;
@@ -886,7 +879,6 @@
                 client_name: clientName,
                 location_id: locationId,
                 total: appState.selectedOrder.total,
-                // MODIFICACIÓN: Se incluye el user_id
                 user_id: appState.userId
             };
 
@@ -911,17 +903,17 @@
                 
                 const { error: productsError } = await supabase.from('order_products').insert(productsToInsert);
                 if (productsError) throw productsError;
-
-                // Actualizar el stock de cada producto en el pedido
-                for (const product of appState.orderProducts) {
-                const { data: promo, error: fetchError } = await supabase.from('promotions').select('stock').eq('id', product.promo_id).single();
-                if (fetchError) throw fetchError;
-
-                const newStock = promo.stock - product.quantity;
-                const { error: updateError } = await supabase.from('promotions').update({ stock: newStock }).eq('id', product.promo_id);
-                if (updateError) throw updateError;
-}
                 
+                // FIX: CÓDIGO CORREGIDO PARA ACTUALIZAR EL STOCK
+                for (const product of appState.orderProducts) {
+                    const { data: promo, error: fetchError } = await supabase.from('promotions').select('stock').eq('id', product.promo_id).single();
+                    if (fetchError) throw fetchError;
+
+                    const newStock = promo.stock - product.quantity;
+                    const { error: updateError } = await supabase.from('promotions').update({ stock: newStock }).eq('id', product.promo_id);
+                    if (updateError) throw updateError;
+                }
+
                 closeModal();
                 showStatusMessage('Pedido guardado con éxito.');
 
@@ -978,5 +970,3 @@
     </script>
 </body>
 </html>
-
-
