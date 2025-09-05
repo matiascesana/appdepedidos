@@ -103,33 +103,28 @@ async function fetchAllData(){
     showLoading(true,'Cargando datos...');
     // PROMOCIONES
     const { data: promos } = await supabase.from('promotions').select('*');
-    appState.promotions = {};
-    promos?.forEach(p=>appState.promotions[p.id]=p);
+    appState.promotions = {}; promos?.forEach(p=>appState.promotions[p.id]=p);
     renderPromotions();
     // LOCALIDADES
     const { data: locs } = await supabase.from('locations').select('*');
-    appState.locations = {};
-    locs?.forEach(l=>appState.locations[l.id]=l.name);
+    appState.locations = {}; locs?.forEach(l=>appState.locations[l.id]=l.name);
     renderLocations();
     // CATEGORIAS
     const { data: cats } = await supabase.from('categories').select('*');
-    appState.categories = {};
-    cats?.forEach(c=>appState.categories[c.id]=c.name);
+    appState.categories = {}; cats?.forEach(c=>appState.categories[c.id]=c.name);
     renderCategories();
     // PEDIDOS
     const { data: ords } = await supabase.from('orders').select('*');
-    appState.orders = {};
-    ords?.forEach(o=>appState.orders[o.id]=o);
+    appState.orders = {}; ords?.forEach(o=>appState.orders[o.id]=o);
     renderOrders();
     showLoading(false);
 }
 
 // --- RENDER FUNCTIONS ---
 function renderPromotions(){
-    const list = document.getElementById('promotions-list');
-    list.innerHTML = '';
+    const list = document.getElementById('promotions-list'); list.innerHTML='';
     Object.values(appState.promotions).forEach(p=>{
-        const li = document.createElement('li');
+        const li=document.createElement('li');
         li.className='flex justify-between items-center p-2 bg-white rounded shadow';
         li.innerHTML=`<div>
             <h3 class="font-bold">${p.name}</h3>
@@ -181,11 +176,7 @@ function renderOrders(){
 }
 
 // --- CRUD OPERATIONS ---
-async function addLocation(){
-    const name=document.getElementById('new-location-input').value.trim(); if(!name) return;
-    await supabase.from('locations').insert({name}); document.getElementById('new-location-input').value='';
-    fetchAllData();
-}
+async function addLocation(){ const name=document.getElementById('new-location-input').value.trim(); if(!name) return; await supabase.from('locations').insert({name}); document.getElementById('new-location-input').value=''; fetchAllData();}
 async function deleteLocation(id){ await supabase.from('locations').delete().eq('id',id); fetchAllData();}
 async function addCategory(){ const name=document.getElementById('new-category-input').value.trim(); if(!name) return; await supabase.from('categories').insert({name}); document.getElementById('new-category-input').value=''; fetchAllData();}
 async function deleteCategory(id){ await supabase.from('categories').delete().eq('id',id); fetchAllData();}
@@ -210,22 +201,87 @@ function showPromoModal(promoId=null){
         const price=parseFloat(document.getElementById('promo-price').value);
         const original=parseFloat(document.getElementById('promo-original').value)||null;
         let imageUrl=p.image||null;
-        const imageFile=document.getElementById('promo-image').files[0];
-        if(imageFile){
-            const { data, error } = await supabase.storage.from('promo_images').upload(`${Date.now()}_${imageFile.name}`, imageFile);
-            if(data?.path) imageUrl = supabase.storage.from('promo_images').getPublicUrl(data.path).publicUrl;
+        const file=document.getElementById('promo-image').files[0];
+        if(file){
+            const { data, error } = await supabase.storage.from('promo_images').upload(`public/${Date.now()}_${file.name}`, file);
+            if(!error) imageUrl=`https://ejbqlejlgprvwzrptojo.supabase.co/storage/v1/object/public/promo_images/${data.path}`;
         }
-        if(!name||isNaN(price)){ alert('Completa campos'); return; }
-        if(isEdit){ await supabase.from('promotions').update({name,price,original_price:original,image:imageUrl}).eq('id',promoId);}
-        else{ await supabase.from('promotions').insert({name,price,original_price:original,image:imageUrl});}
+        const obj={name,price,original_price:original,image:imageUrl};
+        if(isEdit) await supabase.from('promotions').update(obj).eq('id',promoId);
+        else await supabase.from('promotions').insert(obj);
         closeModal(); fetchAllData();
     };
 }
+
 async function deletePromo(id){ if(confirm('Eliminar promoción?')){ await supabase.from('promotions').delete().eq('id',id); fetchAllData(); }}
 
-// --- PLACEHOLDER: PEDIDOS CRUD, TOGGLE STATUS, MODALES ---
-// Puedes copiar y adaptar la lógica de promociones para pedidos
-// Incluye creación, edición, eliminación, estado, y UI de modales
+// --- PEDIDOS MODAL Y CRUD ---
+function showOrderModal(orderId=null){
+    const isEdit=!!orderId; const o=appState.orders[orderId]||{client_name:'',total:0,status:'Pendiente'};
+    appState.orderProducts=o.items||[];
+    const productsOptions=Object.values(appState.promotions).map(p=>`<option value="${p.id}">${p.name} - $${p.price}</option>`).join('');
+    showModal(`<h3 class="font-bold text-xl mb-2">${isEdit?'Editar':'Nuevo'} Pedido</h3>
+        <form id="order-form" class="space-y-2">
+            <input type="text" id="order-client" placeholder="Cliente" value="${o.client_name||''}" class="w-full p-2 border rounded" required>
+            <select id="order-location" class="w-full p-2 border rounded" required>
+                <option value="">Seleccione localidad</option>
+                ${Object.keys(appState.locations).map(id=>`<option value="${id}" ${o.location_id===id?'selected':''}>${appState.locations[id]}</option>`).join('')}
+            </select>
+            <div id="order-products-list" class="space-y-1">
+                ${appState.orderProducts.map((item,i)=>`<div class="flex justify-between items-center p-2 bg-gray-100 rounded">
+                    <span>${item.quantity} x ${appState.promotions[item.promo_id]?.name||'Desconocido'}</span>
+                    <span>$${item.quantity*item.price}</span>
+                    <button type="button" onclick="removeOrderProduct(${i})" class="text-red-500">Eliminar</button>
+                </div>`).join('')}
+            </div>
+            <div class="flex space-x-2 items-end">
+                <select id="product-select" class="flex-grow p-2 border rounded">${productsOptions}</select>
+                <input type="number" id="product-qty" value="1" min="1" class="w-20 p-2 border rounded">
+                <button type="button" onclick="addOrderProduct()" class="px-2 py-1 bg-blue-600 text-white rounded">Añadir</button>
+            </div>
+            <p class="text-right font-bold">Total: $<span id="order-total">${o.total}</span></p>
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Guardar</button>
+            </div>
+        </form>`);
+    document.getElementById('order-form').onsubmit=async e=>{
+        e.preventDefault();
+        const client=document.getElementById('order-client').value.trim();
+        const loc=document.getElementById('order-location').value;
+        if(!client||!loc) return alert('Completar campos');
+        const obj={client_name:client,location_id:loc,total:appState.orderProducts.reduce((s,i)=>s+i.quantity*i.price,0),status:o.status,items:appState.orderProducts};
+        if(isEdit) await supabase.from('orders').update(obj).eq('id',orderId);
+        else await supabase.from('orders').insert(obj);
+        closeModal(); fetchAllData();
+    };
+}
+
+function addOrderProduct(){
+    const pid=document.getElementById('product-select').value;
+    const qty=parseInt(document.getElementById('product-qty').value);
+    if(!pid||qty<=0) return;
+    const promo=appState.promotions[pid];
+    const existing=appState.orderProducts.find(i=>i.promo_id===pid);
+    if(existing) existing.quantity+=qty;
+    else appState.orderProducts.push({promo_id:pid,quantity:qty,price:promo.price});
+    renderOrderProducts();
+}
+
+function removeOrderProduct(index){ appState.orderProducts.splice(index,1); renderOrderProducts(); }
+
+function renderOrderProducts(){
+    const list=document.getElementById('order-products-list');
+    list.innerHTML=appState.orderProducts.map((item,i)=>`<div class="flex justify-between items-center p-2 bg-gray-100 rounded">
+        <span>${item.quantity} x ${appState.promotions[item.promo_id]?.name||'Desconocido'}</span>
+        <span>$${item.quantity*item.price}</span>
+        <button type="button" onclick="removeOrderProduct(${i})" class="text-red-500">Eliminar</button>
+    </div>`).join('');
+    document.getElementById('order-total').innerText=appState.orderProducts.reduce((s,i)=>s+i.quantity*i.price,0);
+}
+
+async function deleteOrder(id){ if(confirm('Eliminar pedido?')){ await supabase.from('orders').delete().eq('id',id); fetchAllData(); } }
+async function toggleOrderStatus(id){ const o=appState.orders[id]; const newStatus=o.status==='Pendiente'?'Entregado':'Pendiente'; await supabase.from('orders').update({status:newStatus}).eq('id',id); fetchAllData(); }
 
 fetchAllData();
 showTab('promotions');
@@ -233,4 +289,5 @@ showTab('promotions');
 
 </body>
 </html>
+
 
