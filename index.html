@@ -1050,7 +1050,7 @@
             showStatusMessage('PDF generado con éxito.');
         };
         
-        // NEW: Función para exportar los pedidos a PDF
+        // MODIFICACIÓN: Función de exportación de pedidos actualizada
         window.exportOrdersToPDF = async function() {
             showLoading(true, 'Generando PDF de pedidos...');
             const { jsPDF } = window.jspdf;
@@ -1067,17 +1067,29 @@
                 ordersByLocation[locationName].push(order);
             });
 
-            let startY = 30;
+            const locations = Object.keys(ordersByLocation).sort((a, b) => a.localeCompare(b));
 
-            for (const locationName in ordersByLocation) {
+            let firstPage = true;
+            for (const locationName of locations) {
                 const orders = ordersByLocation[locationName].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 
-                doc.addPage();
-                startY = 20;
+                if (!firstPage) {
+                    doc.addPage();
+                } else {
+                    firstPage = false;
+                }
 
                 doc.setFontSize(14);
                 doc.setTextColor(40);
-                doc.text(`Localidad: ${locationName}`, 14, startY);
+                let currentY = 20;
+                doc.text(`Localidad: ${locationName}`, 14, currentY);
+
+                const totalLocationOrders = orders.length;
+                const totalLocationValue = orders.reduce((sum, order) => sum + order.total, 0);
+                currentY += 10;
+                doc.setFontSize(10);
+                doc.text(`Total de pedidos: ${totalLocationOrders} | Valor total: $${totalLocationValue.toFixed(2)}`, 14, currentY);
+                currentY += 5;
 
                 const tableData = orders.map(order => [
                     `#${order.id.substring(0, 6)}`,
@@ -1090,11 +1102,10 @@
                 doc.autoTable({
                     head: [['ID', 'Cliente', 'Total', 'Fecha', 'Estado']],
                     body: tableData,
-                    startY: startY + 10,
+                    startY: currentY + 5,
                     headStyles: { fillColor: [30, 144, 255] },
                     didParseCell: function(data) {
-                        const statusColumnIndex = 4;
-                        if (data.column.index === statusColumnIndex) {
+                        if (data.column.index === 4) { // Índice de la columna 'Estado'
                             const status = data.cell.raw;
                             if (status === 'Entregado') {
                                 data.cell.styles.fillColor = [0, 128, 0]; // Verde
@@ -1116,4 +1127,3 @@
     </script>
 </body>
 </html>
-
