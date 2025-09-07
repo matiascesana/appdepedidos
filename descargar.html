@@ -2,143 +2,82 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Documentos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            min-height: 100vh;
-            padding: 2rem;
-        }
-        .container {
-            background-color: white;
-            padding: 2.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            max-width: 800px;
-            margin: auto;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-    </style>
+    <title>Descargar Documentos</title>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 class="text-3xl font-bold text-blue-600">Mis Documentos</h1>
-            <button id="logout-button" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
-                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
-            </button>
-        </div>
-        <p class="text-lg text-gray-700 mb-4">Bienvenido, DNI: <span id="user-dni" class="font-bold"></span></p>
-        <div id="documents-list" class="space-y-4">
-        </div>
-        <div id="status-message" class="mt-4 text-center hidden">
-            <p class="text-red-500 font-medium"></p>
-        </div>
+
+    <h1>Descargar Documentos</h1>
+
+    <div>
+        <label for="dni-search">Ingresa tu DNI:</label>
+        <input type="text" id="dni-search">
     </div>
 
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    <button onclick="fetchDocuments()">Buscar Documentos</button>
 
-        const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    <div id="document-list"></div>
 
-        const documentsList = document.getElementById('documents-list');
-        const userDniSpan = document.getElementById('user-dni');
-        const statusMessageDiv = document.getElementById('status-message');
-        const logoutButton = document.getElementById('logout-button');
-
-        function showMessage(message, isError = false) {
-            statusMessageDiv.innerText = message;
-            statusMessageDiv.classList.toggle('text-red-500', isError);
-            statusMessageDiv.classList.toggle('text-green-600', !isError);
-            statusMessageDiv.classList.remove('hidden');
-        }
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'TU_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         async function fetchDocuments() {
-            const { data: documents, error } = await supabase
-                .from('documents')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error("Error fetching documents:", error);
-                showMessage('Error al cargar tus documentos.', true);
+            const dni = document.getElementById('dni-search').value;
+            if (!dni) {
+                alert('Por favor, ingresa tu DNI.');
                 return;
             }
 
-            if (documents.length === 0) {
-                documentsList.innerHTML = '<p class="text-center text-gray-500">No hay documentos disponibles para tu DNI.</p>';
-                return;
+            try {
+                // Aquí es donde la política RLS hace su magia
+                // Solo devuelve documentos con el DNI proporcionado
+                const { data: documents, error } = await supabase
+                    .from('documents')
+                    .select('*')
+                    .eq('dni', dni);
+
+                if (error) throw error;
+
+                const list = document.getElementById('document-list');
+                list.innerHTML = ''; // Limpia la lista anterior
+
+                if (documents.length === 0) {
+                    list.innerHTML = '<p>No se encontraron documentos para este DNI.</p>';
+                    return;
+                }
+
+                documents.forEach(doc => {
+                    const docDiv = document.createElement('div');
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = doc.file_name;
+                    link.onclick = () => downloadDocument(doc.storage_path);
+                    docDiv.appendChild(link);
+                    list.appendChild(docDiv);
+                });
+
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+                console.error(error);
             }
-
-            documentsList.innerHTML = '';
-            documents.forEach(doc => {
-                const docItem = document.createElement('div');
-                docItem.className = 'flex justify-between items-center p-4 bg-gray-100 rounded-lg shadow-sm';
-                docItem.innerHTML = `
-                    <div class="flex-grow">
-                        <p class="font-bold text-lg text-gray-800">${doc.file_name}</p>
-                        <p class="text-sm text-gray-500">Subido el: ${new Date(doc.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <button onclick="downloadDocument('${doc.storage_path}', '${doc.file_name}')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                        <i class="fas fa-download mr-2"></i>Descargar
-                    </button>
-                `;
-                documentsList.appendChild(docItem);
-            });
-        }
-        
-        window.downloadDocument = async function(storagePath, fileName) {
-            const { data: { signedUrl }, error } = await supabase.storage.from('private-documents').createSignedUrl(storagePath, 60);
-
-            if (error) {
-                console.error("Error generating signed URL:", error);
-                showMessage('Error al generar el enlace de descarga.', true);
-                return;
-            }
-
-            window.location.href = signedUrl;
-        };
-
-        async function init() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            const userDNI = session.user.email.split('@')[0];
-            userDniSpan.innerText = userDNI;
-
-            await fetchDocuments();
         }
 
-        logoutButton.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Error al cerrar sesión:', error);
-                showMessage('Error al cerrar sesión.', true);
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
+        async function downloadDocument(path) {
+            try {
+                const { data, error } = await supabase.storage
+                    .from('private-documents')
+                    .createSignedUrl(path, 60); // URL válida por 60 segundos
 
-        init();
+                if (error) throw error;
+
+                window.open(data.signedUrl, '_blank');
+            } catch (error) {
+                alert(`Error al descargar: ${error.message}`);
+                console.error(error);
+            }
+        }
     </script>
 </body>
-
 </html>
