@@ -59,16 +59,14 @@
                 if (uploadError) throw uploadError;
 
                 // Inserta los metadatos en la base de datos
-                const { error: insertError } = await supabase
-                    .from('documents')
-                    .insert([
-                        {
-                            dni: dni,
-                            file_name: fileName,
-                            storage_path: filePath,
-                            user_id: adminUUID
-                        }
-                    ]);
+                const { data: dbData, error: dbError } = await supabase
+    .from('documents')
+    .insert({
+        dni: dni,
+        file_name: file.name,
+        storage_path: filePath,
+        user_id: appState.userId
+    });
 
                 if (insertError) throw insertError;
 
@@ -82,5 +80,6 @@
     </script>
 </body>
 </html>
+
 
 
