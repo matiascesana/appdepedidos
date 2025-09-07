@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -32,16 +32,16 @@
         <p id="status-message" class="mt-4 text-gray-700 font-medium">Iniciando...</p>
     </div>
 
-    <div id="app-container" class="flex flex-col flex-grow">
+    <div id="app-container" class="flex flex-col flex-grow hidden">
         <header class="bg-white shadow-md p-4 flex items-center justify-between z-10">
             <h1 class="text-2xl font-bold text-blue-600">Gestor de Negocio</h1>
             <nav id="nav-tabs" class="flex space-x-2">
-    <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
-    <button onclick="navigate('orders')" id="tab-orders" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Pedidos</button>
-    <button onclick="navigate('locations')" id="tab-locations" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Localidades</button>
-    <button onclick="navigate('categories')" id="tab-categories" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Categorías</button>
-    <button onclick="navigate('documents')" id="tab-documents" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Documentos</button>
-        </nav>
+                <button onclick="navigate('promotions')" id="tab-promotions" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-500 text-white">Promociones</button>
+                <button onclick="navigate('orders')" id="tab-orders" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Pedidos</button>
+                <button onclick="navigate('locations')" id="tab-locations" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Localidades</button>
+                <button onclick="navigate('categories')" id="tab-categories" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Categorías</button>
+                <button onclick="navigate('documents')" id="tab-documents" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-200">Documentos</button>
+            </nav>
         </header>
 
         <main id="main-content" class="p-4 flex-grow overflow-y-auto">
@@ -63,7 +63,6 @@
 
         // Global app state
         let appState = {
-            // MODIFICACIÓN: El ID de usuario se establece a un valor fijo
             userId: 'anonymous_user', 
             userName: null,
             currentView: 'promotions',
@@ -77,27 +76,20 @@
         
         // --- Utility Functions ---
         const viewTemplates = {
-    // ... (otras vistas) ...
-    documents: `
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold">Gestión de Documentos</h2>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="font-bold text-lg mb-4">Subir Nuevos Documentos</h3>
-            <p class="text-gray-600 mb-4">Selecciona los archivos PDF y asocia un número de DNI a cada uno. El nombre del archivo debe ser el DNI de la persona.</p>
-            <div id="file-upload-container">
+            promotions: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Catálogo de Promociones</h2>
+                    <div class="space-x-2">
+                        <button onclick="exportPromotionsToPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-md">
+                            <i class="fas fa-file-pdf mr-2"></i>Exportar a PDF
+                        </button>
+                        <button onclick="showPromoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Nueva Promoción
+                        </button>
+                    </div>
                 </div>
-            <div class="mt-4 text-center">
-                <button onclick="uploadFiles()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
-                    <i class="fas fa-upload mr-2"></i>Subir Documentos
-                </button>
-            </div>
-        </div>
-        <div id="documents-list-container" class="mt-6">
-            <h3 class="text-xl font-bold mb-4">Documentos Subidos</h3>
-            <ul id="documents-list" class="space-y-4"></ul>
-        </div>
-           `,
+                <div id="promotions-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            `,
             orders: `
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">Pedidos</h2>
@@ -148,6 +140,27 @@
                         <button onclick="addCategory()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Agregar</button>
                     </div>
                     <ul id="categories-list" class="space-y-2"></ul>
+                </div>
+            `,
+            documents: `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Gestión de Documentos</h2>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="font-bold text-lg mb-4">Subir Nuevos Documentos</h3>
+                    <p class="text-gray-600 mb-4">Sube los documentos PDF. El nombre del archivo debe ser el DNI de la persona (ej. '12345678.pdf').</p>
+                    <div id="file-upload-container">
+                        <input type="file" id="file-input" accept=".pdf" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                    <div class="mt-4 text-center">
+                        <button onclick="uploadFiles()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                            <i class="fas fa-upload mr-2"></i>Subir Documentos
+                        </button>
+                    </div>
+                </div>
+                <div id="documents-list-container" class="mt-6">
+                    <h3 class="text-xl font-bold mb-4">Documentos Subidos</h3>
+                    <ul id="documents-list" class="space-y-4"></ul>
                 </div>
             `
         };
@@ -222,6 +235,9 @@
                 case 'categories':
                     renderCategories();
                     break;
+                case 'documents':
+                    renderDocuments();
+                    break;
             }
         }
         
@@ -272,12 +288,22 @@
                     price double precision NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS public.documents (
+                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                    dni text NOT NULL,
+                    file_name text NOT NULL,
+                    storage_path text NOT NULL,
+                    created_at timestamp with time zone DEFAULT now(),
+                    user_id text
+                );
+
                 -- Enable RLS for all tables
                 ALTER TABLE public.promotions ENABLE ROW LEVEL SECURITY;
                 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
                 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
                 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
                 ALTER TABLE public.order_products ENABLE ROW LEVEL SECURITY;
+                ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
                 -- MODIFICACIÓN: Se cambian las políticas para permitir acceso público
                 -- Promotions
@@ -309,6 +335,12 @@
                 DROP POLICY IF EXISTS "Allow user to manage their order products" ON public.order_products;
                 CREATE POLICY "Allow all users to read order_products" ON public.order_products FOR SELECT USING ( true );
                 CREATE POLICY "Allow public to manage order_products" ON public.order_products FOR ALL USING ( true );
+                
+                -- Documents
+                DROP POLICY IF EXISTS "Allow public to read documents" ON public.documents;
+                DROP POLICY IF EXISTS "Allow public to manage documents" ON public.documents;
+                CREATE POLICY "Allow public to read documents" ON public.documents FOR SELECT USING ( true );
+                CREATE POLICY "Allow public to manage documents" ON public.documents FOR ALL USING ( true );
             `;
 
             try {
@@ -316,14 +348,8 @@
                 
                 if (error && error.code === '42P01') {
                     showStatusMessage('Configurando la base de datos por primera vez. Esto puede tardar unos segundos...');
-                    
                     const { error: queryError } = await supabase.rpc('execute_sql', { sql_query: sql });
-                    
-                    if (queryError) {
-                        console.error('Error al ejecutar script SQL:', queryError);
-                        throw queryError;
-                    }
-                    
+                    if (queryError) throw queryError;
                     showStatusMessage('Base de datos configurada. ¡Listo para usar!');
                 }
             } catch (e) {
@@ -346,7 +372,6 @@
             }
         })();
 
-
         // --- Data Fetching and Real-time Listeners ---
         function listenForData() {
             supabase.channel('public:promotions').on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, payload => {
@@ -365,10 +390,15 @@
                 fetchOrders();
             }).subscribe();
 
+            supabase.channel('public:documents').on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, payload => {
+                renderDocuments();
+            }).subscribe();
+
             fetchPromotions();
             fetchCategories();
             fetchLocations();
             fetchOrders();
+            renderDocuments();
             showLoading(false);
         }
 
@@ -527,7 +557,120 @@
                 listContainer.appendChild(li);
             });
         }
-        
+
+        // --- Document Functions ---
+        async function renderDocuments() {
+            const documentsList = document.getElementById('documents-list');
+            if (!documentsList) return;
+            
+            documentsList.innerHTML = '';
+            
+            const docs = await fetchDocuments();
+            if (docs.length === 0) {
+                documentsList.innerHTML = '<p class="text-center text-gray-500">No hay documentos subidos.</p>';
+            } else {
+                docs.forEach(doc => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-lg shadow-sm';
+                    li.innerHTML = `
+                        <div class="flex-grow">
+                            <p class="font-bold text-gray-800">${doc.file_name}</p>
+                            <p class="text-sm text-gray-600">DNI: ${doc.dni}</p>
+                            <p class="text-xs text-gray-400">Subido el: ${new Date(doc.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <button onclick="deleteDocument('${doc.id}', '${doc.storage_path}')" class="text-red-500 hover:text-red-700 transition-colors">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    documentsList.appendChild(li);
+                });
+            }
+        }
+
+        async function fetchDocuments() {
+            const { data, error } = await supabase.from('documents').select('*');
+            if (error) {
+                console.error("Error fetching documents:", error);
+                return [];
+            }
+            return data;
+        }
+
+        window.uploadFiles = async function() {
+            const fileInput = document.getElementById('file-input');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert('Por favor, selecciona al menos un archivo.');
+                return;
+            }
+
+            showLoading(true, 'Subiendo archivos...');
+            const uploadPromises = [];
+
+            for (const file of files) {
+                const dni = file.name.split('.')[0];
+                if (!dni) {
+                    console.error(`Error: El nombre de archivo "${file.name}" no es un DNI válido.`);
+                    continue;
+                }
+                
+                const filePath = `documents/${dni}.pdf`;
+
+                const uploadPromise = supabase.storage
+                    .from('private-documents')
+                    .upload(filePath, file, { upsert: true }) // upsert: true permite reemplazar si el archivo ya existe
+                    .then(async ({ error }) => {
+                        if (error) throw error;
+                        
+                        const { data: dbData, error: dbError } = await supabase
+                            .from('documents')
+                            .upsert({
+                                dni: dni,
+                                file_name: file.name,
+                                storage_path: filePath,
+                                user_id: appState.userId
+                            }, { onConflict: 'dni' }); // Si ya existe un documento con ese DNI, lo actualiza
+                            
+                        if (dbError) throw dbError;
+                    });
+                uploadPromises.push(uploadPromise);
+            }
+
+            try {
+                await Promise.all(uploadPromises);
+                alert('Documentos subidos y registrados con éxito.');
+            } catch (error) {
+                console.error("Error en la subida:", error.message);
+                alert('Ocurrió un error al subir los documentos. Ver la consola para más detalles.');
+            } finally {
+                fileInput.value = null;
+                await renderDocuments();
+                showLoading(false);
+            }
+        };
+
+        window.deleteDocument = async function(id, storagePath) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este documento? También se borrará del almacenamiento.')) return;
+            
+            showLoading(true, 'Eliminando documento...');
+            try {
+                const { error: storageError } = await supabase.storage.from('private-documents').remove([storagePath]);
+                if (storageError) throw storageError;
+
+                const { error: dbError } = await supabase.from('documents').delete().eq('id', id);
+                if (dbError) throw dbError;
+
+                alert('Documento eliminado con éxito.');
+            } catch (error) {
+                console.error("Error al eliminar el documento:", error.message);
+                alert('Ocurrió un error al eliminar el documento. Ver la consola.');
+            } finally {
+                await renderDocuments();
+                showLoading(false);
+            }
+        };
+
         // --- CRUD Operations ---
 
         // Promotions
@@ -644,7 +787,7 @@
                         .from('promo_images')
                         .getPublicUrl(filePath);
 
-                    imageUrl = publicUrl.getPublicUrl;
+                    imageUrl = publicUrlData.publicUrl;
                 }
 
                 const promoData = {
@@ -834,7 +977,6 @@
             `;
             showModal(modalHtml);
             
-            // Event listener for form submission
             document.getElementById('order-form').onsubmit = async (e) => {
                 e.preventDefault();
                 await saveOrder(order.id);
@@ -842,7 +984,6 @@
         };
 
         window.addOrderProduct = function() {
-            // FIX: Guardar el estado de los campos del formulario antes de añadir el producto
             const clientNameInput = document.getElementById('client-name');
             const locationSelect = document.getElementById('order-location');
             appState.selectedOrder.client_name = clientNameInput.value;
@@ -925,7 +1066,6 @@
                 const { error: productsError } = await supabase.from('order_products').insert(productsToInsert);
                 if (productsError) throw productsError;
                 
-                // FIX: CÓDIGO CORREGIDO PARA ACTUALIZAR EL STOCK
                 for (const product of appState.orderProducts) {
                     const { data: promo, error: fetchError } = await supabase.from('promotions').select('stock').eq('id', product.promo_id).single();
                     if (fetchError) throw fetchError;
@@ -973,11 +1113,9 @@
             `);
         };
 
-        // NEW: Función para confirmar la eliminación y devolver el stock
         window.confirmDeleteOrder = async function(orderId) {
             showLoading(true, 'Eliminando pedido y devolviendo stock...');
             try {
-                // Paso 1: Obtener los productos del pedido
                 const { data: orderProducts, error: fetchError } = await supabase
                     .from('order_products')
                     .select('*')
@@ -985,7 +1123,6 @@
 
                 if (fetchError) throw fetchError;
 
-                // Paso 2: Devolver el stock de cada producto
                 for (const product of orderProducts) {
                     const { data: promo, error: fetchPromoError } = await supabase
                         .from('promotions')
@@ -1004,7 +1141,6 @@
                     if (updateError) throw updateError;
                 }
 
-                // Paso 3: Eliminar el pedido
                 const { error: deleteError } = await supabase.from('orders').delete().eq('id', orderId);
                 if (deleteError) throw deleteError;
 
@@ -1016,7 +1152,7 @@
                 showStatusMessage('Error al eliminar el pedido. Revisa la consola.', true);
             } finally {
                 await fetchOrders();
-                await fetchPromotions(); // Asegurar que el stock se actualice en la vista
+                await fetchPromotions();
                 setTimeout(() => showLoading(false), 2000);
             }
         };
@@ -1055,7 +1191,6 @@
                 const xPos = marginX + ((i % 2) * (promoWidth + padding));
                 const yPos = startY + (Math.floor((i % PAGE_LIMIT) / 2) * (promoHeight + padding));
 
-                // Cargar la imagen y convertirla a base64
                 let imageData = 'https://placehold.co/150x150/d1d5db/374151?text=No+Image';
                 if (promo.image) {
                     try {
@@ -1072,7 +1207,6 @@
                         });
                     } catch (e) {
                         console.error('Error al cargar la imagen de la promoción', promo.name, e);
-                        // Continúa con la imagen de placeholder
                     }
                 }
 
@@ -1087,7 +1221,7 @@
 
                 if (promo.original_price) {
                     doc.setFontSize(8);
-                    doc.setTextColor(255, 0, 0); // Rojo para el precio tachado
+                    doc.setTextColor(255, 0, 0);
                     doc.text(`$${promo.original_price.toFixed(2)}`, xPos, textY);
                     doc.setDrawColor(255, 0, 0);
                     const textWidth = doc.getStringUnitWidth(`$${promo.original_price.toFixed(2)}`) * doc.internal.getFontSize() / doc.internal.scaleFactor;
@@ -1096,7 +1230,7 @@
                 }
 
                 doc.setFontSize(12);
-                doc.setTextColor(0, 128, 0); // Verde para el precio de oferta
+                doc.setTextColor(0, 128, 0);
                 doc.text(`$${promo.price.toFixed(2)}`, xPos, textY);
             }
 
@@ -1127,11 +1261,9 @@
 
             let startY = 30;
 
-            // Iterar sobre las localidades ordenadas
             for (const locationName of locations) {
                 const orders = ordersByLocation[locationName].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-                // Agregar una nueva página para cada localidad, excepto la primera
                 if (locations.indexOf(locationName) > 0) {
                     doc.addPage();
                     startY = 20;
@@ -1160,12 +1292,12 @@
                     startY: startY + 20,
                     headStyles: { fillColor: [30, 144, 255] },
                     didParseCell: function(data) {
-                        if (data.column.index === 4) { // Índice de la columna 'Estado'
+                        if (data.column.index === 4) {
                             const status = data.cell.raw;
                             if (status === 'Entregado') {
-                                data.cell.styles.fillColor = [0, 128, 0]; // Verde
+                                data.cell.styles.fillColor = [0, 128, 0];
                             } else if (status === 'Pendiente') {
-                                data.cell.styles.fillColor = [255, 0, 0]; // Rojo
+                                data.cell.styles.fillColor = [255, 0, 0];
                             }
                         }
                     },
@@ -1182,5 +1314,3 @@
     </script>
 </body>
 </html>
-
-
