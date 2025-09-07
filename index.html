@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -636,7 +636,7 @@
                         .from('promo_images')
                         .getPublicUrl(filePath);
 
-                    imageUrl = publicUrlData.publicUrl;
+                    imageUrl = publicUrl.getPublicUrl;
                 }
 
                 const promoData = {
@@ -1015,39 +1015,87 @@
 
         // NEW: Función para exportar las promociones a PDF
         window.exportPromotionsToPDF = async function() {
-            showLoading(true, 'Generando PDF...');
+            showLoading(true, 'Generando PDF de promociones...');
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
             const promotionsArray = Object.values(appState.promotions).sort((a, b) => a.name.localeCompare(b.name));
 
-            const tableData = promotionsArray.map(promo => {
-                const categoryName = appState.categories[promo.category_id] || 'Sin Categoría';
-                return [
-                    promo.name,
-                    `$${promo.price.toFixed(2)}`,
-                    promo.stock,
-                    categoryName
-                ];
-            });
+            const PAGE_LIMIT = 8;
+            const promoWidth = 80;
+            const promoHeight = 90;
+            const padding = 10;
+            const marginX = 14;
+            let startY = 20;
 
-            doc.text('Listado de Promociones', 14, 20);
+            doc.setFontSize(16);
+            doc.text('Listado de Promociones', marginX, startY);
+            startY += 20;
 
-            doc.autoTable({
-                head: [['Nombre', 'Precio', 'Stock', 'Categoría']],
-                body: tableData,
-                startY: 30,
-                headStyles: { fillColor: [30, 144, 255] },
-                didDrawPage: function (data) {
-                    doc.text("Página " + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+            for (let i = 0; i < promotionsArray.length; i++) {
+                const promo = promotionsArray[i];
+
+                if (i > 0 && i % PAGE_LIMIT === 0) {
+                    doc.addPage();
+                    startY = 20;
+                    doc.setFontSize(16);
+                    doc.text('Listado de Promociones', marginX, startY);
+                    startY += 20;
                 }
-            });
+
+                const xPos = marginX + ((i % 2) * (promoWidth + padding));
+                const yPos = startY + (Math.floor((i % PAGE_LIMIT) / 2) * (promoHeight + padding));
+
+                // Cargar la imagen y convertirla a base64
+                let imageData = 'https://placehold.co/150x150/d1d5db/374151?text=No+Image';
+                if (promo.image) {
+                    try {
+                        const response = await fetch(promo.image);
+                        const blob = await response.blob();
+                        await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                imageData = reader.result;
+                                resolve();
+                            };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch (e) {
+                        console.error('Error al cargar la imagen de la promoción', promo.name, e);
+                        // Continúa con la imagen de placeholder
+                    }
+                }
+
+                doc.addImage(imageData, 'JPEG', xPos, yPos, 40, 40);
+
+                let textY = yPos + 45;
+                
+                doc.setFontSize(10);
+                doc.setTextColor(50);
+                doc.text(promo.name, xPos, textY);
+                textY += 6;
+
+                if (promo.original_price) {
+                    doc.setFontSize(8);
+                    doc.setTextColor(255, 0, 0); // Rojo para el precio tachado
+                    doc.text(`$${promo.original_price.toFixed(2)}`, xPos, textY);
+                    doc.setDrawColor(255, 0, 0);
+                    const textWidth = doc.getStringUnitWidth(`$${promo.original_price.toFixed(2)}`) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+                    doc.line(xPos, textY - 1, xPos + textWidth, textY - 1);
+                    textY += 6;
+                }
+
+                doc.setFontSize(12);
+                doc.setTextColor(0, 128, 0); // Verde para el precio de oferta
+                doc.text(`$${promo.price.toFixed(2)}`, xPos, textY);
+            }
 
             doc.save('promociones.pdf');
             
             showLoading(false);
-            showStatusMessage('PDF generado con éxito.');
+            showStatusMessage('PDF de promociones generado con éxito.');
         };
         
         // MODIFICACIÓN: Función de exportación de pedidos actualizada
@@ -1069,27 +1117,26 @@
 
             const locations = Object.keys(ordersByLocation).sort((a, b) => a.localeCompare(b));
 
-            let firstPage = true;
+            let startY = 30;
+
+            // Iterar sobre las localidades ordenadas
             for (const locationName of locations) {
                 const orders = ordersByLocation[locationName].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                
-                if (!firstPage) {
+
+                // Agregar una nueva página para cada localidad, excepto la primera
+                if (locations.indexOf(locationName) > 0) {
                     doc.addPage();
-                } else {
-                    firstPage = false;
+                    startY = 20;
                 }
 
                 doc.setFontSize(14);
                 doc.setTextColor(40);
-                let currentY = 20;
-                doc.text(`Localidad: ${locationName}`, 14, currentY);
+                doc.text(`Localidad: ${locationName}`, 14, startY);
 
                 const totalLocationOrders = orders.length;
                 const totalLocationValue = orders.reduce((sum, order) => sum + order.total, 0);
-                currentY += 10;
                 doc.setFontSize(10);
-                doc.text(`Total de pedidos: ${totalLocationOrders} | Valor total: $${totalLocationValue.toFixed(2)}`, 14, currentY);
-                currentY += 5;
+                doc.text(`Total de pedidos: ${totalLocationOrders} | Valor total: $${totalLocationValue.toFixed(2)}`, 14, startY + 10);
 
                 const tableData = orders.map(order => [
                     `#${order.id.substring(0, 6)}`,
@@ -1102,7 +1149,7 @@
                 doc.autoTable({
                     head: [['ID', 'Cliente', 'Total', 'Fecha', 'Estado']],
                     body: tableData,
-                    startY: currentY + 5,
+                    startY: startY + 20,
                     headStyles: { fillColor: [30, 144, 255] },
                     didParseCell: function(data) {
                         if (data.column.index === 4) { // Índice de la columna 'Estado'
@@ -1127,4 +1174,3 @@
     </script>
 </body>
 </html>
-
