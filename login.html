@@ -10,7 +10,7 @@
 
     <div>
         <label for="6c5dac5e-3aa9-46a0-a629-e0e6c3150075">Tu UUID de Administrador:</label>
-        <input type="text" id="6c5dac5e-3aa9-46a0-a629-e0e6c3150075 placeholder="6c5dac5e-3aa9-46a0-a629-e0e6c3150075">
+        <input type="text" id="admin-uuid" placeholder="6c5dac5e-3aa9-46a0-a629-e0e6c3150075">
     </div>
 
     <div>
@@ -37,6 +37,8 @@
             const fileInput = document.getElementById('file-upload');
             const file = fileInput.files[0];
 
+            // Este bloque "if" debe estar dentro de la función.
+            // Asegúrate de que todas tus comprobaciones estén aquí.
             if (!dni || !file || !adminUUID) {
                 alert('Por favor, completa todos los campos.');
                 return;
@@ -58,15 +60,15 @@
 
                 // Inserta los metadatos en la base de datos
                 const { error: insertError } = await supabase
-  .from('documents')
-  .insert([
-    {
-      dni: dni,
-      file_name: fileName,
-      storage_path: filePath,
-      user_id: adminUUID
-    }
-  ]); // ¡Así, sin el onConflict!
+                    .from('documents')
+                    .insert([
+                        {
+                            dni: dni,
+                            file_name: fileName,
+                            storage_path: filePath,
+                            user_id: adminUUID
+                        }
+                    ]);
 
                 if (insertError) throw insertError;
 
@@ -80,6 +82,5 @@
     </script>
 </body>
 </html>
-
 
 
