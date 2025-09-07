@@ -58,15 +58,15 @@
 
                 // Inserta los metadatos en la base de datos
                 const { error: insertError } = await supabase
-                    .from('documents')
-                    .insert([
-                        {
-                            dni: dni,
-                            file_name: fileName,
-                            storage_path: filePath,
-                            user_id: adminUUID
-                        }
-                    ]);
+  .from('documents')
+  .insert([
+    {
+      dni: dni,
+      file_name: fileName,
+      storage_path: filePath,
+      user_id: adminUUID
+    }
+  ]); // ¡Así, sin el onConflict!
 
                 if (insertError) throw insertError;
 
@@ -80,3 +80,4 @@
     </script>
 </body>
 </html>
+
