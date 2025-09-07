@@ -624,13 +624,13 @@
                         if (error) throw error;
                         
                         const { data: dbData, error: dbError } = await supabase
-                            .from('documents')
-                            .upsert({
-                                dni: dni,
-                                file_name: file.name,
-                                storage_path: filePath,
-                                user_id: appState.userId
-                            }, { onConflict: 'dni' }); // Si ya existe un documento con ese DNI, lo actualiza
+    .from('documents')
+    .insert({
+        dni: dni,
+        file_name: file.name,
+        storage_path: filePath,
+        user_id: appState.userId
+    });
                             
                         if (dbError) throw dbError;
                     });
@@ -1314,3 +1314,4 @@
     </script>
 </body>
 </html>
+
