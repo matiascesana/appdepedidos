@@ -2,83 +2,284 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Administración</title>
+    <title>Gestor de Documentos</title>
 </head>
 <body>
 
-    <h1>Subir Nuevo Documento</h1>
+    <h1>Gestor de Documentos</h1>
 
-    <div>
-        <label for="admin-uuid">Tu UUID de Administrador:</label>
-        <input type="text" id="admin-uuid" value="6c5dac5e-3aa9-46a0-a629-e0e6c3150075" placeholder="Pega tu UUID aquí">
-    </div>
-
+    <!-- Subida -->
     <div>
         <label for="dni-input">DNI del Cliente:</label>
-        <input type="text" id="dni-input" placeholder="Ej: 12345678A">
+        <input type="text" id="dni-input">
     </div>
 
     <div>
-        <label for="file-upload">Selecciona el PDF:</label>
-        <input type="file" id="file-upload" accept=".pdf">
+        <label for="file-input">Seleccionar PDF:</label>
+        <input type="file" id="file-input" accept=".pdf">
     </div>
 
-    <button onclick="uploadDocument()">Subir Documento</button>
+    <button id="upload-button">Subir Documento</button>
+
+    <hr>
+
+    <!-- Buscador -->
+    <h2>Documentos Subidos</h2>
+    <div>
+        <label for="search-dni">Buscar por DNI:</label>
+        <input type="text" id="search-dni" placeholder="Ej: 12345678">
+        <button id="search-button">Buscar</button>
+        <button id="reset-button">Ver Todos</button>
+    </div>
+
+    <div id="documents-list"></div>
+
+    <hr>
+
+    <!-- Eliminación masiva -->
+    <h2>Eliminación Masiva</h2>
+    <div>
+        <label for="delete-dni">Eliminar por DNI:</label>
+        <input type="text" id="delete-dni" placeholder="Ej: 12345678">
+    </div>
+    <div>
+        <label for="delete-date">Eliminar por fecha (>=):</label>
+        <input type="date" id="delete-date">
+    </div>
+    <div>
+        <button id="delete-by-dni">Eliminar por DNI</button>
+        <button id="delete-by-date">Eliminar por Fecha</button>
+        <button id="delete-all">Eliminar TODOS</button>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // ========================
+        // Subida de documentos
+        // ========================
         async function uploadDocument() {
-            const dni = document.getElementById('dni-input').value;
-            const adminUUID = document.getElementById('admin-uuid').value;
-            const fileInput = document.getElementById('file-upload');
+            const dni = document.getElementById('dni-input').value.trim();
+            const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
 
-            if (!dni || !file || !adminUUID) {
-                alert('Por favor, completa todos los campos.');
+            if (!dni || !file) {
+                alert('Por favor, ingresa un DNI y selecciona un archivo.');
                 return;
             }
 
-            const fileName = `${dni}_${file.name}`;
-            const filePath = `documents/${fileName}`;
+            const fileName = `${dni}_${Date.now()}.pdf`;
+            const storagePath = `${dni}/${fileName}`;
 
             try {
-                const { error: uploadError } = await supabase.storage
+                const { error: uploadError } = await supabaseClient.storage
                     .from('private-documents')
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+                    .upload(storagePath, file, { upsert: true });
 
                 if (uploadError) {
-                    throw new Error(`Error de Supabase Storage: ${uploadError.message}`);
+                    throw new Error(`Error al subir el archivo: ${uploadError.message}`);
                 }
 
-                const { error: insertError } = await supabase
+                const { error: dbError } = await supabaseClient
                     .from('documents')
-                    .insert([
-                        {
-                            dni: dni,
-                            file_name: fileName,
-                            storage_path: filePath,
-                            user_id: adminUUID
-                        }
-                    ]);
+                    .insert({ dni: dni, file_name: fileName, storage_path: storagePath });
 
-                if (insertError) {
-                    throw new Error(`Error de Supabase DB: ${insertError.message}`);
+                if (dbError) {
+                    throw new Error(`Error al registrar el documento en la base de datos: ${dbError.message}`);
                 }
 
-                alert('¡Documento subido con éxito!');
+                alert('Documento subido y registrado con éxito.');
+                fetchDocuments();
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+                console.error('Error al subir:', error);
+            }
+        }
+
+        // ========================
+        // Listado de documentos
+        // ========================
+        async function fetchDocuments(filterDni = null) {
+            try {
+                let query = supabaseClient.from('documents').select('*').order('created_at', { ascending: false });
+
+                if (filterDni) query = query.eq('dni', filterDni);
+
+                const { data: documents, error } = await query;
+
+                if (error) throw new Error(`Error al obtener documentos: ${error.message}`);
+
+                const listDiv = document.getElementById('documents-list');
+                listDiv.innerHTML = '';
+
+                if (!documents || documents.length === 0) {
+                    listDiv.innerHTML = '<p>No hay documentos disponibles.</p>';
+                    return;
+                }
+
+                documents.forEach(doc => {
+                    const docDiv = document.createElement('div');
+                    docDiv.style.border = '1px solid #ccc';
+                    docDiv.style.padding = '10px';
+                    docDiv.style.margin = '5px 0';
+                    docDiv.style.display = 'flex';
+                    docDiv.style.justifyContent = 'space-between';
+                    docDiv.style.alignItems = 'center';
+
+                    const docInfo = document.createElement('span');
+                    docInfo.textContent = `DNI: ${doc.dni}, Archivo: ${doc.file_name}, Creado: ${new Date(doc.created_at).toLocaleString()}, Actualizado: ${new Date(doc.updated_at).toLocaleString()}`;
+
+                    const previewButton = document.createElement('button');
+                    previewButton.textContent = 'Vista Previa';
+                    previewButton.onclick = () => previewDocument(doc.storage_path);
+
+                    const downloadButton = document.createElement('button');
+                    downloadButton.textContent = 'Descargar';
+                    downloadButton.onclick = () => downloadDocument(doc.storage_path);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Eliminar';
+                    deleteButton.onclick = () => deleteDocument(doc.id, doc.storage_path);
+
+                    docDiv.appendChild(docInfo);
+                    docDiv.appendChild(previewButton);
+                    docDiv.appendChild(downloadButton);
+                    docDiv.appendChild(deleteButton);
+                    listDiv.appendChild(docDiv);
+                });
 
             } catch (error) {
-                alert(`Error en la subida: ${error.message}`);
+                alert(`Error: ${error.message}`);
                 console.error(error);
             }
         }
+
+        // ========================
+        // Vista previa / descarga
+        // ========================
+        async function previewDocument(path) {
+            try {
+                const { data, error } = await supabaseClient.storage
+                    .from('private-documents')
+                    .createSignedUrl(path, 60);
+                if (error) throw new Error(error.message);
+                window.open(data.signedUrl, '_blank');
+            } catch (error) {
+                alert(`Error en vista previa: ${error.message}`);
+            }
+        }
+
+        async function downloadDocument(path) {
+            try {
+                const { data, error } = await supabaseClient.storage
+                    .from('private-documents')
+                    .createSignedUrl(path, 60);
+                if (error) throw new Error(error.message);
+
+                const a = document.createElement('a');
+                a.href = data.signedUrl;
+                a.download = path.split('/').pop();
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (error) {
+                alert(`Error en la descarga: ${error.message}`);
+            }
+        }
+
+        // ========================
+        // Eliminación individual
+        // ========================
+        async function deleteDocument(docId, storagePath) {
+            try {
+                await supabaseClient.storage.from('private-documents').remove([storagePath]);
+                await supabaseClient.from('documents').delete().eq('id', docId);
+
+                alert('Documento eliminado con éxito.');
+                fetchDocuments();
+            } catch (error) {
+                alert(`Error al eliminar: ${error.message}`);
+            }
+        }
+
+        // ========================
+        // Eliminación masiva
+        // ========================
+        async function deleteMassive({ dni = null, date = null, all = false }) {
+            try {
+                let query = supabaseClient.from('documents').select('*');
+
+                if (dni) query = query.eq('dni', dni);
+                if (date) query = query.gte('created_at', date);
+                if (all) query = query;
+
+                const { data: docs, error } = await query;
+                if (error) throw new Error(error.message);
+                if (!docs || docs.length === 0) {
+                    alert("No se encontraron documentos para eliminar.");
+                    return;
+                }
+
+                if (!confirm(`Se eliminarán ${docs.length} documentos. ¿Continuar?`)) return;
+
+                const paths = docs.map(d => d.storage_path);
+                await supabaseClient.storage.from('private-documents').remove(paths);
+
+                const ids = docs.map(d => d.id);
+                await supabaseClient.from('documents').delete().in('id', ids);
+
+                alert(`Se eliminaron ${docs.length} documentos.`);
+                fetchDocuments();
+            } catch (error) {
+                alert(`Error en eliminación masiva: ${error.message}`);
+            }
+        }
+
+        // ========================
+        // Eventos
+        // ========================
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDocuments();
+
+            document.getElementById('upload-button').addEventListener('click', uploadDocument);
+
+            document.getElementById('search-button').addEventListener('click', () => {
+                const searchValue = document.getElementById('search-dni').value.trim();
+                fetchDocuments(searchValue || null);
+            });
+
+            document.getElementById('reset-button').addEventListener('click', () => {
+                document.getElementById('search-dni').value = '';
+                fetchDocuments();
+            });
+
+            document.getElementById('search-dni').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const searchValue = e.target.value.trim();
+                    fetchDocuments(searchValue || null);
+                }
+            });
+
+            document.getElementById('delete-by-dni').addEventListener('click', () => {
+                const dni = document.getElementById('delete-dni').value.trim();
+                if (!dni) return alert("Ingresa un DNI para eliminar.");
+                deleteMassive({ dni });
+            });
+
+            document.getElementById('delete-by-date').addEventListener('click', () => {
+                const date = document.getElementById('delete-date').value;
+                if (!date) return alert("Selecciona una fecha.");
+                deleteMassive({ date });
+            });
+
+            document.getElementById('delete-all').addEventListener('click', () => {
+                deleteMassive({ all: true });
+            });
+        });
     </script>
 </body>
 </html>
+
