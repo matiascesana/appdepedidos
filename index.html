@@ -558,128 +558,33 @@
             });
         }
 
-       // ------------------ Documentos ------------------
+       <!-- Sección de Documentos -->
+<div class="max-w-3xl mx-auto my-6 p-4 bg-white rounded-xl shadow-md">
+    <h2 class="text-2xl font-bold mb-4">Documentos</h2>
 
-// Subir archivos al storage y registrar en la DB
-window.uploadDocuments = async function(fileInput) {
-    const files = fileInput.files;
-    if (!files || files.length === 0) {
-        alert('Por favor, selecciona al menos un archivo.');
-        return;
-    }
+    <!-- Subida de Archivos -->
+    <div class="mb-4 flex items-center space-x-2">
+        <input type="file" id="file-input" multiple accept=".pdf" class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+        <button 
+            onclick="uploadFiles(document.getElementById('file-input'))" 
+            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-md"
+        >
+            Subir
+        </button>
+    </div>
 
-    showLoading(true, 'Subiendo archivos...');
-    fileInput.disabled = true; // Evita doble submit
-    const uploadPromises = [];
+    <!-- Contenedor de Documentos -->
+    <div id="documents-container" class="space-y-2 max-h-80 overflow-y-auto">
+        <!-- Los documentos se cargarán aquí dinámicamente -->
+    </div>
+</div>
 
-    for (const file of files) {
-        // Extraer DNI del nombre del archivo
-        const dni = file.name.split('.')[0].trim();
-        if (!dni || !/^\d+$/.test(dni)) {
-            console.error(`El archivo "${file.name}" no tiene un DNI válido.`);
-            continue;
-        }
-
-        const filePath = `documents/${dni}.pdf`;
-
-        const uploadPromise = supabase.storage
-            .from('private-documents')
-            .upload(filePath, file, { upsert: true })
-            .then(async ({ error }) => {
-                if (error) throw error;
-
-                const { data: dbData, error: dbError } = await supabase
-                    .from('documents')
-                    .insert({
-                        dni,
-                        file_name: file.name,
-                        storage_path: filePath,
-                        user_id: appState.userId
-                    });
-
-                if (dbError) throw dbError;
-            })
-            .catch(e => {
-                console.error(`Error al subir "${file.name}":`, e.message || e);
-            });
-
-        uploadPromises.push(uploadPromise);
-    }
-
-    try {
-        await Promise.all(uploadPromises);
-        alert('Documentos subidos y registrados con éxito.');
-    } catch (e) {
-        console.error('Error general en la subida de documentos:', e);
-        alert('Ocurrió un error al subir algunos documentos. Revisa la consola.');
-    } finally {
-        fileInput.value = null;
-        fileInput.disabled = false;
-        await renderDocuments();
-        showLoading(false);
-    }
-};
-
-// Eliminar documento
-window.deleteDocument = async function(id, storagePath) {
-    if (!confirm('¿Estás seguro de que quieres eliminar este documento? También se borrará del almacenamiento.')) return;
-
-    showLoading(true, 'Eliminando documento...');
-    try {
-        // Primero eliminamos del storage
-        const { error: storageError } = await supabase.storage
-            .from('private-documents')
-            .remove([storagePath]);
-
-        if (storageError) throw storageError;
-
-        // Luego eliminamos de la base de datos
-        const { error: dbError } = await supabase
-            .from('documents')
-            .delete()
-            .eq('id', id);
-
-        if (dbError) throw dbError;
-
-        alert('Documento eliminado con éxito.');
-    } catch (e) {
-        console.error('Error al eliminar el documento:', e.message || e);
-        alert('Ocurrió un error al eliminar el documento. Revisa la consola.');
-    } finally {
-        await renderDocuments();
-        showLoading(false);
-    }
-};
-
-// Renderizar lista de documentos (ejemplo básico)
-async function renderDocuments() {
-    const { data: documents, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('user_id', appState.userId)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error al obtener documentos:', error);
-        return;
-    }
-
-    const container = document.getElementById('documents-container');
-    container.innerHTML = '';
-
-    documents.forEach(doc => {
-        const div = document.createElement('div');
-        div.className = 'flex justify-between items-center p-2 border-b border-gray-200';
-        div.innerHTML = `
-            <span>${doc.dni} - ${doc.file_name}</span>
-            <div>
-                <a href="${supabase.storage.from('private-documents').getPublicUrl(doc.storage_path).data.publicUrl}" target="_blank" class="text-blue-600 hover:underline mr-2">Ver</a>
-                <button onclick="deleteDocument(${doc.id}, '${doc.storage_path}')" class="text-red-600 hover:underline">Eliminar</button>
-            </div>
-        `;
-        container.appendChild(div);
+<script>
+    // Llamamos a renderDocuments al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+        renderDocuments();
     });
-}
+</script>
 
 
         // --- CRUD Operations ---
@@ -1325,5 +1230,6 @@ async function renderDocuments() {
     </script>
 </body>
 </html>
+
 
 
