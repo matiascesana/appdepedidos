@@ -558,118 +558,129 @@
             });
         }
 
-        // --- Document Functions ---
-        async function renderDocuments() {
-            const documentsList = document.getElementById('documents-list');
-            if (!documentsList) return;
-            
-            documentsList.innerHTML = '';
-            
-            const docs = await fetchDocuments();
-            if (docs.length === 0) {
-                documentsList.innerHTML = '<p class="text-center text-gray-500">No hay documentos subidos.</p>';
-            } else {
-                docs.forEach(doc => {
-                    const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-lg shadow-sm';
-                    li.innerHTML = `
-                        <div class="flex-grow">
-                            <p class="font-bold text-gray-800">${doc.file_name}</p>
-                            <p class="text-sm text-gray-600">DNI: ${doc.dni}</p>
-                            <p class="text-xs text-gray-400">Subido el: ${new Date(doc.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <button onclick="deleteDocument('${doc.id}', '${doc.storage_path}')" class="text-red-500 hover:text-red-700 transition-colors">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    `;
-                    documentsList.appendChild(li);
-                });
-            }
+       // ------------------ Documentos ------------------
+
+// Subir archivos al storage y registrar en la DB
+window.uploadDocuments = async function(fileInput) {
+    const files = fileInput.files;
+    if (!files || files.length === 0) {
+        alert('Por favor, selecciona al menos un archivo.');
+        return;
+    }
+
+    showLoading(true, 'Subiendo archivos...');
+    fileInput.disabled = true; // Evita doble submit
+    const uploadPromises = [];
+
+    for (const file of files) {
+        // Extraer DNI del nombre del archivo
+        const dni = file.name.split('.')[0].trim();
+        if (!dni || !/^\d+$/.test(dni)) {
+            console.error(`El archivo "${file.name}" no tiene un DNI válido.`);
+            continue;
         }
 
-        async function fetchDocuments() {
-            const { data, error } = await supabase.from('documents').select('*');
-            if (error) {
-                console.error("Error fetching documents:", error);
-                return [];
-            }
-            return data;
-        }
+        const filePath = `documents/${dni}.pdf`;
 
-        window.uploadFiles = async function() {
-            const fileInput = document.getElementById('file-input');
-            const files = fileInput.files;
+        const uploadPromise = supabase.storage
+            .from('private-documents')
+            .upload(filePath, file, { upsert: true })
+            .then(async ({ error }) => {
+                if (error) throw error;
 
-            if (files.length === 0) {
-                alert('Por favor, selecciona al menos un archivo.');
-                return;
-            }
-
-            showLoading(true, 'Subiendo archivos...');
-            const uploadPromises = [];
-
-            for (const file of files) {
-                const dni = file.name.split('.')[0];
-                if (!dni) {
-                    console.error(`Error: El nombre de archivo "${file.name}" no es un DNI válido.`);
-                    continue;
-                }
-                
-                const filePath = `documents/${dni}.pdf`;
-
-                const uploadPromise = supabase.storage
-                    .from('private-documents')
-                    .upload(filePath, file, { upsert: true }) // upsert: true permite reemplazar si el archivo ya existe
-                    .then(async ({ error }) => {
-                        if (error) throw error;
-                        
-                        const { data: dbData, error: dbError } = await supabase
-    .from('documents')
-    .insert({
-        dni: dni,
-        file_name: file.name,
-        storage_path: filePath,
-        user_id: appState.userId
-    });
-                            
-                        if (dbError) throw dbError;
+                const { data: dbData, error: dbError } = await supabase
+                    .from('documents')
+                    .insert({
+                        dni,
+                        file_name: file.name,
+                        storage_path: filePath,
+                        user_id: appState.userId
                     });
-                uploadPromises.push(uploadPromise);
-            }
 
-            try {
-                await Promise.all(uploadPromises);
-                alert('Documentos subidos y registrados con éxito.');
-            } catch (error) {
-                console.error("Error en la subida:", error.message);
-                alert('Ocurrió un error al subir los documentos. Ver la consola para más detalles.');
-            } finally {
-                fileInput.value = null;
-                await renderDocuments();
-                showLoading(false);
-            }
-        };
-
-        window.deleteDocument = async function(id, storagePath) {
-            if (!confirm('¿Estás seguro de que quieres eliminar este documento? También se borrará del almacenamiento.')) return;
-            
-            showLoading(true, 'Eliminando documento...');
-            try {
-                const { error: storageError } = await supabase.storage.from('private-documents').remove([storagePath]);
-                if (storageError) throw storageError;
-
-                const { error: dbError } = await supabase.from('documents').delete().eq('id', id);
                 if (dbError) throw dbError;
+            })
+            .catch(e => {
+                console.error(`Error al subir "${file.name}":`, e.message || e);
+            });
 
-                alert('Documento eliminado con éxito.');
-            } catch (error) {
-                console.error("Error al eliminar el documento:", error.message);
-                alert('Ocurrió un error al eliminar el documento. Ver la consola.');
-            } finally {
-                await renderDocuments();
-                showLoading(false);
-            }
-        };
+        uploadPromises.push(uploadPromise);
+    }
+
+    try {
+        await Promise.all(uploadPromises);
+        alert('Documentos subidos y registrados con éxito.');
+    } catch (e) {
+        console.error('Error general en la subida de documentos:', e);
+        alert('Ocurrió un error al subir algunos documentos. Revisa la consola.');
+    } finally {
+        fileInput.value = null;
+        fileInput.disabled = false;
+        await renderDocuments();
+        showLoading(false);
+    }
+};
+
+// Eliminar documento
+window.deleteDocument = async function(id, storagePath) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este documento? También se borrará del almacenamiento.')) return;
+
+    showLoading(true, 'Eliminando documento...');
+    try {
+        // Primero eliminamos del storage
+        const { error: storageError } = await supabase.storage
+            .from('private-documents')
+            .remove([storagePath]);
+
+        if (storageError) throw storageError;
+
+        // Luego eliminamos de la base de datos
+        const { error: dbError } = await supabase
+            .from('documents')
+            .delete()
+            .eq('id', id);
+
+        if (dbError) throw dbError;
+
+        alert('Documento eliminado con éxito.');
+    } catch (e) {
+        console.error('Error al eliminar el documento:', e.message || e);
+        alert('Ocurrió un error al eliminar el documento. Revisa la consola.');
+    } finally {
+        await renderDocuments();
+        showLoading(false);
+    }
+};
+
+// Renderizar lista de documentos (ejemplo básico)
+async function renderDocuments() {
+    const { data: documents, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', appState.userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error al obtener documentos:', error);
+        return;
+    }
+
+    const container = document.getElementById('documents-container');
+    container.innerHTML = '';
+
+    documents.forEach(doc => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center p-2 border-b border-gray-200';
+        div.innerHTML = `
+            <span>${doc.dni} - ${doc.file_name}</span>
+            <div>
+                <a href="${supabase.storage.from('private-documents').getPublicUrl(doc.storage_path).data.publicUrl}" target="_blank" class="text-blue-600 hover:underline mr-2">Ver</a>
+                <button onclick="deleteDocument(${doc.id}, '${doc.storage_path}')" class="text-red-600 hover:underline">Eliminar</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
 
         // --- CRUD Operations ---
 
@@ -1314,4 +1325,5 @@
     </script>
 </body>
 </html>
+
 
