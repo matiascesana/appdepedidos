@@ -31,17 +31,17 @@
             }
 
             try {
-                // Aquí es donde la política RLS hace su magia
-                // Solo devuelve documentos con el DNI proporcionado
                 const { data: documents, error } = await supabase
                     .from('documents')
                     .select('*')
                     .eq('dni', dni);
 
-                if (error) throw error;
+                if (error) {
+                    throw new Error(`Error de Supabase DB: ${error.message}`);
+                }
 
                 const list = document.getElementById('document-list');
-                list.innerHTML = ''; // Limpia la lista anterior
+                list.innerHTML = '';
 
                 if (documents.length === 0) {
                     list.innerHTML = '<p>No se encontraron documentos para este DNI.</p>';
@@ -68,9 +68,11 @@
             try {
                 const { data, error } = await supabase.storage
                     .from('private-documents')
-                    .createSignedUrl(path, 60); // URL válida por 60 segundos
+                    .createSignedUrl(path, 60);
 
-                if (error) throw error;
+                if (error) {
+                    throw new Error(`Error de Supabase Storage: ${error.message}`);
+                }
 
                 window.open(data.signedUrl, '_blank');
             } catch (error) {
