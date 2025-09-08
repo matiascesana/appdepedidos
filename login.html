@@ -9,8 +9,8 @@
     <h1>Subir Nuevo Documento</h1>
 
     <div>
-        <label for="6c5dac5e-3aa9-46a0-a629-e0e6c3150075">Tu UUID de Administrador:</label>
-        <input type="text" id="admin-uuid" placeholder="6c5dac5e-3aa9-46a0-a629-e0e6c3150075">
+        <label for="admin-uuid">Tu UUID de Administrador:</label>
+        <input type="text" id="admin-uuid" value="6c5dac5e-3aa9-46a0-a629-e0e6c3150075" placeholder="Pega tu UUID aquí">
     </div>
 
     <div>
@@ -37,8 +37,6 @@
             const fileInput = document.getElementById('file-upload');
             const file = fileInput.files[0];
 
-            // Este bloque "if" debe estar dentro de la función.
-            // Asegúrate de que todas tus comprobaciones estén aquí.
             if (!dni || !file || !adminUUID) {
                 alert('Por favor, completa todos los campos.');
                 return;
@@ -48,7 +46,6 @@
             const filePath = `documents/${fileName}`;
 
             try {
-                // Sube el archivo al bucket de almacenamiento
                 const { error: uploadError } = await supabase.storage
                     .from('private-documents')
                     .upload(filePath, file, {
@@ -56,19 +53,24 @@
                         upsert: false
                     });
 
-                if (uploadError) throw uploadError;
+                if (uploadError) {
+                    throw new Error(`Error de Supabase Storage: ${uploadError.message}`);
+                }
 
-                // Inserta los metadatos en la base de datos
-                const { data: dbData, error: dbError } = await supabase
-    .from('documents')
-    .insert({
-        dni: dni,
-        file_name: file.name,
-        storage_path: filePath,
-        user_id: appState.userId
-    });
+                const { error: insertError } = await supabase
+                    .from('documents')
+                    .insert([
+                        {
+                            dni: dni,
+                            file_name: fileName,
+                            storage_path: filePath,
+                            user_id: adminUUID
+                        }
+                    ]);
 
-                if (insertError) throw insertError;
+                if (insertError) {
+                    throw new Error(`Error de Supabase DB: ${insertError.message}`);
+                }
 
                 alert('¡Documento subido con éxito!');
 
@@ -80,6 +82,3 @@
     </script>
 </body>
 </html>
-
-
-
