@@ -2,429 +2,219 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>App de Pedidos</title>
+    <title>App de Pedidos Completa</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Estilos básicos */
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; }
-        .modal-content { background:#fff; padding:20px; border-radius:10px; max-width:600px; width:100%; }
-        .loading { position:fixed; top:10px; right:10px; background:#000;color:#fff;padding:10px;border-radius:5px; display:none; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2 { color: #333; }
+        input, button { margin: 5px 0; padding: 8px; }
+        .section { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 10px; }
+        label { display: block; margin-top: 10px; }
     </style>
 </head>
 <body>
+    <h1>Gestión Completa de Pedidos</h1>
 
-<h1>App de Pedidos</h1>
+    <!-- Sección de Categorías -->
+    <div class="section">
+        <h2>Agregar Categoría</h2>
+        <input type="text" id="categoryName" placeholder="Nombre de categoría">
+        <button onclick="addCategory()">Agregar Categoría</button>
+        <h3>Categorías existentes:</h3>
+        <ul id="categoryList"></ul>
+    </div>
 
-<!-- Documentos -->
-<h2>Documentos</h2>
-<input type="file" id="file-input" multiple>
-<button onclick="uploadFiles()">Subir Archivos</button>
-<div id="documents-list"></div>
+    <!-- Sección de Productos -->
+    <div class="section">
+        <h2>Agregar Producto</h2>
+        <input type="text" id="productName" placeholder="Nombre de producto">
+        <input type="number" id="productPrice" placeholder="Precio">
+        <input type="file" id="productImage" multiple>
+        <button onclick="addProduct()">Agregar Producto</button>
+        <h3>Productos existentes:</h3>
+        <ul id="productList"></ul>
+    </div>
 
-<!-- Promociones -->
-<h2>Promociones</h2>
-<button onclick="showPromoModal()">Nueva Promoción</button>
-<button onclick="exportPromotionsToPDF()">Exportar Promociones a PDF</button>
-<div id="promotions-list"></div>
+    <!-- Sección de Documentos -->
+    <div class="section">
+        <h2>Subir Documentos</h2>
+        <input type="file" id="docFiles" multiple>
+        <button onclick="uploadFiles()">Subir Archivos</button>
+        <h3>Documentos subidos:</h3>
+        <ul id="documentList"></ul>
+    </div>
 
-<!-- Pedidos -->
-<h2>Pedidos</h2>
-<button onclick="showOrderModal()">Nuevo Pedido</button>
-<button onclick="exportOrdersToPDF()">Exportar Pedidos a PDF</button>
-<div id="orders-list"></div>
+    <!-- Sección PDF -->
+    <div class="section">
+        <h2>Generar PDF</h2>
+        <button onclick="generatePDF()">Generar PDF de prueba</button>
+    </div>
 
-<!-- Localidades -->
-<h2>Localidades</h2>
-<input type="text" id="new-location-input" placeholder="Nueva Localidad">
-<button onclick="addLocation()">Agregar</button>
-<div id="locations-list"></div>
+    <script>
+        // ----------------- Inicialización Supabase -----------------
+        const SUPABASE_URL = 'TU_SUPABASE_URL';
+        const SUPABASE_KEY = 'TU_SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-<!-- Categorías -->
-<h2>Categorías</h2>
-<input type="text" id="new-category-input" placeholder="Nueva Categoría">
-<button onclick="addCategory()">Agregar</button>
-<div id="categories-list"></div>
+        // ----------------- Categorías -----------------
+        async function addCategory() {
+            const name = document.getElementById('categoryName').value;
+            if (!name) return alert('Ingrese un nombre de categoría');
 
-<div id="modal" class="modal" style="display:none;">
-    <div class="modal-content" id="modal-content"></div>
-</div>
+            const { data, error } = await supabase
+                .from('categorias')
+                .insert([{ nombre: name }]);
 
-<div id="loading" class="loading"></div>
-<div id="status-message"></div>
-
-<script>
-    // --- Supabase ---
-    const supabase = supabase.createClient('https://ejbqlejlgprvwzrptojo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8');
-
-    const appState = {
-        userId: 'user_123',
-        documents: {},
-        promotions: {},
-        orders: {},
-        locations: {},
-        categories: {},
-        orderProducts: [],
-        selectedOrder: null
-    };
-
-    // --- Utilidades ---
-    function showLoading(show, message='') {
-        const el = document.getElementById('loading');
-        if(show){ el.style.display='block'; el.textContent=message; }
-        else el.style.display='none';
-    }
-
-    function showStatusMessage(msg, isError=false) {
-        const el = document.getElementById('status-message');
-        el.textContent = msg;
-        el.style.color = isError ? 'red' : 'green';
-        setTimeout(()=>el.textContent='',4000);
-    }
-
-    function showModal(html) {
-        document.getElementById('modal-content').innerHTML = html;
-        document.getElementById('modal').style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('modal').style.display = 'none';
-    }
-
-    // --- Documentos ---
-    async function fetchDocuments() {
-        const { data, error } = await supabase.from('documents').select('*');
-        if(error){ console.error(error); return; }
-        appState.documents = {};
-        data.forEach(d => appState.documents[d.id] = d);
-        renderDocuments();
-    }
-
-    function renderDocuments() {
-        const container = document.getElementById('documents-list');
-        container.innerHTML = Object.values(appState.documents).map(d => `
-            <div style="margin-bottom:5px;">
-                ${d.file_name} 
-                <button onclick="deleteDocument(${d.id}, '${d.storage_path}')">Eliminar</button>
-            </div>
-        `).join('');
-    }
-
-    async function uploadFiles() {
-        const fileInput = document.getElementById('file-input');
-        const files = fileInput.files;
-        if(!files.length){ alert('Selecciona al menos un archivo'); return; }
-
-        showLoading(true,'Subiendo archivos...');
-        const uploadPromises = [];
-        for(const file of files){
-            const dni = file.name.split('.')[0];
-            if(!dni) { console.error(`Archivo inválido: ${file.name}`); continue; }
-
-            const filePath = `documents/${dni}.pdf`;
-            const uploadPromise = supabase.storage
-                .from('private-documents')
-                .upload(filePath, file, { upsert:true })
-                .then(async ({error})=>{
-                    if(error) throw error;
-                    const { error: dbError } = await supabase.from('documents').insert({
-                        dni:dni,
-                        file_name:file.name,
-                        storage_path:filePath,
-                        user_id: appState.userId
-                    });
-                    if(dbError) throw dbError;
-                });
-            uploadPromises.push(uploadPromise);
-        }
-
-        try{
-            await Promise.all(uploadPromises);
-            showStatusMessage('Documentos subidos con éxito.');
-        }catch(e){
-            console.error(e); showStatusMessage('Error subiendo documentos',true);
-        }finally{
-            fileInput.value=null;
-            await fetchDocuments();
-            showLoading(false);
-        }
-    }
-
-    async function deleteDocument(id, storagePath){
-        if(!confirm('¿Eliminar este documento?')) return;
-        showLoading(true,'Eliminando...');
-        try{
-            const { error: storageError } = await supabase.storage.from('private-documents').remove([storagePath]);
-            if(storageError) throw storageError;
-            const { error: dbError } = await supabase.from('documents').delete().eq('id',id);
-            if(dbError) throw dbError;
-            showStatusMessage('Documento eliminado con éxito.');
-        }catch(e){ console.error(e); showStatusMessage('Error eliminando documento',true); }
-        finally{ await fetchDocuments(); showLoading(false); }
-    }
-
-    // --- Promociones ---
-    async function fetchPromotions() {
-        const { data, error } = await supabase.from('promotions').select('*');
-        if(error){ console.error(error); return; }
-        appState.promotions = {};
-        data.forEach(p => appState.promotions[p.id] = p);
-        renderPromotions();
-    }
-
-    function renderPromotions() {
-        const container = document.getElementById('promotions-list');
-        container.innerHTML = Object.values(appState.promotions).map(p => `
-            <div style="margin-bottom:5px;">
-                ${p.name} - $${p.price.toFixed(2)} 
-                <button onclick="showPromoModal(${p.id})">Editar</button>
-                <button onclick="deletePromo(${p.id})">Eliminar</button>
-            </div>
-        `).join('');
-    }
-
-    async function showPromoModal(promoId=null){
-        const isEditing = promoId!==null;
-        const promo = appState.promotions[promoId] || {};
-        const { data: categories } = await supabase.from('categories').select('*');
-        const catOptions = categories.map(c=>`<option value="${c.id}" ${promo.category_id===c.id?'selected':''}>${c.name}</option>`).join('');
-        const html = `
-            <h3>${isEditing?'Editar':'Nueva'} Promoción</h3>
-            <form id="promo-form">
-                <input type="text" id="promo-name" value="${promo.name||''}" placeholder="Nombre" required>
-                <input type="number" id="promo-original-price" value="${promo.original_price||''}" placeholder="Precio Original">
-                <input type="number" id="promo-price" value="${promo.price||''}" placeholder="Precio Final" required>
-                <input type="number" id="promo-stock" value="${promo.stock||0}" placeholder="Stock" required>
-                <select id="promo-category"><option value="">Sin Categoría</option>${catOptions}</select>
-                <input type="file" id="promo-image" accept="image/*">
-                ${promo.image?`<img src="${promo.image}" style="width:50px;height:50px">`:''}
-                <button type="submit">${isEditing?'Guardar':'Crear'}</button>
-                <button type="button" onclick="closeModal()">Cancelar</button>
-            </form>
-        `;
-        showModal(html);
-        document.getElementById('promo-form').onsubmit = async (e)=>{
-            e.preventDefault(); await savePromo(promoId);
-        };
-    }
-
-    async function savePromo(promoId=null){
-        showLoading(true,'Guardando...');
-        const name = document.getElementById('promo-name').value.trim();
-        const originalPriceInput = document.getElementById('promo-original-price').value;
-        const price = parseFloat(document.getElementById('promo-price').value);
-        const stock = parseInt(document.getElementById('promo-stock').value,10);
-        const categoryId = document.getElementById('promo-category').value||null;
-        const imageFile = document.getElementById('promo-image').files[0];
-        let imageUrl = appState.promotions[promoId]?.image || null;
-
-        if(!name || isNaN(price) || isNaN(stock)){ showStatusMessage('Datos inválidos',true); showLoading(false); return; }
-
-        if(imageFile){
-            const filePath = `public/${Date.now()}_${imageFile.name}`;
-            const { error: uploadError } = await supabase.storage.from('promo_images').upload(filePath,imageFile);
-            if(uploadError){ console.error(uploadError); showStatusMessage('Error imagen',true); showLoading(false); return; }
-            const { data } = supabase.storage.from('promo_images').getPublicUrl(filePath);
-            imageUrl = data.publicUrl;
-        }
-
-        const promoData = { name, original_price: originalPriceInput?parseFloat(originalPriceInput):null, price, stock, category_id:categoryId, image:imageUrl, user_id: appState.userId };
-        try{
-            if(promoId){ const { error } = await supabase.from('promotions').update(promoData).eq('id',promoId); if(error) throw error; }
-            else { const { error } = await supabase.from('promotions').insert(promoData); if(error) throw error; }
-            closeModal();
-            showStatusMessage('Promoción guardada');
-        }catch(e){ console.error(e); showStatusMessage('Error guardando promoción',true);}
-        finally{ await fetchPromotions(); showLoading(false); }
-    }
-
-    async function deletePromo(promoId){
-        if(!confirm('¿Eliminar promoción?')) return;
-        try{ const { error } = await supabase.from('promotions').delete().eq('id',promoId); if(error) throw error; showStatusMessage('Promoción eliminada'); }
-        catch(e){ console.error(e); showStatusMessage('Error eliminando',true);}
-        finally{ await fetchPromotions(); }
-    }
-
-    async function exportPromotionsToPDF() {
-        showLoading(true,'Generando PDF...');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const promotions = Object.values(appState.promotions).sort((a,b)=>a.name.localeCompare(b.name));
-
-        const PAGE_LIMIT=8, promoWidth=80,promoHeight=90,padding=10,marginX=14;
-        let startY=20;
-        doc.setFontSize(16); doc.text('Listado de Promociones', marginX,startY); startY+=20;
-
-        for(let i=0;i<promotions.length;i++){
-            const promo = promotions[i];
-            if(i>0 && i%PAGE_LIMIT===0){ doc.addPage(); startY=20; doc.setFontSize(16); doc.text('Listado de Promociones', marginX,startY); startY+=20; }
-
-            const xPos = marginX + ((i%2)*(promoWidth+padding));
-            const yPos = startY + (Math.floor((i%PAGE_LIMIT)/2)*(promoHeight+padding));
-
-            let imageData = 'https://placehold.co/150x150/d1d5db/374151?text=No+Image';
-            if(promo.image){
-                try{ const resp = await fetch(promo.image); const blob=await resp.blob(); await new Promise((res,rej)=>{ const reader=new FileReader(); reader.onloadend=()=>{imageData=reader.result; res();}; reader.onerror=rej; reader.readAsDataURL(blob); }); }catch(e){ console.error(e);}
+            if (error) {
+                console.error(error);
+                alert('Error al agregar categoría');
+            } else {
+                alert('Categoría agregada');
+                document.getElementById('categoryName').value = '';
+                fetchCategories();
             }
-
-            doc.addImage(imageData,'JPEG',xPos,yPos,40,40);
-            let textY=yPos+45;
-            doc.setFontSize(10); doc.setTextColor(50); doc.text(promo.name,xPos,textY); textY+=6;
-            if(promo.original_price){ doc.setFontSize(8); doc.setTextColor(255,0,0); doc.text(`$${promo.original_price.toFixed(2)}`,xPos,textY); const textWidth = doc.getStringUnitWidth(`$${promo.original_price.toFixed(2)}`)*doc.internal.getFontSize()/doc.internal.scaleFactor; doc.line(xPos,textY-1,xPos+textWidth,textY-1); textY+=6; }
-            doc.setFontSize(12); doc.setTextColor(0,128,0); doc.text(`$${promo.price.toFixed(2)}`,xPos,textY);
         }
 
-        doc.save('promociones.pdf');
-        showLoading(false); showStatusMessage('PDF de promociones generado con éxito.');
-    }
+        async function fetchCategories() {
+            const { data, error } = await supabase.from('categorias').select('*');
+            if (error) return console.error(error);
 
-    // --- Pedidos ---
-    async function fetchOrders() {
-        const { data, error } = await supabase.from('orders').select('*');
-        if(error){ console.error(error); return; }
-        appState.orders={}; data.forEach(o=>appState.orders[o.id]=o);
-        renderOrders();
-    }
-
-    function renderOrders() {
-        const container = document.getElementById('orders-list');
-        container.innerHTML = Object.values(appState.orders).map(o=>`
-            <div style="margin-bottom:5px;">
-                Pedido #${o.id.substring(0,6)} - $${o.total.toFixed(2)} - ${o.status}
-                <button onclick="showOrderModal('${o.id}')">Editar</button>
-                <button onclick="deleteOrder('${o.id}')">Eliminar</button>
-                <button onclick="toggleOrderStatus('${o.id}','${o.status}')">Cambiar Estado</button>
-            </div>
-        `).join('');
-    }
-
-    async function exportOrdersToPDF() {
-        showLoading(true, 'Generando PDF de pedidos...');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFontSize(16); doc.text('Listado de Pedidos por Localidad',14,20);
-
-        const ordersByLocation = {};
-        Object.values(appState.orders).forEach(order=>{
-            const locName = appState.locations[order.location_id] || 'Sin Localidad';
-            if(!ordersByLocation[locName]) ordersByLocation[locName]=[];
-            ordersByLocation[locName].push(order);
-        });
-
-        const locations = Object.keys(ordersByLocation).sort();
-        let startY=30;
-        for(const locName of locations){
-            const orders = ordersByLocation[locName].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-            if(locations.indexOf(locName)>0){ doc.addPage(); startY=20; }
-            doc.setFontSize(14); doc.setTextColor(40); doc.text(`Localidad: ${locName}`,14,startY);
-            const totalOrders = orders.length;
-            const totalValue = orders.reduce((sum,o)=>sum+o.total,0);
-            doc.setFontSize(10); doc.text(`Total de pedidos: ${totalOrders} | Valor total: $${totalValue.toFixed(2)}`,14,startY+10);
-
-            const tableData = orders.map(o=>[`#${o.id.substring(0,6)}`,o.client_name,`$${o.total.toFixed(2)}`,new Date(o.created_at).toLocaleDateString(),o.status]);
-
-            doc.autoTable({
-                head:[['ID','Cliente','Total','Fecha','Estado']],
-                body:tableData,
-                startY:startY+20,
-                headStyles:{ fillColor:[30,144,255] },
-                didParseCell:function(data){
-                    if(data.column.index===4){
-                        const status = data.cell.raw;
-                        if(status==='Entregado'){ data.cell.styles.fillColor=[0,128,0]; data.cell.styles.textColor=255; }
-                        else if(status==='Pendiente'){ data.cell.styles.fillColor=[255,0,0]; data.cell.styles.textColor=255; }
-                    }
-                },
-                didDrawPage:function(data){
-                    doc.setFontSize(8); doc.setTextColor(100);
-                    doc.text("Página "+doc.internal.getNumberOfPages(),data.settings.margin.left,doc.internal.pageSize.height-10);
-                },
-                margin:{ top:startY+20,left:14,right:14 }
+            const list = document.getElementById('categoryList');
+            list.innerHTML = '';
+            data.forEach(cat => {
+                const li = document.createElement('li');
+                li.textContent = `ID: ${cat.id} - ${cat.nombre}`;
+                list.appendChild(li);
             });
         }
 
-        doc.save('pedidos.pdf');
-        showLoading(false); showStatusMessage('PDF de pedidos generado con éxito.');
-    }
+        // ----------------- Productos -----------------
+        async function addProduct() {
+            const name = document.getElementById('productName').value;
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const files = document.getElementById('productImage').files;
 
-    // --- Localidades ---
-    async function fetchLocations() {
-        const { data,error } = await supabase.from('locations').select('*');
-        if(error){ console.error(error); return; }
-        appState.locations={}; data.forEach(l=>appState.locations[l.id]=l.name);
-        renderLocations();
-    }
+            if (!name || !price || files.length === 0) return alert('Complete todos los campos');
 
-    function renderLocations() {
-        const container=document.getElementById('locations-list');
-        container.innerHTML=Object.entries(appState.locations).map(([id,name])=>`
-            <div>${name} <button onclick="deleteLocation(${id})">Eliminar</button></div>
-        `).join('');
-    }
+            // Subir imágenes al storage
+            const uploadedUrls = [];
+            for (let file of files) {
+                const { data, error } = await supabase
+                    .storage
+                    .from('productos')
+                    .upload(file.name, file, { upsert: true });
 
-    async function addLocation(){
-        const name = document.getElementById('new-location-input').value.trim();
-        if(!name){ alert('Nombre vacío'); return; }
-        const { error } = await supabase.from('locations').insert({name});
-        if(error){ console.error(error); showStatusMessage('Error agregando',true); return;}
-        document.getElementById('new-location-input').value='';
-        await fetchLocations();
-    }
+                if (error) {
+                    console.error(error);
+                    alert('Error al subir imagen: ' + file.name);
+                    return;
+                } else {
+                    const url = `${SUPABASE_URL}/storage/v1/object/public/productos/${file.name}`;
+                    uploadedUrls.push(url);
+                }
+            }
 
-    async function deleteLocation(id){
-        if(!confirm('Eliminar localidad?')) return;
-        const { error } = await supabase.from('locations').delete().eq('id',id);
-        if(error){ console.error(error); showStatusMessage('Error',true); return;}
-        await fetchLocations();
-    }
+            // Insertar producto en DB
+            const { data, error } = await supabase
+                .from('productos')
+                .insert([{ nombre: name, precio: price, imagen: uploadedUrls.join(',') }]);
 
-    // --- Categorías ---
-    async function fetchCategories() {
-        const { data,error } = await supabase.from('categories').select('*');
-        if(error){ console.error(error); return; }
-        appState.categories={}; data.forEach(c=>appState.categories[c.id]=c.name);
-        renderCategories();
-    }
+            if (error) {
+                console.error(error);
+                alert('Error al agregar producto');
+            } else {
+                alert('Producto agregado');
+                document.getElementById('productName').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productImage').value = '';
+                fetchProducts();
+            }
+        }
 
-    function renderCategories() {
-        const container=document.getElementById('categories-list');
-        container.innerHTML=Object.entries(appState.categories).map(([id,name])=>`
-            <div>${name} <button onclick="deleteCategory(${id})">Eliminar</button></div>
-        `).join('');
-    }
+        async function fetchProducts() {
+            const { data, error } = await supabase.from('productos').select('*');
+            if (error) return console.error(error);
 
-    async function addCategory(){
-        const name = document.getElementById('new-category-input').value.trim();
-        if(!name){ alert('Nombre vacío'); return; }
-        const { error } = await supabase.from('categories').insert({name});
-        if(error){ console.error(error); showStatusMessage('Error agregando',true); return;}
-        document.getElementById('new-category-input').value='';
-        await fetchCategories();
-    }
+            const list = document.getElementById('productList');
+            list.innerHTML = '';
+            data.forEach(prod => {
+                const li = document.createElement('li');
+                li.innerHTML = `ID: ${prod.id} - ${prod.nombre} - $${prod.precio} <br> Imagen: ${prod.imagen}`;
+                list.appendChild(li);
+            });
+        }
 
-    async function deleteCategory(id){
-        if(!confirm('Eliminar categoría?')) return;
-        const { error } = await supabase.from('categories').delete().eq('id',id);
-        if(error){ console.error(error); showStatusMessage('Error',true); return;}
-        await fetchCategories();
-    }
+        // ----------------- Documentos -----------------
+        async function uploadFiles() {
+            const files = document.getElementById('docFiles').files;
+            if (files.length === 0) return alert('Seleccione archivos');
 
-    // --- Inicialización ---
-    async function initApp() {
-        await fetchDocuments();
-        await fetchPromotions();
-        await fetchOrders();
-        await fetchLocations();
-        await fetchCategories();
-    }
+            for (let file of files) {
+                const { data, error } = await supabase
+                    .storage
+                    .from('documentos')
+                    .upload(file.name, file, { upsert: true });
 
-    initApp();
-</script>
+                if (error) {
+                    console.error(error);
+                    alert('Error al subir archivo: ' + file.name);
+                }
+            }
 
+            alert('Archivos subidos correctamente');
+            document.getElementById('docFiles').value = '';
+            fetchDocuments();
+        }
+
+        async function fetchDocuments() {
+            const { data, error } = await supabase
+                .storage
+                .from('documentos')
+                .list('');
+
+            if (error) return console.error(error);
+
+            const list = document.getElementById('documentList');
+            list.innerHTML = '';
+            data.forEach(doc => {
+                const li = document.createElement('li');
+                li.textContent = doc.name;
+                list.appendChild(li);
+            });
+        }
+
+        // ----------------- PDF -----------------
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(16);
+            doc.text('Listado de Productos', 10, 10);
+
+            fetchProductsForPDF(doc);
+        }
+
+        async function fetchProductsForPDF(doc) {
+            const { data, error } = await supabase.from('productos').select('*');
+            if (error) return console.error(error);
+
+            let y = 20;
+            data.forEach(prod => {
+                doc.text(`ID: ${prod.id} - ${prod.nombre} - $${prod.precio}`, 10, y);
+                y += 10;
+            });
+
+            doc.save('productos.pdf');
+        }
+
+        // ----------------- Inicializar listas -----------------
+        fetchCategories();
+        fetchProducts();
+        fetchDocuments();
+
+    </script>
 </body>
 </html>
+
 
 
