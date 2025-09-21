@@ -2,295 +2,213 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Pro Admin</title>
+<title>App de Pedidos y Documentos</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
-.progress-bar { @apply w-full bg-gray-200 rounded-full h-3 mt-2; }
-.progress { @apply h-3 bg-green-500 rounded-full w-0 transition-all duration-300; }
-.thumb { @apply w-20 h-20 object-cover rounded-lg ml-2; }
-.toast { @apply fixed top-5 right-5 bg-gray-800 text-white px-4 py-2 rounded shadow-lg opacity-90; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #docProgressContainer { width: 100%; background:#eee; border-radius:5px; margin-top:5px; }
+    #docProgress { width:0%; height:10px; background:green; border-radius:5px; }
+    .section { margin-bottom: 40px; }
 </style>
 </head>
-<body class="bg-gray-100 p-6 font-sans">
+<body>
 
-<div class="max-w-7xl mx-auto">
-<h1 class="text-3xl font-bold mb-6 text-gray-800">Dashboard Pro Admin</h1>
+<h1>App de Pedidos y Promociones</h1>
 
-<!-- Tabs -->
-<div class="mb-6">
-  <button onclick="showTab('categorias')" class="tab-btn bg-blue-500 text-white px-4 py-2 rounded-l hover:bg-blue-600">Categorías</button>
-  <button onclick="showTab('productos')" class="tab-btn bg-green-500 text-white px-4 py-2 hover:bg-green-600">Productos</button>
-  <button onclick="showTab('documentos')" class="tab-btn bg-purple-500 text-white px-4 py-2 rounded-r hover:bg-purple-600">Documentos</button>
-</div>
-
-<!-- Categorías Tab -->
-<div id="categorias" class="tab-content bg-white p-6 rounded-xl shadow mb-6">
-<h2 class="text-xl font-semibold mb-4">Categorías</h2>
-<div class="flex gap-3 mb-3">
-<input type="text" id="categoryName" placeholder="Nombre de categoría" class="border p-2 rounded w-1/3">
-<button onclick="addCategory()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Agregar</button>
-</div>
-<ul id="categoryList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
+<div class="section">
+    <h2>Promociones</h2>
+    <form id="promoForm">
+        <label>Nombre: <input type="text" id="promoNombre"></label><br><br>
+        <label>Precio: <input type="number" id="promoPrecio"></label><br><br>
+        <label>Stock: <input type="number" id="promoStock"></label><br><br>
+        <label>Imagen: <input type="file" id="promoImagen"></label><br><br>
+        <button type="button" onclick="addPromotion()">Agregar Promoción</button>
+    </form>
+    <h3>Lista de Promociones</h3>
+    <div id="promoList"></div>
 </div>
 
-<!-- Productos Tab -->
-<div id="productos" class="tab-content hidden bg-white p-6 rounded-xl shadow mb-6">
-<h2 class="text-xl font-semibold mb-4">Productos</h2>
-<div class="flex gap-3 mb-3">
-<input type="text" id="searchProduct" placeholder="Buscar producto..." class="border p-2 rounded w-1/3" oninput="fetchProducts()">
-</div>
-<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-<input type="text" id="productName" placeholder="Nombre" class="border p-2 rounded col-span-1">
-<input type="number" id="productPrice" placeholder="Precio" class="border p-2 rounded col-span-1">
-<input type="file" id="productImage" multiple class="col-span-2" ondrop="dropHandler(event)" ondragover="dragOverHandler(event)">
-</div>
-<div class="progress-bar"><div id="productProgress" class="progress"></div></div>
-<button onclick="addProduct()" class="mt-3 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Agregar Producto</button>
-<ul id="productList" class="space-y-3 mt-4 max-h-96 overflow-y-auto"></ul>
+<div class="section">
+    <h2>Pedidos</h2>
+    <form id="pedidoForm">
+        <label>Cliente: <input type="text" id="pedidoCliente"></label><br><br>
+        <label>Producto: <input type="text" id="pedidoProducto"></label><br><br>
+        <label>Cantidad: <input type="number" id="pedidoCantidad"></label><br><br>
+        <button type="button" onclick="addOrder()">Agregar Pedido</button>
+    </form>
+    <h3>Lista de Pedidos</h3>
+    <div id="pedidoList"></div>
 </div>
 
-<!-- Documentos Tab -->
-<div id="documentos" class="tab-content hidden bg-white p-6 rounded-xl shadow mb-6">
-<h2 class="text-xl font-semibold mb-4">Documentos</h2>
-<div class="flex gap-3 mb-3">
-<input type="text" id="searchDocument" placeholder="Buscar documento..." class="border p-2 rounded w-1/3" oninput="fetchDocuments()">
+<div class="section">
+    <h2>Documentos</h2>
+    <input type="file" id="docFiles" multiple>
+    <button onclick="uploadFiles()">Subir Documentos</button>
+    <div id="docProgressContainer">
+        <div id="docProgress"></div>
+    </div>
+    <h3>Documentos subidos:</h3>
+    <div id="documentsList"></div>
 </div>
-<input type="file" id="docFiles" multiple class="border p-2 rounded mb-2 w-full">
-<div class="progress-bar"><div id="docProgress" class="progress"></div></div>
-<button onclick="uploadFiles()" class="mt-3 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Subir Documentos</button>
-<ul id="documentList" class="space-y-2 mt-3 max-h-96 overflow-y-auto"></ul>
-</div>
-
-<!-- PDF -->
-<div class="bg-white p-6 rounded-xl shadow mb-6">
-<h2 class="text-xl font-semibold mb-4">Generar PDF</h2>
-<button onclick="generatePDF()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Generar PDF con Imágenes</button>
-</div>
-
-</div>
-
-<div id="toastContainer"></div>
 
 <script>
-const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Inicialización Supabase
+    const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// ---------------- Tabs ----------------
-function showTab(tab){
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
-  document.getElementById(tab).classList.remove('hidden');
-}
+    // ------------------ PROMOCIONES ------------------
+    async function addPromotion() {
+        const nombre = document.getElementById('promoNombre').value;
+        const precio = parseFloat(document.getElementById('promoPrecio').value);
+        const stock = parseInt(document.getElementById('promoStock').value);
+        const imagenFile = document.getElementById('promoImagen').files[0];
 
-// ---------------- Toast ----------------
-function showToast(msg){
-  const toast=document.createElement('div');
-  toast.className='toast';
-  toast.textContent=msg;
-  document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(),3000);
-}
+        if (!nombre || isNaN(precio) || isNaN(stock)) {
+            return alert('Complete todos los campos correctamente');
+        }
 
-// ---------------- Categorías ----------------
-async function addCategory() {
-    const name = document.getElementById('categoryName').value;
-    if(!name) return alert('Ingrese nombre de categoría');
-    const { error } = await supabase.from('categorias').insert([{ nombre: name }]);
-    if(error){ console.error(error); alert('Error agregando categoría'); return; }
-    document.getElementById('categoryName').value='';
-    showToast('Categoría agregada');
-    fetchCategories();
-}
+        let imagePath = null;
+        if (imagenFile) {
+            const fileName = `${Date.now()}_${imagenFile.name}`;
+            const { error } = await supabase.storage.from('private-documents').upload(fileName, imagenFile, { upsert: true });
+            if (error) return alert('Error subiendo imagen: ' + error.message);
+            imagePath = fileName;
+        }
 
-async function fetchCategories() {
-    const { data } = await supabase.from('categorias').select('*');
-    const list = document.getElementById('categoryList');
-    list.innerHTML = '';
-    data.forEach(cat=>{
-        const li = document.createElement('li');
-        li.className='flex justify-between items-center p-2 bg-gray-50 rounded';
-        li.innerHTML = `<span>${cat.id} - ${cat.nombre}</span>`;
-        const btns = document.createElement('div');
-        const editBtn = document.createElement('button'); editBtn.textContent='Editar';
-        editBtn.className='text-blue-500 hover:underline mr-2';
-        editBtn.onclick=()=>editCategory(cat.id,cat.nombre);
-        const delBtn = document.createElement('button'); delBtn.textContent='Eliminar';
-        delBtn.className='text-red-500 hover:underline';
-        delBtn.onclick=()=>deleteCategory(cat.id);
-        btns.appendChild(editBtn); btns.appendChild(delBtn);
-        li.appendChild(btns);
-        list.appendChild(li);
-    });
-}
-
-async function editCategory(id, oldName){
-    const newName = prompt('Nuevo nombre:', oldName);
-    if(!newName) return;
-    await supabase.from('categorias').update({nombre:newName}).eq('id',id);
-    showToast('Categoría editada');
-    fetchCategories();
-}
-
-async function deleteCategory(id){
-    if(!confirm('Eliminar categoría?')) return;
-    await supabase.from('categorias').delete().eq('id',id);
-    showToast('Categoría eliminada');
-    fetchCategories();
-}
-
-// ---------------- Productos ----------------
-async function addProduct(){
-    const name = document.getElementById('productName').value;
-    const price = parseFloat(document.getElementById('productPrice').value);
-    const files = document.getElementById('productImage').files;
-    if(!name || !price || files.length===0) return alert('Complete todos los campos');
-    const uploadedUrls=[];
-    const progressElem = document.getElementById('productProgress');
-    for(let i=0;i<files.length;i++){
-        const file = files[i];
-        const { error } = await supabase.storage.from('productos').upload(file.name, file, {upsert:true});
-        if(error){ console.error(error); alert('Error subiendo '+file.name); return; }
-        uploadedUrls.push(`${SUPABASE_URL}/storage/v1/object/public/productos/${file.name}`);
-        progressElem.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
+        try {
+            const { data, error } = await supabase.from('promociones').insert([{ nombre, precio, stock, imagen: imagePath }]);
+            if (error) throw error;
+            document.getElementById('promoForm').reset();
+            fetchPromotions();
+            showToast('Promoción agregada');
+        } catch (err) {
+            console.error(err);
+            alert('Error agregando promoción: ' + err.message);
+        }
     }
-    await supabase.from('productos').insert([{nombre:name,precio:price,imagen:uploadedUrls.join(',')}]);
-    document.getElementById('productName').value='';
-    document.getElementById('productPrice').value='';
-    document.getElementById('productImage').value='';
-    progressElem.style.width='0%';
-    showToast('Producto agregado');
-    fetchProducts();
-}
 
-async function fetchProducts(){
-    const search = document.getElementById('searchProduct').value.toLowerCase();
-    const { data } = await supabase.from('productos').select('*');
-    const filtered = data.filter(p=>p.nombre.toLowerCase().includes(search));
-    const list = document.getElementById('productList');
-    list.innerHTML='';
-    filtered.forEach(prod=>{
-        const li = document.createElement('li');
-        li.className='flex justify-between items-center p-2 bg-gray-50 rounded';
-        let html = `<span>${prod.id} - ${prod.nombre} - $${prod.precio}</span>`;
-        if(prod.imagen) prod.imagen.split(',').forEach(url=>html+=`<img src="${url}" class="thumb">`);
-        li.innerHTML = html;
-        const btns = document.createElement('div');
-        const editBtn = document.createElement('button'); editBtn.textContent='Editar';
-        editBtn.className='text-blue-500 hover:underline mr-2';
-        editBtn.onclick=()=>editProduct(prod.id,prod.nombre,prod.precio);
-        const delBtn = document.createElement('button'); delBtn.textContent='Eliminar';
-        delBtn.className='text-red-500 hover:underline';
-        delBtn.onclick=()=>deleteProduct(prod.id);
-        btns.appendChild(editBtn); btns.appendChild(delBtn);
-        li.appendChild(btns);
-        list.appendChild(li);
-    });
-}
+    async function fetchPromotions() {
+        const { data, error } = await supabase.from('promociones').select();
+        if (error) return console.error(error);
 
-async function editProduct(id, oldName, oldPrice){
-    const newName = prompt('Nuevo nombre:', oldName);
-    const newPrice = parseFloat(prompt('Nuevo precio:', oldPrice));
-    if(!newName || isNaN(newPrice)) return;
-    await supabase.from('productos').update({nombre:newName,precio:newPrice}).eq('id',id);
-    showToast('Producto editado');
-    fetchProducts();
-}
-
-async function deleteProduct(id){
-    if(!confirm('Eliminar producto?')) return;
-    await supabase.from('productos').delete().eq('id',id);
-    showToast('Producto eliminado');
-    fetchProducts();
-}
-
-// Drag & Drop
-function dropHandler(ev){ ev.preventDefault(); document.getElementById('productImage').files = ev.dataTransfer.files; }
-function dragOverHandler(ev){ ev.preventDefault(); }
-
-// ---------------- Documentos ----------------
-async function uploadFiles(){
-    const files = document.getElementById('docFiles').files;
-    if(files.length===0) return alert('Seleccione archivos');
-    const progressElem = document.getElementById('docProgress');
-    for(let i=0;i<files.length;i++){
-        const file = files[i];
-        const { error } = await supabase.storage.from('documentos').upload(file.name,file,{upsert:true});
-        if(error){ console.error(error); alert('Error subiendo '+file.name); return; }
-        progressElem.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
+        const container = document.getElementById('promoList');
+        container.innerHTML = '';
+        for (let promo of data) {
+            let imgTag = promo.imagen ? `<img src="${await getFileUrl(promo.imagen)}" width="50">` : '';
+            container.innerHTML += `<div>${imgTag} ${promo.nombre} - $${promo.precio} - Stock: ${promo.stock}</div>`;
+        }
     }
-    document.getElementById('docFiles').value='';
-    progressElem.style.width='0%';
-    showToast('Documentos subidos');
-    fetchDocuments();
-}
 
-async function fetchDocuments(){
-    const search = document.getElementById('searchDocument').value.toLowerCase();
-    const { data } = await supabase.storage.from('documentos').list('');
-    const filtered = data.filter(d=>d.name.toLowerCase().includes(search));
-    const list = document.getElementById('documentList');
-    list.innerHTML='';
-    filtered.forEach(doc=>{
-        const li = document.createElement('li');
-        li.className='flex justify-between items-center p-2 bg-gray-50 rounded';
-        li.innerHTML=`<span>${doc.name}</span>`;
-        const delBtn = document.createElement('button'); delBtn.textContent='Eliminar';
-        delBtn.className='text-red-500 hover:underline';
-        delBtn.onclick=()=>deleteDocument(doc.name);
-        li.appendChild(delBtn);
-        list.appendChild(li);
-    });
-}
+    // ------------------ PEDIDOS ------------------
+    async function addOrder() {
+        const cliente = document.getElementById('pedidoCliente').value;
+        const producto = document.getElementById('pedidoProducto').value;
+        const cantidad = parseInt(document.getElementById('pedidoCantidad').value);
 
-async function deleteDocument(name){
-    if(!confirm('Eliminar documento?')) return;
-    await supabase.storage.from('documentos').remove([name]);
-    showToast('Documento eliminado');
-    fetchDocuments();
-}
+        if (!cliente || !producto || isNaN(cantidad)) return alert('Complete todos los campos correctamente');
 
-// ---------------- PDF ----------------
-async function generatePDF(){
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(16); doc.text('Listado de Productos',10,10);
-    const { data } = await supabase.from('productos').select('*');
-    let y=20;
-    for(let prod of data){
-        doc.setFontSize(12); doc.text(`ID:${prod.id} - ${prod.nombre} - $${prod.precio}`,10,y); y+=5;
-        if(prod.imagen){
-            for(let url of prod.imagen.split(',')){
-                try{
-                    const imgData = await getImageData(url);
-                    doc.addImage(imgData,'JPEG',10,y,30,30); y+=35;
-                }catch(e){ console.warn('No se pudo agregar imagen',e); }
+        try {
+            const { data, error } = await supabase.from('pedidos').insert([{ cliente, producto, cantidad }]);
+            if (error) throw error;
+            document.getElementById('pedidoForm').reset();
+            fetchOrders();
+            showToast('Pedido agregado');
+        } catch (err) {
+            console.error(err);
+            alert('Error agregando pedido: ' + err.message);
+        }
+    }
+
+    async function fetchOrders() {
+        const { data, error } = await supabase.from('pedidos').select();
+        if (error) return console.error(error);
+
+        const container = document.getElementById('pedidoList');
+        container.innerHTML = '';
+        for (let pedido of data) {
+            container.innerHTML += `<div>${pedido.cliente} pidió ${pedido.cantidad} x ${pedido.producto}</div>`;
+        }
+    }
+
+    // ------------------ DOCUMENTOS ------------------
+    async function uploadFiles() {
+        const files = document.getElementById('docFiles').files;
+        if (files.length === 0) return alert('Seleccione archivos');
+
+        const progressElem = document.getElementById('docProgress');
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileName = `${Date.now()}_${file.name}`;
+
+            try {
+                const { error } = await supabase.storage.from('private-documents').upload(fileName, file, { upsert: true });
+                if (error) throw error;
+
+                progressElem.style.width = `${Math.round(((i + 1) / files.length) * 100)}%`;
+            } catch (err) {
+                console.error('Error subiendo archivo:', err.message);
+                alert('Error subiendo ' + file.name + ': ' + err.message);
+                progressElem.style.width = '0%';
+                return;
             }
         }
-        y+=5;
-        if(y>270){ doc.addPage(); y=10; }
+
+        document.getElementById('docFiles').value = '';
+        progressElem.style.width = '0%';
+        showToast('Documentos subidos');
+        fetchDocuments();
     }
-    doc.save('productos.pdf');
-}
 
-function getImageData(url){
-    return new Promise((resolve,reject)=>{
-        const img = new Image();
-        img.crossOrigin='anonymous';
-        img.onload=()=>{
-            const canvas=document.createElement('canvas');
-            canvas.width=img.width; canvas.height=img.height;
-            const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0);
-            resolve(canvas.toDataURL('image/jpeg'));
-        };
-        img.onerror=()=>reject('Error cargando imagen');
-        img.src=url;
-    });
-}
+    async function fetchDocuments() {
+        const { data, error } = await supabase.storage.from('private-documents').list('', { limit: 100 });
+        if (error) return console.error(error);
 
-// Inicialización
-showTab('categorias'); fetchCategories(); fetchProducts(); fetchDocuments();
+        const container = document.getElementById('documentsList');
+        container.innerHTML = '';
+
+        for (let file of data) {
+            const url = await getFileUrl(file.name);
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.textContent = file.name;
+            container.appendChild(link);
+            container.appendChild(document.createElement('br'));
+        }
+    }
+
+    async function getFileUrl(fileName) {
+        const { data, error } = await supabase.storage.from('private-documents').createSignedUrl(fileName, 3600);
+        if (error) {
+            console.error('Error creando URL firmada', error);
+            return '#';
+        }
+        return data.signedUrl;
+    }
+
+    // ------------------ TOAST ------------------
+    function showToast(msg) {
+        const toast = document.createElement('div');
+        toast.textContent = msg;
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.background = '#333';
+        toast.style.color = '#fff';
+        toast.style.padding = '10px 15px';
+        toast.style.borderRadius = '5px';
+        toast.style.opacity = '0.9';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ------------------ INICIALIZACION ------------------
+    fetchPromotions();
+    fetchOrders();
+    fetchDocuments();
+
 </script>
 
 </body>
