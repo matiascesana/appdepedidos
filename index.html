@@ -1,363 +1,291 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8" />
-<title>App de Pedidos y Documentos</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
-<style>
-body { font-family:'Roboto',sans-serif; margin:0; padding:0; background:#f9f9f9; color:#333;}
-h1,h2{font-family:'Playfair Display',serif;}
-h1{text-align:center;margin-bottom:20px;}
-nav { display:flex; justify-content:center; gap:10px; background:#6a1b9a; padding:10px;}
-nav button { background:#fff; color:#6a1b9a; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:600;}
-nav button.active{ background:#7b1fa2; color:#fff;}
-.section { display:none; padding:25px; margin:20px auto; max-width:900px; background:#fff; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08);}
-.item-card, .doc-item { background:#f4f4f4; padding:10px 15px; border-radius:10px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;}
-.item-card img { width:50px;height:50px;object-fit:cover;border-radius:6px;margin-right:10px;}
-button { cursor:pointer; border:none; border-radius:6px; padding:6px 10px; font-weight:600; background:#6a1b9a;color:#fff;}
-button:hover{background:#7b1fa2;}
-.delete-btn{background:#e53935;}
-.delete-btn:hover{background:#f44336;}
-#docProgressContainer{width:100%;background:#eee;border-radius:5px;margin-top:5px;}
-#docProgress{width:0%;height:10px;background:green;border-radius:5px;transition:width 300ms;}
-.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999;}
-.modal-content{background:#fff;padding:20px;border-radius:10px;max-width:500px;width:100%;position:relative;}
-.modal-close{position:absolute;top:10px;right:10px;cursor:pointer;font-weight:bold;}
-table { width:100%; border-collapse: collapse; margin-top:10px;}
-table, th, td { border:1px solid #ccc;}
-th, td { padding:6px; text-align:left;}
-</style>
-</head>
-<body>
-<h1>App de Pedidos y Documentos</h1>
-
-<nav>
-  <button class="tab-btn active" data-tab="promos">Promociones</button>
-  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-  <button class="tab-btn" data-tab="categorias">Categorías</button>
-  <button class="tab-btn" data-tab="localidades">Localidades</button>
-  <button class="tab-btn" data-tab="documentos">Documentos</button>
-</nav>
-
-<!-- ---------------- PROMOCIONES ---------------- -->
-<div class="section" id="promos">
-<h2>Promociones</h2>
-<form id="promoForm" onsubmit="return false;">
-<label>Nombre:<input type="text" id="promoNombre" required></label>
-<label>Precio:<input type="number" id="promoPrecio" step="0.01" required></label>
-<label>Stock:<input type="number" id="promoStock" required></label>
-<label>Categoría:<select id="promoCategoria"></select></label>
-<label>Imagen:<input type="file" id="promoImagen" accept="image/*"></label>
-<button type="button" id="addPromoBtn">Agregar Promoción</button>
-<button type="button" id="exportPromoPDFBtn">Exportar PDF</button>
-</form>
-<h3>Lista de Promociones</h3>
-<div id="promoList"></div>
-</div>
-
-<!-- ---------------- PEDIDOS ---------------- -->
-<div class="section" id="pedidos">
-<h2>Pedidos</h2>
-<form id="pedidoForm" onsubmit="return false;">
-<label>Cliente:<input type="text" id="pedidoCliente" required></label>
-<label>Producto:<input type="text" id="pedidoProducto" required></label>
-<label>Cantidad:<input type="number" id="pedidoCantidad" required></label>
-<label>Localidad:<select id="pedidoLocalidad"></select></label>
-<button type="button" id="addOrderBtn">Agregar Pedido</button>
-<button type="button" id="exportPedidosPDFBtn">Exportar PDF</button>
-</form>
-<h3>Lista de Pedidos</h3>
-<div id="pedidoList"></div>
-</div>
-
-<!-- ---------------- CATEGORIAS ---------------- -->
-<div class="section" id="categorias">
-<h2>Categorías de Promociones</h2>
-<form id="categoriaForm" onsubmit="return false;">
-<label>Nombre:<input type="text" id="categoriaNombre" required></label>
-<button type="button" id="addCategoriaBtn">Agregar Categoría</button>
-</form>
-<h3>Lista de Categorías</h3>
-<div id="categoriaList"></div>
-</div>
-
-<!-- ---------------- LOCALIDADES ---------------- -->
-<div class="section" id="localidades">
-<h2>Localidades</h2>
-<form id="localidadForm" onsubmit="return false;">
-<label>Nombre:<input type="text" id="localidadNombre" required></label>
-<button type="button" id="addLocalidadBtn">Agregar Localidad</button>
-</form>
-<h3>Lista de Localidades</h3>
-<div id="localidadList"></div>
-</div>
-
-<!-- ---------------- DOCUMENTOS ---------------- -->
-<div class="section" id="documentos">
-<h2>Documentos</h2>
-<label>Buscar por DNI:</label>
-<input type="text" id="searchDoc" placeholder="Escriba DNI...">
-<input type="file" id="docFiles" multiple>
-<button id="uploadDocsBtn">Subir Documentos</button>
-<button id="deleteAllDocsBtn">Eliminar Todos</button>
-<div id="docProgressContainer">
-  <div id="docProgress"></div>
-</div>
-<h3>Documentos subidos:</h3>
-<div id="documentsList"></div>
-</div>
-
-<!-- MODAL -->
-<div id="modal" class="modal" style="display:none;">
-  <div class="modal-content" id="modalContent">
-    <span class="modal-close" onclick="closeModal()">×</span>
-  </div>
-</div>
-
 <script>
-/* -------------------- Supabase -------------------- */
-const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+// -------------------- Supabase --------------------
+const SUPABASE_URL='https://ejbqlejlgprvwzrptojo.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-/* -------------------- Helpers -------------------- */
-function showToast(msg,d=3000){ const t=document.createElement('div'); t.textContent=msg; Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'}); document.body.appendChild(t); setTimeout(()=>t.remove(),d);}
-function openModal(title,html){ const modal=document.getElementById('modal'); const content=document.getElementById('modalContent'); content.innerHTML=`<span class="modal-close" onclick="closeModal()">×</span><h3>${title}</h3>${html}`; modal.style.display='flex';}
+// -------------------- Helpers --------------------
+function showToast(msg,d=3000){ 
+  const t=document.createElement('div'); 
+  t.textContent=msg; 
+  Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'}); 
+  document.body.appendChild(t); 
+  setTimeout(()=>t.remove(),d);
+}
+function openModal(title,html){ 
+  const modal=document.getElementById('modal'); 
+  const content=document.getElementById('modalContent'); 
+  content.innerHTML=`<span class="modal-close" onclick="closeModal()">×</span><h3>${title}</h3>${html}`; 
+  modal.style.display='flex';
+}
 function closeModal(){ document.getElementById('modal').style.display='none'; }
-async function safeGetFileUrl(fileName,bucket='private-documents'){ try{const {data,error}=await supabase.storage.from(bucket).createSignedUrl(fileName,3600); return error?null:data.signedUrl;}catch{return null;} }
+async function safeGetFileUrl(fileName,bucket='private-documents'){ 
+  try{
+    const {data,error}=await supabase.storage.from(bucket).createSignedUrl(fileName,3600); 
+    return error?null:data.signedUrl;
+  }catch{return null;}
+}
 
-/* -------------------- PESTAÑAS -------------------- */
+// -------------------- Tabs --------------------
 const tabBtns=document.querySelectorAll('.tab-btn');
-tabBtns.forEach(btn=>btn.addEventListener('click',()=>{tabBtns.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.section').forEach(s=>s.style.display='none'); document.getElementById(btn.dataset.tab).style.display='block';}));
+tabBtns.forEach(btn=>btn.addEventListener('click',()=>{
+  tabBtns.forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  document.getElementById(btn.dataset.tab).style.display='block';
+}));
 document.getElementById('promos').style.display='block';
 
-/* -------------------- CATEGORIAS -------------------- */
+// -------------------- CATEGORÍAS --------------------
 async function fetchCategorias(){
   const {data,error}=await supabase.from('categorias').select('*').order('id');
   if(error) return console.error(error);
   const container=document.getElementById('categoriaList'); container.innerHTML='';
-  const selectPromo=document.getElementById('promoCategoria'); selectPromo.innerHTML='';
-  for(let c of data){
-    const div=document.createElement('div'); div.className='item-card'; div.textContent=c.nombre;
-    const btnEdit=document.createElement('button'); btnEdit.textContent='Editar';
-    btnEdit.onclick=()=>editCategoria(c);
-    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar categoría?')){await supabase.from('categorias').delete().eq('id',c.id); fetchCategorias(); showToast('Categoría eliminada');}};
-    div.appendChild(btnEdit); div.appendChild(btnDel); container.appendChild(div);
-    selectPromo.innerHTML+=`<option value="${c.id}">${c.nombre}</option>`;
-  }
+  const select=document.getElementById('promoCategoria'); select.innerHTML='<option value="">Seleccione</option>';
+  data.forEach(cat=>{
+    select.innerHTML+=`<option value="${cat.id}">${cat.nombre}</option>`;
+    const div=document.createElement('div'); div.className='item-card';
+    div.innerHTML=`<span>${cat.nombre}</span> <div>
+      <button onclick="editCategoria(${cat.id},'${cat.nombre}')">Editar</button>
+      <button class="delete-btn" onclick="deleteCategoria(${cat.id})">Eliminar</button>
+    </div>`;
+    container.appendChild(div);
+  });
 }
-document.getElementById('addCategoriaBtn').addEventListener('click',async()=>{
+async function addCategoria(){
   const nombre=document.getElementById('categoriaNombre').value.trim();
   if(!nombre) return alert('Ingrese nombre'); 
   const {error}=await supabase.from('categorias').insert([{nombre}]);
-  if(error) return alert(error.message); 
-  document.getElementById('categoriaForm').reset(); fetchCategorias(); showToast('Categoría agregada');
-});
-async function editCategoria(c){
-  openModal('Editar Categoría',`<label>Nombre:<input type="text" id="editCatNombre" value="${c.nombre}"></label><button id="saveCatBtn">Guardar</button>`);
-  document.getElementById('saveCatBtn').onclick=async()=>{
-    const nombre=document.getElementById('editCatNombre').value.trim();
-    if(!nombre) return alert('Ingrese nombre'); 
-    const {error}=await supabase.from('categorias').update({nombre}).eq('id',c.id);
-    if(error) return alert(error.message); closeModal(); fetchCategorias(); showToast('Categoría editada');
-  };
+  if(error) return alert(error.message);
+  document.getElementById('categoriaForm').reset();
+  fetchCategorias();
 }
+async function editCategoria(id,nombre){
+  openModal('Editar Categoría',`<input id="editCatName" value="${nombre}"><button onclick="updateCategoria(${id})">Guardar</button>`);
+}
+async function updateCategoria(id){
+  const nombre=document.getElementById('editCatName').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const {error}=await supabase.from('categorias').update({nombre}).eq('id',id);
+  if(error) return alert(error.message);
+  closeModal(); fetchCategorias(); fetchPromotions();
+}
+async function deleteCategoria(id){ if(confirm('Eliminar categoría?')){ await supabase.from('categorias').delete().eq('id',id); fetchCategorias(); fetchPromotions(); } }
+document.getElementById('addCategoriaBtn').addEventListener('click',addCategoria);
+fetchCategorias();
 
-/* -------------------- LOCALIDADES -------------------- */
+// -------------------- LOCALIDADES --------------------
 async function fetchLocalidades(){
   const {data,error}=await supabase.from('localidades').select('*').order('id');
   if(error) return console.error(error);
   const container=document.getElementById('localidadList'); container.innerHTML='';
-  const selectPedido=document.getElementById('pedidoLocalidad'); selectPedido.innerHTML='';
-  for(let l of data){
-    const div=document.createElement('div'); div.className='item-card'; div.textContent=l.nombre;
-    const btnEdit=document.createElement('button'); btnEdit.textContent='Editar';
-    btnEdit.onclick=()=>editLocalidad(l);
-    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar localidad?')){await supabase.from('localidades').delete().eq('id',l.id); fetchLocalidades(); showToast('Localidad eliminada');}};
-    div.appendChild(btnEdit); div.appendChild(btnDel); container.appendChild(div);
-    selectPedido.innerHTML+=`<option value="${l.id}">${l.nombre}</option>`;
-  }
+  const select=document.getElementById('pedidoLocalidad'); select.innerHTML='<option value="">Seleccione</option>';
+  data.forEach(loc=>{
+    select.innerHTML+=`<option value="${loc.id}">${loc.nombre}</option>`;
+    const div=document.createElement('div'); div.className='item-card';
+    div.innerHTML=`<span>${loc.nombre}</span> <div>
+      <button onclick="editLocalidad(${loc.id},'${loc.nombre}')">Editar</button>
+      <button class="delete-btn" onclick="deleteLocalidad(${loc.id})">Eliminar</button>
+    </div>`;
+    container.appendChild(div);
+  });
 }
-document.getElementById('addLocalidadBtn').addEventListener('click',async()=>{
+async function addLocalidad(){
   const nombre=document.getElementById('localidadNombre').value.trim();
   if(!nombre) return alert('Ingrese nombre'); 
   const {error}=await supabase.from('localidades').insert([{nombre}]);
-  if(error) return alert(error.message); 
-  document.getElementById('localidadForm').reset(); fetchLocalidades(); showToast('Localidad agregada');
-});
-async function editLocalidad(l){
-  openModal('Editar Localidad',`<label>Nombre:<input type="text" id="editLocNombre" value="${l.nombre}"></label><button id="saveLocBtn">Guardar</button>`);
-  document.getElementById('saveLocBtn').onclick=async()=>{
-    const nombre=document.getElementById('editLocNombre').value.trim();
-    if(!nombre) return alert('Ingrese nombre'); 
-    const {error}=await supabase.from('localidades').update({nombre}).eq('id',l.id);
-    if(error) return alert(error.message); closeModal(); fetchLocalidades(); showToast('Localidad editada');
-  };
+  if(error) return alert(error.message);
+  document.getElementById('localidadForm').reset();
+  fetchLocalidades();
 }
+async function editLocalidad(id,nombre){ openModal('Editar Localidad',`<input id="editLocName" value="${nombre}"><button onclick="updateLocalidad(${id})">Guardar</button>`);}
+async function updateLocalidad(id){ const nombre=document.getElementById('editLocName').value.trim(); if(!nombre) return alert('Ingrese nombre'); const {error}=await supabase.from('localidades').update({nombre}).eq('id',id); if(error) return alert(error.message); closeModal(); fetchLocalidades(); fetchOrders();}
+async function deleteLocalidad(id){ if(confirm('Eliminar localidad?')){ await supabase.from('localidades').delete().eq('id',id); fetchLocalidades(); fetchOrders(); }}
+document.getElementById('addLocalidadBtn').addEventListener('click',addLocalidad);
+fetchLocalidades();
 
-/* -------------------- PROMOCIONES -------------------- */
+// -------------------- PROMOCIONES --------------------
+async function fetchPromotions(){
+  const {data,error}=await supabase.from('promociones').select('*').order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('promoList'); container.innerHTML='';
+  for(let promo of data){
+    const catName=await getCategoriaName(promo.categoria_id);
+    const card=document.createElement('div'); card.className='item-card';
+    let imgHTML=promo.imagen?`<img src="${await safeGetFileUrl(promo.imagen)}">`:'';
+    card.innerHTML=`${imgHTML}<div><strong>${promo.nombre}</strong><br>$${promo.precio} - Stock: ${promo.stock} - ${catName}</div>
+    <div>
+      <button onclick="editPromo(${promo.id})">Editar</button>
+      <button class="delete-btn" onclick="deletePromo(${promo.id})">Eliminar</button>
+    </div>`;
+    container.appendChild(card);
+  }
+}
+async function getCategoriaName(id){ if(!id) return ''; const {data}=await supabase.from('categorias').select('nombre').eq('id',id).single(); return data?data.nombre:''; }
 document.getElementById('addPromoBtn').addEventListener('click',async()=>{
   const nombre=document.getElementById('promoNombre').value.trim();
   const precio=parseFloat(document.getElementById('promoPrecio').value);
   const stock=parseInt(document.getElementById('promoStock').value,10);
-  const categoria_id=parseInt(document.getElementById('promoCategoria').value,10);
+  const categoria_id=document.getElementById('promoCategoria').value||null;
   const imagenFile=document.getElementById('promoImagen').files[0];
-  if(!nombre||Number.isNaN(precio)||Number.isNaN(stock)) return alert('Complete campos');
+  if(!nombre || isNaN(precio)||isNaN(stock)) return alert('Complete campos');
   let imagePath=null;
   if(imagenFile){
-    const fileName=`${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`;
+    const fileName=`promo_${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`;
     const {error}=await supabase.storage.from('promo_images').upload(fileName,imagenFile,{upsert:true});
-    if(error) return alert('Error subiendo imagen');
+    if(error) return alert(error.message);
     imagePath=fileName;
   }
   const {error}=await supabase.from('promociones').insert([{nombre,precio,stock,categoria_id,imagen:imagePath}]);
   if(error) return alert(error.message);
-  document.getElementById('promoForm').reset();
-  fetchPromotions(); showToast('Promoción agregada');
+  document.getElementById('promoForm').reset(); fetchPromotions(); showToast('Promoción agregada');
 });
+async function editPromo(id){
+  const {data,error}=await supabase.from('promociones').select('*').eq('id',id).single();
+  if(error) return alert(error.message);
+  openModal('Editar Promoción',`
+    <label>Nombre:<input id="editPromoNombre" value="${data.nombre}"></label>
+    <label>Precio:<input id="editPromoPrecio" type="number" step="0.01" value="${data.precio}"></label>
+    <label>Stock:<input id="editPromoStock" type="number" value="${data.stock}"></label>
+    <label>Categoría:<select id="editPromoCategoria"></select></label>
+    <button onclick="updatePromo(${id})">Guardar</button>
+  `);
+  const cats=await supabase.from('categorias').select('*'); 
+  const sel=document.getElementById('editPromoCategoria'); sel.innerHTML='<option value="">Seleccione</option>';
+  cats.data.forEach(c=>sel.innerHTML+=`<option value="${c.id}" ${c.id===data.categoria_id?'selected':''}>${c.nombre}</option>`);
+}
+async function updatePromo(id){
+  const nombre=document.getElementById('editPromoNombre').value.trim();
+  const precio=parseFloat(document.getElementById('editPromoPrecio').value);
+  const stock=parseInt(document.getElementById('editPromoStock').value,10);
+  const categoria_id=document.getElementById('editPromoCategoria').value||null;
+  const {error}=await supabase.from('promociones').update({nombre,precio,stock,categoria_id}).eq('id',id);
+  if(error) return alert(error.message);
+  closeModal(); fetchPromotions(); showToast('Promoción actualizada');
+}
+async function deletePromo(id){ if(confirm('Eliminar promoción?')){ await supabase.from('promociones').delete().eq('id',id); fetchPromotions(); } }
+fetchPromotions();
 
-async function fetchPromotions(){
-  const {data,error}=await supabase.from('promociones').select('*,categorias(nombre)').order('id');
+// -------------------- PEDIDOS --------------------
+async function fetchOrders(){
+  const {data,error}=await supabase.from('pedidos').select('*').order('id');
   if(error) return console.error(error);
-  const container=document.getElementById('promoList'); container.innerHTML='';
+  const container=document.getElementById('pedidoList'); container.innerHTML='';
   for(let p of data){
+    const locName=await getLocalidadName(p.localidad_id);
     const div=document.createElement('div'); div.className='item-card';
-    if(p.imagen){ const url=await safeGetFileUrl(p.imagen,'promo_images'); if(url){ const img=document.createElement('img'); img.src=url; div.appendChild(img); }}
-    const text=document.createElement('div'); text.innerHTML=`<strong>${p.nombre}</strong><br> $${p.precio} - Stock:${p.stock} - ${p.categorias?.nombre||''}`;
-    div.appendChild(text);
-    const btnEdit=document.createElement('button'); btnEdit.textContent='Editar';
-    btnEdit.onclick=()=>editPromo(p);
-    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar promoción?')){await supabase.from('promociones').delete().eq('id',p.id); fetchPromotions(); showToast('Promoción eliminada');}};
-    div.appendChild(btnEdit); div.appendChild(btnDel); container.appendChild(div);
+    div.innerHTML=`<span>${p.cliente} pidió ${p.cantidad} x ${p.producto} - ${locName}</span>
+    <div>
+      <button onclick="editOrder(${p.id})">Editar</button>
+      <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+    </div>`;
+    container.appendChild(div);
   }
 }
-
-async function editPromo(p){
-  openModal('Editar Promoción',`
-  <label>Nombre:<input type="text" id="editPromoNombre" value="${p.nombre}"></label>
-  <label>Precio:<input type="number" step="0.01" id="editPromoPrecio" value="${p.precio}"></label>
-  <label>Stock:<input type="number" id="editPromoStock" value="${p.stock}"></label>
-  <label>Categoría:<select id="editPromoCategoria"></select></label>
-  <label>Imagen:<input type="file" id="editPromoImagen" accept="image/*"></label>
-  <button id="savePromoBtn">Guardar</button>
-  `);
-  const catSelect=document.getElementById('editPromoCategoria');
-  const {data}=await supabase.from('categorias').select('*');
-  data.forEach(c=>{catSelect.innerHTML+=`<option value="${c.id}" ${c.id===p.categoria_id?'selected':''}>${c.nombre}</option>`});
-  document.getElementById('savePromoBtn').onclick=async()=>{
-    const nombre=document.getElementById('editPromoNombre').value.trim();
-    const precio=parseFloat(document.getElementById('editPromoPrecio').value);
-    const stock=parseInt(document.getElementById('editPromoStock').value,10);
-    const categoria_id=parseInt(catSelect.value,10);
-    let imagePath=p.imagen;
-    const fileInput=document.getElementById('editPromoImagen');
-    if(fileInput.files[0]){
-      const file=fileInput.files[0]; const fileName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
-      const {error}=await supabase.storage.from('promo_images').upload(fileName,file,{upsert:true});
-      if(error) return alert('Error subiendo imagen'); imagePath=fileName;
-    }
-    const {error}=await supabase.from('promociones').update({nombre,precio,stock,categoria_id,imagen:imagePath}).eq('id',p.id);
-    if(error) return alert(error.message); closeModal(); fetchPromotions(); showToast('Promoción editada');
-  };
-}
-
-/* -------------------- PEDIDOS -------------------- */
+async function getLocalidadName(id){ if(!id) return ''; const {data}=await supabase.from('localidades').select('nombre').eq('id',id).single(); return data?data.nombre:''; }
 document.getElementById('addOrderBtn').addEventListener('click',async()=>{
   const cliente=document.getElementById('pedidoCliente').value.trim();
   const producto=document.getElementById('pedidoProducto').value.trim();
   const cantidad=parseInt(document.getElementById('pedidoCantidad').value,10);
-  const localidad_id=parseInt(document.getElementById('pedidoLocalidad').value,10);
-  if(!cliente||!producto||Number.isNaN(cantidad)||Number.isNaN(localidad_id)) return alert('Complete campos');
+  const localidad_id=document.getElementById('pedidoLocalidad').value||null;
+  if(!cliente||!producto||isNaN(cantidad)) return alert('Complete campos');
   const {error}=await supabase.from('pedidos').insert([{cliente,producto,cantidad,localidad_id}]);
-  if(error) return alert(error.message); document.getElementById('pedidoForm').reset(); fetchOrders(); showToast('Pedido agregado');
+  if(error) return alert(error.message);
+  document.getElementById('pedidoForm').reset(); fetchOrders(); showToast('Pedido agregado');
 });
-
-async function fetchOrders(){
-  const {data,error}=await supabase.from('pedidos').select('*,localidades(nombre)').order('id');
-  if(error) return console.error(error);
-  const container=document.getElementById('pedidoList'); container.innerHTML='';
-  for(let p of data){
-    const div=document.createElement('div'); div.className='item-card';
-    div.textContent=`${p.cliente} pidió ${p.cantidad} x ${p.producto} (${p.localidades?.nombre||''})`;
-    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar pedido?')){await supabase.from('pedidos').delete().eq('id',p.id); fetchOrders(); showToast('Pedido eliminado');}};
-    div.appendChild(btnDel); container.appendChild(div);
-  }
+async function editOrder(id){
+  const {data,error}=await supabase.from('pedidos').select('*').eq('id',id).single();
+  if(error) return alert(error.message);
+  openModal('Editar Pedido',`
+    <label>Cliente:<input id="editPedidoCliente" value="${data.cliente}"></label>
+    <label>Producto:<input id="editPedidoProducto" value="${data.producto}"></label>
+    <label>Cantidad:<input type="number" id="editPedidoCantidad" value="${data.cantidad}"></label>
+    <label>Localidad:<select id="editPedidoLocalidad"></select></label>
+    <button onclick="updateOrder(${id})">Guardar</button>
+  `);
+  const locs=await supabase.from('localidades').select('*');
+  const sel=document.getElementById('editPedidoLocalidad'); sel.innerHTML='<option value="">Seleccione</option>';
+  locs.data.forEach(l=>sel.innerHTML+=`<option value="${l.id}" ${l.id===data.localidad_id?'selected':''}>${l.nombre}</option>`);
 }
+async function updateOrder(id){
+  const cliente=document.getElementById('editPedidoCliente').value.trim();
+  const producto=document.getElementById('editPedidoProducto').value.trim();
+  const cantidad=parseInt(document.getElementById('editPedidoCantidad').value,10);
+  const localidad_id=document.getElementById('editPedidoLocalidad').value||null;
+  if(!cliente||!producto||isNaN(cantidad)) return alert('Complete campos');
+  const {error}=await supabase.from('pedidos').update({cliente,producto,cantidad,localidad_id}).eq('id',id);
+  if(error) return alert(error.message);
+  closeModal(); fetchOrders(); showToast('Pedido actualizado');
+}
+async function deleteOrder(id){ if(confirm('Eliminar pedido?')){ await supabase.from('pedidos').delete().eq('id',id); fetchOrders(); } }
+fetchOrders();
 
-/* -------------------- DOCUMENTOS -------------------- */
-document.getElementById('uploadDocsBtn').addEventListener('click',async()=>{
-  const files=document.getElementById('docFiles').files;
-  if(!files || files.length===0) return alert('Seleccione archivos');
-  const progressElem=document.getElementById('docProgress');
-  for(let i=0;i<files.length;i++){
-    const file=files[i]; const originalName=file.name;
-    const timestamp=new Date().toISOString().replace(/[-:.]/g,''); const uniqueName=`${originalName}_${timestamp}`;
-    try{
-      const {error}=await supabase.storage.from('private-documents').upload(uniqueName,file,{upsert:false});
-      if(error) throw error;
-      await supabase.from('documentos_metadata').insert([{original_name:originalName,storage_name:uniqueName,uploaded_at:new Date()}]);
-      progressElem.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
-    }catch(err){alert('Error subiendo '+file.name+': '+(err.message||err)); progressElem.style.width='0%'; return;}
-  }
-  try{document.getElementById('docFiles').value=null;}catch(e){document.getElementById('docFiles').value='';}
-  progressElem.style.width='0%'; showToast('Documentos subidos'); fetchDocuments();
-});
-document.getElementById('deleteAllDocsBtn').addEventListener('click',async()=>{
-  if(!confirm('Eliminar todos los documentos?')) return;
-  const {data}=await supabase.from('documentos_metadata').select('*');
-  for(let doc of data) await supabase.storage.from('private-documents').remove([doc.storage_name]);
-  await supabase.from('documentos_metadata').delete();
-  fetchDocuments(); showToast('Todos los documentos eliminados');
-});
-document.getElementById('searchDoc').addEventListener('input',e=>fetchDocuments(e.target.value));
+// -------------------- DOCUMENTOS --------------------
 async function fetchDocuments(filter=''){
-  const {data,error}=await supabase.from('documentos_metadata').select('*').order('uploaded_at',{ascending:false}).ilike('original_name',`%${filter}%`);
+  const {data,error}=await supabase.storage.from('private-documents').list('',{limit:200});
   if(error) return console.error(error);
   const container=document.getElementById('documentsList'); container.innerHTML='';
-  for(let doc of data){
+  data.filter(f=>f.name.includes(filter)).forEach(async file=>{
+    const url=await safeGetFileUrl(file.name);
     const div=document.createElement('div'); div.className='doc-item';
-    const link=document.createElement('a'); link.href=await safeGetFileUrl(doc.storage_name); link.target='_blank'; link.textContent=`${doc.original_name} (${new Date(doc.uploaded_at).toLocaleString()})`;
-    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar este documento?')){await supabase.storage.from('private-documents').remove([doc.storage_name]); await supabase.from('documentos_metadata').delete().eq('id',doc.id); fetchDocuments(filter);}};
-    div.appendChild(link); div.appendChild(btnDel); container.appendChild(div);
-  }
+    div.innerHTML=`<a href="${url}" target="_blank">${file.name}</a>
+    <button class="delete-btn" onclick="deleteDoc('${file.name}')">Eliminar</button>`;
+    container.appendChild(div);
+  });
 }
+document.getElementById('uploadDocsBtn').addEventListener('click',async()=>{
+  const files=document.getElementById('docFiles').files;
+  if(!files.length) return alert('Seleccione archivos');
+  const progress=document.getElementById('docProgress');
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    const storageName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
+    const {error}=await supabase.storage.from('private-documents').upload(storageName,file,{upsert:true});
+    if(error) return alert(error.message);
+    progress.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
+  }
+  document.getElementById('docFiles').value='';
+  progress.style.width='0%'; showToast('Documentos subidos'); fetchDocuments();
+});
+document.getElementById('searchDoc').addEventListener('input',(e)=>fetchDocuments(e.target.value));
+async function deleteDoc(name){ if(confirm('Eliminar documento?')){ await supabase.storage.from('private-documents').remove([name]); fetchDocuments(); } }
+document.getElementById('deleteAllDocsBtn').addEventListener('click',async()=>{ if(confirm('Eliminar todos los documentos?')){ const {data}=await supabase.storage.from('private-documents').list(''); await supabase.storage.from('private-documents').remove(data.map(f=>f.name)); fetchDocuments(); } });
+fetchDocuments();
 
-/* -------------------- EXPORT PDF -------------------- */
+// -------------------- EXPORT PDF --------------------
 document.getElementById('exportPromoPDFBtn').addEventListener('click',async()=>{
-  const { jsPDF } = window.jspdf; const doc=new jsPDF();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const {data}=await supabase.from('promociones').select('*').order('id');
   let y=10;
-  const {data,error}=await supabase.from('promociones').select('*,categorias(nombre)').order('id');
-  if(error) return alert(error.message);
   for(let p of data){
     doc.setFontSize(12); doc.text(`Nombre: ${p.nombre}`,10,y); y+=6;
-    doc.text(`Precio: $${p.precio} - Stock:${p.stock}`,10,y); y+=6;
-    doc.text(`Categoría: ${p.categorias?.nombre||''}`,10,y); y+=6;
-    if(p.imagen){ const url=await safeGetFileUrl(p.imagen,'promo_images'); if(url){ const img=await loadImageAsDataURL(url); doc.addImage(img,'JPEG',10,y,30,30); y+=35; }}
-    y+=5; if(y>270){doc.addPage();y=10;}
-  } doc.save('promociones.pdf');
+    doc.text(`Precio: ${p.precio} - Stock: ${p.stock}`,10,y); y+=6;
+    if(p.imagen){
+      const url=await safeGetFileUrl(p.imagen,'promo_images');
+      if(url){ const img=await loadImageToCanvas(url); doc.addImage(img, 'JPEG', 10, y, 40, 40); }
+      y+=45;
+    }
+    y+=5; if(y>270){ doc.addPage(); y=10;}
+  }
+  doc.save('promociones.pdf');
 });
+async function loadImageToCanvas(url){
+  const img=await new Promise(res=>{ const i=new Image(); i.crossOrigin="Anonymous"; i.onload=()=>res(i); i.src=url; });
+  const canvas=document.createElement('canvas'); canvas.width=img.width; canvas.height=img.height;
+  const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); return canvas.toDataURL('image/jpeg');
+}
 document.getElementById('exportPedidosPDFBtn').addEventListener('click',async()=>{
-  const { jsPDF } = window.jspdf; const doc=new jsPDF(); let y=10;
-  const {data,error}=await supabase.from('pedidos').select('*,localidades(nombre)').order('localidad_id').order('id');
-  if(error) return alert(error.message);
-  const pedidosPorLocalidad={}; for(let p of data){ const loc=p.localidades?.nombre||'Sin localidad'; if(!pedidosPorLocalidad[loc]) pedidosPorLocalidad[loc]=[]; pedidosPorLocalidad[loc].push(p);}
-  for(let loc in pedidosPorLocalidad){ doc.setFontSize(14); doc.text(`Localidad: ${loc}`,10,y); y+=8;
-    for(let p of pedidosPorLocalidad[loc]){ doc.setFontSize(12); doc.text(`${p.cliente} pidió ${p.cantidad} x ${p.producto}`,10,y); y+=6; if(y>270){doc.addPage(); y=10;}}
-    y+=5; if(y>270){doc.addPage();y=10;}}
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const {data}=await supabase.from('pedidos').select('*').order('localidad_id');
+  let y=10; let currentLoc='';
+  for(let p of data){
+    const locName=await getLocalidadName(p.localidad_id);
+    if(locName!==currentLoc){ currentLoc=locName; doc.setFontSize(14); doc.text(`Localidad: ${locName}`,10,y); y+=7;}
+    doc.setFontSize(12); doc.text(`${p.cliente} pidió ${p.cantidad} x ${p.producto}`,10,y); y+=6;
+    if(y>270){ doc.addPage(); y=10;}
+  }
   doc.save('pedidos.pdf');
 });
-async function loadImageAsDataURL(url){return new Promise((resolve,reject)=>{const img=new Image(); img.setAttribute('crossOrigin','anonymous'); img.onload=()=>{const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; c.getContext('2d').drawImage(img,0,0); resolve(c.toDataURL('image/jpeg'));}; img.onerror=reject; img.src=url;});}
-
-/* -------------------- Inicialización -------------------- */
-fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocuments();
 </script>
-</body>
-</html>
