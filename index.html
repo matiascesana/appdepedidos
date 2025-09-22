@@ -1,93 +1,109 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<title>App de Pedidos y Documentos (Producción)</title>
+<meta charset="UTF-8">
+<title>App Multi-Página de Pedidos y Promociones</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
 <style>
-body {
-    font-family: 'Roboto', sans-serif;
-    padding: 30px;
-    background: #f9f9f9;
-    color: #333;
-}
-h1, h2 { font-family: 'Playfair Display', serif; }
-h1 { text-align:center; margin-bottom:40px; }
-.section {
-    background:#fff;
-    padding:25px;
-    margin-bottom:40px;
-    border-radius:15px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-}
-form label { display:block; margin-bottom:10px; font-weight:500; }
-form input { width:100%; padding:8px 12px; margin-top:4px; margin-bottom:15px; border-radius:6px; border:1px solid #ccc; }
-button {
-    background:#6a1b9a;
-    color:#fff;
-    padding:10px 20px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    font-weight:600;
-}
-button:hover { background:#7b1fa2; }
-#docProgressContainer { width:100%; background:#eee; border-radius:5px; margin-top:5px; position:relative; }
-#docProgress { width:0%; height:10px; background:green; border-radius:5px; transition: width 300ms ease; }
-#docProgressText { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:10px; font-weight:bold; color:#fff; }
-.item-card { background:#f4f4f4; padding:10px 15px; border-radius:10px; margin-bottom:10px; display:flex; align-items:center; gap:10px; transition:transform 0.2s ease, background 0.2s ease; }
-.item-card:hover { background:#e8e8e8; transform:translateY(-2px); }
-.item-card img { border-radius:6px; width:50px; height:50px; object-fit:cover; }
-a { color:#6a1b9a; text-decoration:none; }
-a:hover { text-decoration:underline; }
-.doc-item { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; padding:5px 10px; border-radius:6px; background:#f4f4f4; }
-.doc-item button { background:#c62828; margin-left:10px; padding:3px 8px; font-size:12px; }
+body { font-family:'Roboto', sans-serif; padding:20px; background:#f9f9f9; color:#333; }
+h1,h2 { font-family:'Playfair Display', serif; }
+h1 { text-align:center; margin-bottom:20px; }
+nav { margin-bottom:20px; display:flex; gap:10px; justify-content:center; }
+nav button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; background:#6a1b9a; color:#fff; font-weight:600; }
+nav button:hover { background:#7b1fa2; }
+.section { display:none; background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); margin-bottom:20px; }
+.section.active { display:block; }
+form label { display:block; margin-bottom:8px; font-weight:500; }
+form input, form select { width:100%; padding:8px 12px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc; }
+button.submit-btn { background:#6a1b9a; color:#fff; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+button.submit-btn:hover { background:#7b1fa2; }
+.item-card { background:#f4f4f4; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+.item-card img { width:50px; height:50px; object-fit:cover; border-radius:6px; }
+.doc-item { display:flex; justify-content:space-between; align-items:center; background:#f4f4f4; padding:5px 10px; border-radius:6px; margin-bottom:5px; }
+.doc-item button { background:#c62828; padding:3px 8px; font-size:12px; border:none; border-radius:4px; color:#fff; cursor:pointer; }
 .doc-item button:hover { background:#e53935; }
+#docProgressContainer { width:100%; background:#eee; border-radius:5px; margin-top:5px; position:relative; }
+#docProgress { width:0%; height:10px; background:green; border-radius:5px; transition:width 300ms ease; }
+#docProgressText { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:10px; font-weight:bold; color:#fff; }
 </style>
 </head>
 <body>
-<h1>App de Pedidos, Promociones y Documentos</h1>
 
-<!-- Sección Promociones -->
-<div class="section">
+<h1>App Multi-Página de Pedidos y Promociones</h1>
+
+<nav>
+<button onclick="showSection('promociones')">Promociones</button>
+<button onclick="showSection('pedidos')">Pedidos</button>
+<button onclick="showSection('documentos')">Documentos</button>
+<button onclick="showSection('configuracion')">Configuración</button>
+</nav>
+
+<!-- PROMOCIONES -->
+<div id="promociones" class="section">
 <h2>Promociones</h2>
 <form id="promoForm" onsubmit="return false;">
 <label>Nombre: <input type="text" id="promoNombre" required></label>
 <label>Precio: <input type="number" id="promoPrecio" step="0.01" required></label>
 <label>Stock: <input type="number" id="promoStock" required></label>
+<label>Categoría: 
+<select id="promoCategoria" required></select>
+</label>
 <label>Imagen: <input type="file" id="promoImagen" accept="image/*"></label>
-<button type="button" id="addPromoBtn">Agregar Promoción</button>
+<button class="submit-btn" id="addPromoBtn">Agregar Promoción</button>
 </form>
 <h3>Lista de Promociones</h3>
 <div id="promoList"></div>
 </div>
 
-<!-- Sección Pedidos -->
-<div class="section">
+<!-- PEDIDOS -->
+<div id="pedidos" class="section">
 <h2>Pedidos</h2>
 <form id="pedidoForm" onsubmit="return false;">
 <label>Cliente: <input type="text" id="pedidoCliente" required></label>
 <label>Producto: <input type="text" id="pedidoProducto" required></label>
 <label>Cantidad: <input type="number" id="pedidoCantidad" required></label>
-<button type="button" id="addOrderBtn">Agregar Pedido</button>
+<label>Localidad: 
+<select id="pedidoLocalidad" required></select>
+</label>
+<button class="submit-btn" id="addOrderBtn">Agregar Pedido</button>
 </form>
 <h3>Lista de Pedidos</h3>
 <div id="pedidoList"></div>
 </div>
 
-<!-- Sección Documentos -->
-<div class="section">
+<!-- DOCUMENTOS -->
+<div id="documentos" class="section">
 <h2>Documentos</h2>
 <input type="file" id="docFiles" multiple>
-<button id="uploadDocsBtn">Subir Documentos</button>
-<button id="deleteAllDocsBtn" style="background:#c62828;">Eliminar Todos</button>
+<button class="submit-btn" id="uploadDocsBtn">Subir Documentos</button>
+<button class="submit-btn" id="deleteAllDocsBtn" style="background:#c62828;">Eliminar Todos</button>
 <div id="docProgressContainer">
-    <div id="docProgress"></div>
-    <div id="docProgressText">0%</div>
+<div id="docProgress"></div>
+<div id="docProgressText">0%</div>
 </div>
 <h3>Documentos subidos:</h3>
 <div id="documentsList"></div>
+</div>
+
+<!-- CONFIGURACION -->
+<div id="configuracion" class="section">
+<h2>Configuración</h2>
+
+<h3>Categorías de Promociones</h3>
+<form id="categoriaForm" onsubmit="return false;">
+<label>Nombre de categoría: <input type="text" id="categoriaNombre" required></label>
+<button class="submit-btn" id="addCategoriaBtn">Agregar Categoría</button>
+</form>
+<div id="categoriaList"></div>
+
+<h3>Localidades para Pedidos</h3>
+<form id="localidadForm" onsubmit="return false;">
+<label>Nombre de localidad: <input type="text" id="localidadNombre" required></label>
+<button class="submit-btn" id="addLocalidadBtn">Agregar Localidad</button>
+</form>
+<div id="localidadList"></div>
+
 </div>
 
 <script>
@@ -96,91 +112,89 @@ const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
 const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Toast utility
+// ---------- NAVEGACION ----------
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ---------- UTILS ----------
 function showToast(msg, timeout=3000){
-    const toast = document.createElement('div');
-    toast.textContent = msg;
-    Object.assign(toast.style, {position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'});
-    document.body.appendChild(toast);
-    setTimeout(()=>toast.remove(), timeout);
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  Object.assign(toast.style,{position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'});
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(),timeout);
 }
 
 // ---------- PROMOCIONES ----------
 document.getElementById('addPromoBtn').addEventListener('click', addPromotion);
+
 async function addPromotion(){
-    if(!supabase) return alert('Supabase no configurado.');
-    const nombre = document.getElementById('promoNombre').value.trim();
-    const precio = parseFloat(document.getElementById('promoPrecio').value);
-    const stock = parseInt(document.getElementById('promoStock').value,10);
-    const imagenFile = document.getElementById('promoImagen').files[0];
-    if(!nombre || Number.isNaN(precio) || Number.isNaN(stock)) return alert('Complete todos los campos correctamente');
+  if(!supabase) return alert('Supabase no configurado.');
+  const nombre=document.getElementById('promoNombre').value.trim();
+  const precio=parseFloat(document.getElementById('promoPrecio').value);
+  const stock=parseInt(document.getElementById('promoStock').value,10);
+  const categoria_id=parseInt(document.getElementById('promoCategoria').value,10);
+  const imagenFile=document.getElementById('promoImagen').files[0];
+  if(!nombre || Number.isNaN(precio)||Number.isNaN(stock)||Number.isNaN(categoria_id)) return alert('Complete todos los campos');
 
-    let imagePath = null;
-    if(imagenFile){
-        const fileName = `${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`;
-        const { error } = await supabase.storage.from('promo_images').upload(fileName, imagenFile, {upsert:true});
-        if(error){ console.error(error); return alert('Error subiendo imagen'); }
-        imagePath = fileName;
-    }
+  let imagePath=null;
+  if(imagenFile){
+    const fileName=`${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`;
+    const { error } = await supabase.storage.from('promo_images').upload(fileName,imagenFile,{upsert:true});
+    if(error) return alert('Error subiendo imagen');
+    imagePath=fileName;
+  }
 
-    try{
-        const { error } = await supabase.from('promociones').insert([{nombre, precio, stock, imagen:imagePath}]);
-        if(error) throw error;
-        document.getElementById('promoForm').reset();
-        try{ document.getElementById('promoImagen').value = null; } catch(e){ document.getElementById('promoImagen').value=''; }
-        fetchPromotions();
-        showToast('Promoción agregada');
-    }catch(err){ alert(err.message || 'Error'); console.error(err); }
+  const { error } = await supabase.from('promociones').insert([{nombre,precio,stock,categoria_id,imagen:imagePath}]);
+  if(error) return alert('Error creando promoción');
+  document.getElementById('promoForm').reset();
+  fetchPromotions();
+  showToast('Promoción agregada');
 }
 
 async function fetchPromotions(){
-    if(!supabase) return;
-    const { data, error } = await supabase.from('promociones').select().limit(200);
-    if(error) return console.error(error);
-    const container = document.getElementById('promoList'); container.innerHTML='';
-    for(let promo of data){
-        const card = document.createElement('div'); card.className='item-card';
-        if(promo.imagen){
-            const img = document.createElement('img');
-            const url = await safeGetFileUrl(promo.imagen,'promo_images');
-            if(url) img.src=url; img.alt=promo.nombre||'imagen';
-            card.appendChild(img);
-        }
-        const text = document.createElement('div');
-        const title = document.createElement('strong'); title.textContent=promo.nombre||''; text.appendChild(title);
-        const meta = document.createElement('div'); meta.textContent=`$${promo.precio ?? ''} - Stock: ${promo.stock ?? ''}`; text.appendChild(meta);
-        card.appendChild(text);
-        container.appendChild(card);
+  const { data,error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('promoList'); container.innerHTML='';
+  for(let p of data){
+    const card=document.createElement('div'); card.className='item-card';
+    if(p.imagen){
+      const img=document.createElement('img');
+      img.src=await safeGetFileUrl(p.imagen,'promo_images'); img.alt=p.nombre;
+      card.appendChild(img);
     }
+    const text=document.createElement('div');
+    const title=document.createElement('strong'); title.textContent=p.nombre; text.appendChild(title);
+    const meta=document.createElement('div'); meta.textContent=`$${p.precio} - Stock:${p.stock} - Categoria: ${p.categoria_id || ''}`; text.appendChild(meta);
+    card.appendChild(text); container.appendChild(card);
+  }
 }
 
 // ---------- PEDIDOS ----------
 document.getElementById('addOrderBtn').addEventListener('click', addOrder);
 async function addOrder(){
-    if(!supabase) return alert('Supabase no configurado.');
-    const cliente=document.getElementById('pedidoCliente').value.trim();
-    const producto=document.getElementById('pedidoProducto').value.trim();
-    const cantidad=parseInt(document.getElementById('pedidoCantidad').value,10);
-    if(!cliente || !producto || Number.isNaN(cantidad)) return alert('Complete todos los campos correctamente');
-    try{
-        const { error } = await supabase.from('pedidos').insert([{cliente, producto, cantidad}]);
-        if(error) throw error;
-        document.getElementById('pedidoForm').reset();
-        fetchOrders();
-        showToast('Pedido agregado');
-    }catch(err){ alert(err.message||'Error'); console.error(err); }
+  const cliente=document.getElementById('pedidoCliente').value.trim();
+  const producto=document.getElementById('pedidoProducto').value.trim();
+  const cantidad=parseInt(document.getElementById('pedidoCantidad').value,10);
+  const localidad_id=parseInt(document.getElementById('pedidoLocalidad').value,10);
+  if(!cliente||!producto||Number.isNaN(cantidad)||Number.isNaN(localidad_id)) return alert('Complete todos los campos');
+
+  const { error } = await supabase.from('pedidos').insert([{cliente,producto,cantidad,localidad_id}]);
+  if(error) return alert('Error agregando pedido');
+  document.getElementById('pedidoForm').reset(); fetchOrders(); showToast('Pedido agregado');
 }
 
 async function fetchOrders(){
-    if(!supabase) return;
-    const { data, error } = await supabase.from('pedidos').select().limit(200);
-    if(error) return console.error(error);
-    const container=document.getElementById('pedidoList'); container.innerHTML='';
-    for(let pedido of data){
-        const card=document.createElement('div'); card.className='item-card';
-        card.textContent=`${pedido.cliente} pidió ${pedido.cantidad} x ${pedido.producto}`;
-        container.appendChild(card);
-    }
+  const { data,error } = await supabase.from('pedidos').select('*').order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('pedidoList'); container.innerHTML='';
+  for(let p of data){
+    const div=document.createElement('div'); div.className='item-card';
+    div.textContent=`${p.cliente} pidió ${p.cantidad} x ${p.producto} (Localidad ID: ${p.localidad_id})`;
+    container.appendChild(div);
+  }
 }
 
 // ---------- DOCUMENTOS ----------
@@ -188,82 +202,113 @@ document.getElementById('uploadDocsBtn').addEventListener('click', uploadFiles);
 document.getElementById('deleteAllDocsBtn').addEventListener('click', deleteAllDocuments);
 
 async function uploadFiles(){
-    if(!supabase) return alert('Supabase no configurado.');
-    const files=document.getElementById('docFiles').files;
-    if(!files || files.length==0) return alert('Seleccione archivos');
-    const progressElem=document.getElementById('docProgress');
-    const progressText=document.getElementById('docProgressText');
-    for(let i=0;i<files.length;i++){
-        const file=files[i]; const fileName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
-        try{
-            const { error } = await supabase.storage.from('private-documents').upload(fileName,file,{upsert:true});
-            if(error) throw error;
-            const pct=Math.round(((i+1)/files.length)*100);
-            progressElem.style.width=pct+'%'; progressText.textContent=pct+'%';
-        }catch(err){ alert('Error subiendo '+file.name); progressElem.style.width='0%'; progressText.textContent='0%'; return; }
-    }
-    try{ document.getElementById('docFiles').value=null; } catch(e){ document.getElementById('docFiles').value=''; }
-    progressElem.style.width='0%'; progressText.textContent='0%';
-    showToast('Documentos subidos');
-    fetchDocuments();
+  const files=document.getElementById('docFiles').files;
+  if(!files || files.length===0) return alert('Seleccione archivos');
+  const progressElem=document.getElementById('docProgress');
+  const progressText=document.getElementById('docProgressText');
+  for(let i=0;i<files.length;i++){
+    const file=files[i]; const fileName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
+    const { error } = await supabase.storage.from('private-documents').upload(fileName,file,{upsert:true});
+    if(error) return alert('Error subiendo '+file.name);
+    const pct=Math.round(((i+1)/files.length)*100);
+    progressElem.style.width=pct+'%'; progressText.textContent=pct+'%';
+  }
+  document.getElementById('docFiles').value='';
+  progressElem.style.width='0%'; progressText.textContent='0%';
+  fetchDocuments(); showToast('Documentos subidos');
 }
 
 async function fetchDocuments(){
-    if(!supabase) return;
-    const { data, error } = await supabase.storage.from('private-documents').list('',{limit:100});
-    if(error) return console.error(error);
-    const container=document.getElementById('documentsList'); container.innerHTML='';
-    for(let file of data){
-        const div=document.createElement('div'); div.className='doc-item';
-        const url=await safeGetFileUrl(file.name,'private-documents');
-        const link=document.createElement('a'); link.href=url||'#'; link.target='_blank'; link.rel='noopener noreferrer'; link.textContent=file.name;
-        const delBtn=document.createElement('button'); delBtn.textContent='Eliminar'; delBtn.onclick=()=>deleteDocument(file.name);
-        div.appendChild(link); div.appendChild(delBtn); container.appendChild(div);
-    }
+  const { data,error } = await supabase.storage.from('private-documents').list('',{limit:100});
+  if(error) return console.error(error);
+  const container=document.getElementById('documentsList'); container.innerHTML='';
+  for(let f of data){
+    const div=document.createElement('div'); div.className='doc-item';
+    const url=await safeGetFileUrl(f.name,'private-documents');
+    const link=document.createElement('a'); link.href=url||'#'; link.target='_blank'; link.textContent=f.name;
+    const btn=document.createElement('button'); btn.textContent='Eliminar'; btn.onclick=()=>deleteDocument(f.name);
+    div.appendChild(link); div.appendChild(btn); container.appendChild(div);
+  }
 }
 
 async function deleteDocument(fileName){
-    if(!supabase) return;
-    if(!confirm('Eliminar este documento?')) return;
-    const { error } = await supabase.storage.from('private-documents').remove([fileName]);
-    if(error){ alert('Error eliminando'); console.error(error); return; }
-    showToast('Documento eliminado');
-    fetchDocuments();
+  if(!confirm('Eliminar este documento?')) return;
+  const { error } = await supabase.storage.from('private-documents').remove([fileName]);
+  if(error) return alert('Error eliminando documento');
+  fetchDocuments(); showToast('Documento eliminado');
 }
 
 async function deleteAllDocuments(){
-    if(!supabase) return;
-    if(!confirm('Eliminar TODOS los documentos?')) return;
-    const { data, error } = await supabase.storage.from('private-documents').list('',{limit:1000});
-    if(error) return console.error(error);
-    const files = data.map(f=>f.name);
-    if(files.length===0) return;
-    const { error: delErr } = await supabase.storage.from('private-documents').remove(files);
-    if(delErr){ alert('Error eliminando'); console.error(delErr); return; }
-    showToast('Todos los documentos eliminados');
-    fetchDocuments();
+  if(!confirm('Eliminar TODOS los documentos?')) return;
+  const { data,error } = await supabase.storage.from('private-documents').list('',{limit:1000});
+  if(error) return console.error(error);
+  const files=data.map(f=>f.name);
+  if(files.length===0) return;
+  const { error:delErr } = await supabase.storage.from('private-documents').remove(files);
+  if(delErr) return alert('Error eliminando documentos');
+  fetchDocuments(); showToast('Todos los documentos eliminados');
 }
 
-// ---------- HELPERS ----------
-async function safeGetFileUrl(fileName,bucket='private-documents'){
-    if(!supabase) return null;
-    try{
-        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName,3600);
-        if(error) { console.warn(error); return null; }
-        return data.signedUrl;
-    }catch(err){ console.error(err); return null; }
+// ---------- CONFIGURACION ----------
+document.getElementById('addCategoriaBtn').addEventListener('click', addCategoria);
+document.getElementById('addLocalidadBtn').addEventListener('click', addLocalidad);
+
+async function addCategoria(){
+  const nombre=document.getElementById('categoriaNombre').value.trim();
+  if(!nombre) return alert('Ingrese nombre de categoría');
+  const { error } = await supabase.from('categorias').insert([{nombre}]);
+  if(error) return alert('Error creando categoría');
+  document.getElementById('categoriaForm').reset(); fetchCategorias();
+  showToast('Categoría agregada');
 }
 
-// ---------- INIT ----------
+async function fetchCategorias(){
+  const { data,error } = await supabase.from('categorias').select().order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('categoriaList'); container.innerHTML='';
+  const selectPromo=document.getElementById('promoCategoria'); selectPromo.innerHTML='<option value="">Seleccione</option>';
+  for(let c of data){
+    const div=document.createElement('div'); div.textContent=c.nombre; container.appendChild(div);
+    const opt=document.createElement('option'); opt.value=c.id; opt.textContent=c.nombre; selectPromo.appendChild(opt);
+  }
+}
+
+async function addLocalidad(){
+  const nombre=document.getElementById('localidadNombre').value.trim();
+  if(!nombre) return alert('Ingrese nombre de localidad');
+  const { error } = await supabase.from('localidades').insert([{nombre}]);
+  if(error) return alert('Error creando localidad');
+  document.getElementById('localidadForm').reset(); fetchLocalidades();
+  showToast('Localidad agregada');
+}
+
+async function fetchLocalidades(){
+  const { data,error } = await supabase.from('localidades').select().order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('localidadList'); container.innerHTML='';
+  const selectPedido=document.getElementById('pedidoLocalidad'); selectPedido.innerHTML='<option value="">Seleccione</option>';
+  for(let l of data){
+    const div=document.createElement('div'); div.textContent=l.nombre; container.appendChild(div);
+    const opt=document.createElement('option'); opt.value=l.id; opt.textContent=l.nombre; selectPedido.appendChild(opt);
+  }
+}
+
+// ---------- HELPER ----------
+async function safeGetFileUrl(fileName,bucket){
+  try{
+    const { data,error } = await supabase.storage.from(bucket).createSignedUrl(fileName,3600);
+    if(error) return null; return data.signedUrl;
+  }catch(e){ return null; }
+}
+
+// ---------- INICIALIZACION ----------
 (async function init(){
-    if(!supabase){ showToast('Supabase SDK no configurado',5000); return; }
-    try{
-        await fetchPromotions();
-        await fetchOrders();
-        await fetchDocuments();
-    }catch(err){ console.error(err); }
+  showSection('promociones');
+  fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocuments();
 })();
 </script>
+
 </body>
 </html>
+
 
