@@ -98,31 +98,136 @@ button.submit-btn:hover{background:#7b1fa2;}
 </div>
 
 <!-- Documentos -->
-<div class="section" id="documentosSec">
-<h2>Documentos</h2>
-<input type="file" id="docFiles" multiple>
-<button class="submit-btn" id="uploadDocsBtn">Subir Documentos</button>
-<button class="submit-btn" id="deleteAllDocsBtn">Eliminar Todos</button>
-<div id="docProgressContainer"><div id="docProgress"></div></div>
-<h3>Documentos subidos:</h3>
-<div id="documentsList"></div>
-</div>
+<div class="section">
+  <h2>Documentos</h2>
 
-<!-- Modal genérico -->
-<div id="modalOverlay">
-  <div id="modalContent"></div>
+  <label>Buscar por DNI:</label>
+  <input type="text" id="searchDoc" placeholder="Escriba DNI...">
+
+  <input type="file" id="docFiles" multiple>
+  <button id="uploadDocsBtn">Subir Documentos</button>
+  <button id="deleteAllDocsBtn">Eliminar Todos</button>
+
+  <div id="docProgressContainer">
+    <div id="docProgress"></div>
+  </div>
+
+  <h3>Documentos subidos:</h3>
+  <div id="documentsList"></div>
 </div>
 
 <script>
-const SUPABASE_URL='https://ejbqlejlgprvwzrptojo.supabase.co';
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
+  // --- Subir archivos ---
+  document.getElementById('uploadDocsBtn').addEventListener('click', uploadFiles);
 
-function showToast(msg,timeout=3000){
-  const toast=document.createElement('div'); toast.textContent=msg;
-  Object.assign(toast.style,{position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'});
-  document.body.appendChild(toast); setTimeout(()=>toast.remove(),timeout);
-}
+  async function uploadFiles() {
+    if(!supabase) return alert('Supabase no configurado.');
+    const files = document.getElementById('docFiles').files;
+    if(!files || files.length === 0) return alert('Seleccione archivos');
+    const progressElem = document.getElementById('docProgress');
+
+    for(let i=0;i<files.length;i++){
+      const file = files[i];
+      const originalName = file.name; // nombre visible (DNI)
+      const timestamp = new Date().toISOString().replace(/[-:.]/g,''); // YYYYMMDDTHHMMSS
+      const uniqueName = `${originalName}_${timestamp}`; // nombre interno en bucket
+
+      try {
+        // Subida al bucket
+        const { error } = await supabase.storage.from('private-documents').upload(uniqueName, file, { upsert: false });
+        if(error) throw error;
+
+        // Guardar metadata en tabla documentos_metadata
+        await supabase.from('documentos_metadata').insert([{
+          original_name: originalName,
+          storage_name: uniqueName,
+          uploaded_at: new Date()
+        }]);
+
+        progressElem.style.width = `${Math.round(((i+1)/files.length)*100)}%`;
+      } catch(err) {
+        alert('Error subiendo ' + file.name + ': ' + (err.message || err));
+        progressElem.style.width='0%';
+        return;
+      }
+    }
+
+    try { document.getElementById('docFiles').value=null; } catch(e){document.getElementById('docFiles').value='';}
+    progressElem.style.width='0%';
+    showToast('Documentos subidos');
+    fetchDocuments();
+  }
+
+  // --- Listar documentos ---
+  async function fetchDocuments(filter='') {
+    if(!supabase) return;
+    const { data, error } = await supabase.from('documentos_metadata')
+      .select('*')
+      .order('uploaded_at', { ascending: false })
+      .ilike('original_name', `%${filter}%`);
+    if(error) return console.error(error);
+
+    const container = document.getElementById('documentsList');
+    container.innerHTML = '';
+
+    for(let doc of data){
+      const div = document.createElement('div'); 
+      div.className='doc-item';
+
+      const link = document.createElement('a');
+      link.href = await safeGetFileUrl(doc.storage_name);
+      link.target='_blank';
+      link.textContent = `${doc.original_name} (${new Date(doc.uploaded_at).toLocaleString()})`;
+
+      const btnDel = document.createElement('button');
+      btnDel.textContent='Eliminar';
+      btnDel.className='delete-btn';
+      btnDel.onclick = async () => {
+        if(confirm('Eliminar este documento?')){
+          await supabase.storage.from('private-documents').remove([doc.storage_name]);
+          await supabase.from('documentos_metadata').delete().eq('id',doc.id);
+          fetchDocuments(document.getElementById('searchDoc').value);
+        }
+      };
+
+      div.appendChild(link);
+      div.appendChild(btnDel);
+      container.appendChild(div);
+    }
+  }
+
+  // --- Eliminar todos ---
+  document.getElementById('deleteAllDocsBtn').addEventListener('click', async () => {
+    if(confirm('Eliminar todos los documentos?')){
+      const { data } = await supabase.from('documentos_metadata').select('*');
+      for(let doc of data){
+        await supabase.storage.from('private-documents').remove([doc.storage_name]);
+      }
+      await supabase.from('documentos_metadata').delete();
+      fetchDocuments();
+      showToast('Todos los documentos eliminados');
+    }
+  });
+
+  // --- Buscador ---
+  document.getElementById('searchDoc').addEventListener('input', e => {
+    fetchDocuments(e.target.value);
+  });
+
+  // --- Safe URL ---
+  async function safeGetFileUrl(fileName) {
+    if(!supabase) return null;
+    try {
+      const { data, error } = await supabase.storage.from('private-documents').createSignedUrl(fileName, 3600);
+      if(error) return null;
+      return data.signedUrl;
+    } catch { return null; }
+  }
+
+  // --- Inicializar ---
+  fetchDocuments();
+</script>
+
 
 // --- Modal genérico ---
 function openModal(title,html){ const overlay=document.getElementById('modalOverlay'); const content=document.getElementById('modalContent'); content.innerHTML=`<h3>${title}</h3>`+html; overlay.style.display='flex'; }
@@ -367,4 +472,5 @@ async function safeGetFileUrl(fileName,bucket='private-documents'){
 </script>
 </body>
 </html>
+
 
