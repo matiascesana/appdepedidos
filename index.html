@@ -61,12 +61,11 @@ button:hover{background:#7b1fa2;}
 <div class="section" id="pedidos">
 <h2>Pedidos</h2>
 <form id="pedidoForm" onsubmit="return false;">
-<label>Cliente:<input type="text" id="pedidoCliente" required></label>
-<label>Producto:<input type="text" id="pedidoProducto" required></label>
-<label>Cantidad:<input type="number" id="pedidoCantidad" required></label>
-<label>Localidad:<select id="pedidoLocalidad"></select></label>
-<button type="button" id="addOrderBtn">Agregar Pedido</button>
-<button type="button" id="exportPedidosPDFBtn">Exportar PDF</button>
+  <label>Cliente:<input type="text" id="pedidoCliente" required></label>
+  <label>Localidad:<select id="pedidoLocalidad"></select></label>
+  <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
+  <div id="selectedProductsContainer"></div>
+  <button type="button" id="addOrderBtn">Agregar Pedido</button>
 </form>
 <h3>Lista de Pedidos</h3>
 <div id="pedidoList"></div>
@@ -250,7 +249,7 @@ async function fetchPromotions(){
   for(let promo of data){
     const catName=await getCategoriaName(promo.categoria_id);
     const card=document.createElement('div'); card.className='item-card';
-    let imgHTML=promo.imagen?`<img src="${await safeGetFileUrl(promo.imagen,'promo_images')}">`:'';
+    let imgHTML=promo.imagen?`<img src="${await safeGetFileUrl(promo.imagen,'promo_images')}">`:''; 
     card.innerHTML=`${imgHTML}<div><strong>${promo.nombre}</strong><br>$${promo.precio} - Stock: ${promo.stock} - ${catName}</div>
     <div>
       <button onclick="editPromo(${promo.id})">Editar</button>
@@ -305,98 +304,118 @@ async function deletePromo(id){ if(confirm('Eliminar promoción?')){ await supab
 fetchPromotions();
 
 // -------------------- PEDIDOS --------------------
+let selectedProducts=[];
+document.getElementById('selectProductsBtn').addEventListener('click',async()=>{
+  const {data:promos,error}=await supabase.from('promociones').select('*').order('id');
+  if(error) return alert(error.message);
+  let html=''; promos.forEach(p=>{
+    html+=`<div style="margin-bottom:5px;">
+      <input type="number" min="0" max="${p.stock}" value="${getSelectedQty(p.id)}" id="prod_${p.id}" style="width:50px">
+      <strong>${p.nombre}</strong> - $${p.precio} - Stock: ${p.stock}
+    </div>`;
+  });
+  html+='<button onclick="confirmProducts()">Confirmar selección</button>';
+  openModal('Seleccionar Productos',html);
+});
+function getSelectedQty(id){ const item=selectedProducts.find(p=>p.id===id); return item?item.cantidad:0; }
+function confirmProducts(){
+  const inputs=document.querySelectorAll('#modalContent input[type=number]');
+  selectedProducts=[]; 
+  inputs.forEach(inp=>{
+    const qty=parseInt(inp.value,10);
+    if(qty>0){
+      const id=parseInt(inp.id.replace('prod_',''),10);
+      const name=inp.parentElement.querySelector('strong').textContent;
+      const price=parseFloat(inp.parentElement.textContent.match(/\$(\d+\.?\d*)/)[1]);
+      selectedProducts.push({id,nombre:name,cantidad:qty,precio:price});
+    }
+  });
+  closeModal(); renderSelectedProducts();
+}
+function renderSelectedProducts(){
+  const container=document.getElementById('selectedProductsContainer');
+  if(selectedProducts.length===0){ container.innerHTML=''; return; }
+  let html='<ul>'; selectedProducts.forEach(p=>{ html+=`<li>${p.nombre} x ${p.cantidad} = $${(p.cantidad*p.precio).toFixed(2)}</li>`; }); html+='</ul>';
+  container.innerHTML=html;
+}
+document.getElementById('addOrderBtn').addEventListener('click',addPedido);
+async function addPedido(){
+  const cliente=document.getElementById('pedidoCliente').value.trim();
+  const localidad_id=document.getElementById('pedidoLocalidad').value||null;
+  if(!cliente||selectedProducts.length===0) return alert('Complete cliente y seleccione productos');
+  for(let p of selectedProducts){
+    const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
+    if(data.stock<p.cantidad) return alert(`Stock insuficiente para ${p.nombre}`);
+  }
+  const total=selectedProducts.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
+  const {error}=await supabase.from('pedidos').insert([{cliente,localidad_id,productos:selectedProducts,total}]);
+  if(error) return alert(error.message);
+  for(let p of selectedProducts){
+    const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
+    await supabase.from('promociones').update({stock:data.stock - p.cantidad}).eq('id',p.id);
+  }
+  document.getElementById('pedidoForm').reset(); selectedProducts=[]; renderSelectedProducts(); fetchOrders(); showToast('Pedido agregado');
+}
 async function fetchOrders(){
   const {data,error}=await supabase.from('pedidos').select('*').order('id');
   if(error) return console.error(error);
   const container=document.getElementById('pedidoList'); container.innerHTML='';
   for(let p of data){
-    const locName=await getLocalidadName(p.localidad_id);
+    let locName=''; if(p.localidad_id){ const loc=await supabase.from('localidades').select('nombre').eq('id',p.localidad_id).single(); locName=loc.data?loc.data.nombre:''; }
     const div=document.createElement('div'); div.className='item-card';
-    div.innerHTML=`<span>${p.cliente} pidió ${p.cantidad} x ${p.producto} - ${locName}</span>
-    <div>
-      <button onclick="editOrder(${p.id})">Editar</button>
-      <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
-    </div>`;
+    let prodHTML='<ul>'; p.productos.forEach(pr=>{ prodHTML+=`<li>${pr.nombre} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`; }); prodHTML+='</ul>';
+    div.innerHTML=`<strong>${p.cliente}</strong> - ${locName}<br>${prodHTML}<strong>Total: $${p.total.toFixed(2)}</strong>
+      <div>
+        <button onclick="editOrder(${p.id})">Editar</button>
+        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+      </div>`;
     container.appendChild(div);
   }
 }
-async function getLocalidadName(id){ if(!id) return ''; const {data}=await supabase.from('localidades').select('nombre').eq('id',id).single(); return data?data.nombre:''; }
-document.getElementById('addOrderBtn').addEventListener('click',async()=>{
-  const cliente=document.getElementById('pedidoCliente').value.trim();
-  const producto=document.getElementById('pedidoProducto').value.trim();
-  const cantidad=parseInt(document.getElementById('pedidoCantidad').value,10);
-  const localidad_id=document.getElementById('pedidoLocalidad').value||null;
-  if(!cliente||!producto||isNaN(cantidad)) return alert('Complete campos');
-  const {error}=await supabase.from('pedidos').insert([{cliente,producto,cantidad,localidad_id}]);
-  if(error) return alert(error.message);
-  document.getElementById('pedidoForm').reset(); fetchOrders(); showToast('Pedido agregado');
-});
 async function editOrder(id){
-  const {data,error}=await supabase.from('pedidos').select('*').eq('id',id).single();
+  const {data:error}=await supabase.from('pedidos').select('*').eq('id',id).single();
   if(error) return alert(error.message);
-  openModal('Editar Pedido',`
-    <label>Cliente:<input id="editPedidoCliente" value="${data.cliente}"></label>
-    <label>Producto:<input id="editPedidoProducto" value="${data.producto}"></label>
-    <label>Cantidad:<input type="number" id="editPedidoCantidad" value="${data.cantidad}"></label>
-    <label>Localidad:<select id="editPedidoLocalidad"></select></label>
-    <button onclick="updateOrder(${id})">Guardar</button>
-  `);
-  const locs=await supabase.from('localidades').select('*');
-  const sel=document.getElementById('editPedidoLocalidad'); sel.innerHTML='<option value="">Seleccione</option>';
-  locs.data.forEach(l=>sel.innerHTML+=`<option value="${l.id}" ${l.id===data.localidad_id?'selected':''}>${l.nombre}</option>`);
-}
-async function updateOrder(id){
-  const cliente=document.getElementById('editPedidoCliente').value.trim();
-  const producto=document.getElementById('editPedidoProducto').value.trim();
-  const cantidad=parseInt(document.getElementById('editPedidoCantidad').value,10);
-  const localidad_id=document.getElementById('editPedidoLocalidad').value||null;
-  if(!cliente||!producto||isNaN(cantidad)) return alert('Complete campos');
-  const {error}=await supabase.from('pedidos').update({cliente,producto,cantidad,localidad_id}).eq('id',id);
-  if(error) return alert(error.message);
-  closeModal(); fetchOrders(); showToast('Pedido actualizado');
-}
-async function deleteOrder(id){ if(confirm('Eliminar pedido?')){ await supabase.from('pedidos').delete().eq('id',id); fetchOrders(); } }
-fetchOrders();
-
-// -------------------- DOCUMENTOS --------------------
-async function fetchDocuments(filter=''){
-  const {data,error}=await supabase.storage.from('private-documents').list('',{limit:200});
-  if(error) return console.error(error);
-  const container=document.getElementById('documentsList'); container.innerHTML='';
-  data.filter(f=>f.name.includes(filter)).forEach(async file=>{
-    const url=await safeGetFileUrl(file.name);
-    const div=document.createElement('div'); div.className='doc-item';
-    div.innerHTML=`<a href="${url}" target="_blank">${file.name}</a>
-      <button class="delete-btn" onclick="deleteDoc('${file.name}')">Eliminar</button>`;
-    container.appendChild(div);
-  });
-}
-document.getElementById('uploadDocsBtn').addEventListener('click',async()=>{
-  const files=document.getElementById('docFiles').files;
-  if(!files.length) return alert('Seleccione archivos');
-  const progress=document.getElementById('docProgress');
-  for(let i=0;i<files.length;i++){
-    const file=files[i];
-    const storageName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
-    const {error}=await supabase.storage.from('private-documents').upload(storageName,file,{upsert:true});
+  const p=error?null:data; selectedProducts=[...p.productos];
+  document.getElementById('pedidoCliente').value=p.cliente;
+  document.getElementById('pedidoLocalidad').value=p.localidad_id||'';
+  renderSelectedProducts(); document.getElementById('selectProductsBtn').click();
+  const btn=document.getElementById('addOrderBtn'); btn.textContent='Actualizar Pedido';
+  btn.onclick=async ()=>{
+    const cliente=document.getElementById('pedidoCliente').value.trim();
+    const localidad_id=document.getElementById('pedidoLocalidad').value||null;
+    if(!cliente||selectedProducts.length===0) return alert('Complete cliente y seleccione productos');
+    const {data: oldOrder}=await supabase.from('pedidos').select('*').eq('id',id).single();
+    for(let oldP of oldOrder.productos){
+      const {data}=await supabase.from('promociones').select('stock').eq('id',oldP.id).single();
+      await supabase.from('promociones').update({stock:data.stock + oldP.cantidad}).eq('id',oldP.id);
+    }
+    for(let p of selectedProducts){
+      const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
+      if(data.stock<p.cantidad) return alert(`Stock insuficiente para ${p.nombre}`);
+    }
+    const total=selectedProducts.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
+    const {error}=await supabase.from('pedidos').update({cliente,localidad_id,productos:selectedProducts,total}).eq('id',id);
     if(error) return alert(error.message);
-    progress.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
+    for(let p of selectedProducts){
+      const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
+      await supabase.from('promociones').update({stock:data.stock - p.cantidad}).eq('id',p.id);
+    }
+    document.getElementById('pedidoForm').reset(); selectedProducts=[]; renderSelectedProducts(); btn.textContent='Agregar Pedido'; btn.onclick=addPedido; fetchOrders(); showToast('Pedido actualizado');
+  };
+}
+async function deleteOrder(id){
+  if(!confirm('Eliminar pedido?')) return;
+  const {data: p}=await supabase.from('pedidos').select('*').eq('id',id).single();
+  for(let prod of p.productos){
+    const {data}=await supabase.from('promociones').select('stock').eq('id',prod.id).single();
+    await supabase.from('promociones').update({stock:data.stock + prod.cantidad}).eq('id',prod.id);
   }
-  document.getElementById('docFiles').value=''; progress.style.width='0%'; showToast('Documentos subidos'); fetchDocuments();
-});
-document.getElementById('searchDoc').addEventListener('input',(e)=>fetchDocuments(e.target.value));
-async function deleteDoc(name){ if(confirm('Eliminar documento?')){ await supabase.storage.from('private-documents').remove([name]); fetchDocuments(); } }
-document.getElementById('deleteAllDocsBtn').addEventListener('click',async()=>{
-  if(confirm('Eliminar todos los documentos?')){
-    const {data}=await supabase.storage.from('private-documents').list('');
-    await supabase.storage.from('private-documents').remove(data.map(f=>f.name));
-    fetchDocuments();
-  }
-});
-fetchDocuments();
-
-
+  await supabase.from('pedidos').delete().eq('id',id);
+  fetchOrders();
+}
+fetchOrders();
 </script>
+
 </body>
 </html>
 
