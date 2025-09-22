@@ -1,380 +1,370 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Dashboard App Pedidos y Promociones</title>
+<meta charset="UTF-8" />
+<title>App de Pedidos y Documentos (Completa)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-/* --- GENERAL --- */
-body { margin:0; font-family:'Roboto',sans-serif; background:#f4f4f9; color:#333; display:flex; }
-h1,h2,h3 { font-family:'Playfair Display',serif; margin:0; }
-button { cursor:pointer; }
-/* --- SIDEBAR --- */
-#sidebar { width:220px; background:#6a1b9a; color:#fff; height:100vh; display:flex; flex-direction:column; padding-top:20px; }
-#sidebar button { background:none; border:none; color:#fff; text-align:left; padding:12px 20px; font-size:16px; width:100%; margin-bottom:2px; }
-#sidebar button:hover, #sidebar button.active { background:#7b1fa2; }
-/* --- MAIN CONTENT --- */
-#main { flex:1; padding:20px; overflow-y:auto; }
-.section { display:none; padding:20px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); margin-bottom:20px; }
-.section.active { display:block; }
-form label { display:block; margin-bottom:8px; font-weight:500; }
-form input, form select { width:100%; padding:8px 12px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc; }
-button.submit-btn { background:#6a1b9a; color:#fff; padding:8px 16px; border:none; border-radius:6px; font-weight:600; }
-button.submit-btn:hover { background:#7b1fa2; }
-.item-card { background:#f4f4f4; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
-.item-card img { width:50px; height:50px; object-fit:cover; border-radius:6px; margin-right:10px; }
-.item-card div { flex:1; display:flex; align-items:center; justify-content:space-between; }
-.item-card button { margin-left:5px; padding:4px 8px; font-size:12px; border:none; border-radius:4px; color:#fff; }
-.edit-btn { background:#0288d1; }
-.edit-btn:hover { background:#03a9f4; }
-.delete-btn { background:#c62828; }
-.delete-btn:hover { background:#e53935; }
-/* --- DOCUMENTOS --- */
-.doc-item { display:flex; justify-content:space-between; align-items:center; background:#f4f4f4; padding:5px 10px; border-radius:6px; margin-bottom:5px; }
-#docProgressContainer { width:100%; background:#eee; border-radius:5px; margin-top:5px; position:relative; }
-#docProgress { width:0%; height:10px; background:green; border-radius:5px; transition:width 300ms ease; }
-#docProgressText { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:10px; font-weight:bold; color:#fff; }
-/* --- MODAL --- */
-.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000; }
-.modal-content { background:#fff; padding:20px; border-radius:12px; width:400px; max-width:90%; position:relative; }
-.modal-content h3 { margin-bottom:12px; }
-.close-modal { position:absolute; top:10px; right:10px; cursor:pointer; font-weight:bold; font-size:18px; }
+body { font-family:'Roboto',sans-serif; padding:20px; background:#f9f9f9; color:#333; }
+h1,h2{font-family:'Playfair Display',serif;}
+h1{text-align:center;margin-bottom:30px;}
+nav button{margin-right:10px;padding:8px 16px;border:none;border-radius:8px;background:#6a1b9a;color:#fff;cursor:pointer;font-weight:600;}
+nav button.active{background:#7b1fa2;}
+.section{display:none;background:#fff;padding:20px;margin-top:20px;border-radius:15px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+form label{display:block;margin-bottom:8px;font-weight:500;}
+form input,form select{width:100%;padding:6px 10px;margin-top:4px;margin-bottom:12px;border-radius:6px;border:1px solid #ccc;}
+button.submit-btn{background:#6a1b9a;color:#fff;padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-weight:600;}
+button.submit-btn:hover{background:#7b1fa2;}
+.item-card{background:#f4f4f4;padding:10px 12px;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.item-card img{border-radius:6px;width:50px;height:50px;object-fit:cover;margin-right:10px;}
+.delete-btn{background:#e53935;margin-left:5px;}
+.delete-btn:hover{background:#f44336;}
+.edit-btn{background:#ffb300;margin-left:5px;}
+.edit-btn:hover{background:#ffc107;}
+#docProgressContainer{width:100%;background:#eee;border-radius:5px;margin-top:5px;}
+#docProgress{width:0%;height:10px;background:green;border-radius:5px;transition:width 300ms ease;}
+.doc-item{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+#modalOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:1000;}
+#modalContent{background:#fff;padding:20px;border-radius:12px;width:90%;max-width:500px;}
+#modalContent input, #modalContent select{margin-bottom:10px;}
+#modalContent button{margin-top:10px;}
 </style>
 </head>
 <body>
+<h1>Dashboard de Pedidos y Promociones</h1>
 
-<div id="sidebar">
-<button class="active" onclick="showSection('promociones')">Promociones</button>
-<button onclick="showSection('pedidos')">Pedidos</button>
-<button onclick="showSection('documentos')">Documentos</button>
-<button onclick="showSection('configuracion')">Configuración</button>
-</div>
+<nav>
+  <button class="tab-btn active" data-target="promocionesSec">Promociones</button>
+  <button class="tab-btn" data-target="pedidosSec">Pedidos</button>
+  <button class="tab-btn" data-target="categoriasSec">Categorías</button>
+  <button class="tab-btn" data-target="localidadesSec">Localidades</button>
+  <button class="tab-btn" data-target="documentosSec">Documentos</button>
+</nav>
 
-<div id="main">
-
-<!-- PROMOCIONES -->
-<div id="promociones" class="section active">
+<!-- Promociones -->
+<div class="section" id="promocionesSec">
 <h2>Promociones</h2>
 <form id="promoForm" onsubmit="return false;">
-<label>Nombre: <input type="text" id="promoNombre" required></label>
-<label>Precio: <input type="number" id="promoPrecio" step="0.01" required></label>
-<label>Stock: <input type="number" id="promoStock" required></label>
-<label>Categoría: <select id="promoCategoria" required></select></label>
-<label>Imagen: <input type="file" id="promoImagen" accept="image/*"></label>
-<button class="submit-btn" id="addPromoBtn">Agregar Promoción</button>
+  <label>Nombre:<input type="text" id="promoNombre" required></label>
+  <label>Precio:<input type="number" id="promoPrecio" step="0.01" required></label>
+  <label>Stock:<input type="number" id="promoStock" required></label>
+  <label>Categoría:<select id="promoCategoria"><option value="">Seleccione</option></select></label>
+  <label>Imagen:<input type="file" id="promoImagen" accept="image/*"></label>
+  <button type="button" class="submit-btn" id="addPromoBtn">Agregar Promoción</button>
 </form>
+<button class="submit-btn" id="exportPromoPDFBtn">Exportar PDF</button>
 <h3>Lista de Promociones</h3>
 <div id="promoList"></div>
 </div>
 
-<!-- PEDIDOS -->
-<div id="pedidos" class="section">
+<!-- Pedidos -->
+<div class="section" id="pedidosSec">
 <h2>Pedidos</h2>
 <form id="pedidoForm" onsubmit="return false;">
-<label>Cliente: <input type="text" id="pedidoCliente" required></label>
-<label>Producto: <input type="text" id="pedidoProducto" required></label>
-<label>Cantidad: <input type="number" id="pedidoCantidad" required></label>
-<label>Localidad: <select id="pedidoLocalidad" required></select></label>
-<button class="submit-btn" id="addOrderBtn">Agregar Pedido</button>
+  <label>Cliente:<input type="text" id="pedidoCliente" required></label>
+  <label>Producto:<input type="text" id="pedidoProducto" required></label>
+  <label>Cantidad:<input type="number" id="pedidoCantidad" required></label>
+  <label>Localidad:<select id="pedidoLocalidad"><option value="">Seleccione</option></select></label>
+  <button type="button" class="submit-btn" id="addOrderBtn">Agregar Pedido</button>
 </form>
+<button class="submit-btn" id="exportPedidosPDFBtn">Exportar PDF</button>
 <h3>Lista de Pedidos</h3>
 <div id="pedidoList"></div>
 </div>
 
-<!-- DOCUMENTOS -->
-<div id="documentos" class="section">
+<!-- Categorías -->
+<div class="section" id="categoriasSec">
+<h2>Categorías</h2>
+<form id="categoriaForm" onsubmit="return false;">
+  <label>Nombre:<input type="text" id="categoriaNombre" required></label>
+  <button type="button" class="submit-btn" id="addCategoriaBtn">Agregar Categoría</button>
+</form>
+<h3>Lista de Categorías</h3>
+<div id="categoriaList"></div>
+</div>
+
+<!-- Localidades -->
+<div class="section" id="localidadesSec">
+<h2>Localidades</h2>
+<form id="localidadForm" onsubmit="return false;">
+  <label>Nombre:<input type="text" id="localidadNombre" required></label>
+  <button type="button" class="submit-btn" id="addLocalidadBtn">Agregar Localidad</button>
+</form>
+<h3>Lista de Localidades</h3>
+<div id="localidadList"></div>
+</div>
+
+<!-- Documentos -->
+<div class="section" id="documentosSec">
 <h2>Documentos</h2>
 <input type="file" id="docFiles" multiple>
 <button class="submit-btn" id="uploadDocsBtn">Subir Documentos</button>
-<button class="submit-btn delete-btn" id="deleteAllDocsBtn">Eliminar Todos</button>
-<div id="docProgressContainer">
-<div id="docProgress"></div>
-<div id="docProgressText">0%</div>
-</div>
+<button class="submit-btn" id="deleteAllDocsBtn">Eliminar Todos</button>
+<div id="docProgressContainer"><div id="docProgress"></div></div>
 <h3>Documentos subidos:</h3>
 <div id="documentsList"></div>
 </div>
 
-<!-- CONFIGURACION -->
-<div id="configuracion" class="section">
-<h2>Configuración</h2>
-
-<h3>Categorías de Promociones</h3>
-<form id="categoriaForm" onsubmit="return false;">
-<label>Nombre de categoría: <input type="text" id="categoriaNombre" required></label>
-<button class="submit-btn" id="addCategoriaBtn">Agregar Categoría</button>
-</form>
-<div id="categoriaList"></div>
-
-<h3>Localidades para Pedidos</h3>
-<form id="localidadForm" onsubmit="return false;">
-<label>Nombre de localidad: <input type="text" id="localidadNombre" required></label>
-<button class="submit-btn" id="addLocalidadBtn">Agregar Localidad</button>
-</form>
-<div id="localidadList"></div>
-
-</div>
-
-<!-- MODAL GENERICO -->
-<div id="modal" class="modal">
-<div class="modal-content">
-<span class="close-modal" onclick="closeModal()">&times;</span>
-<h3 id="modalTitle">Editar</h3>
-<div id="modalBody"></div>
-</div>
+<!-- Modal genérico -->
+<div id="modalOverlay">
+  <div id="modalContent"></div>
 </div>
 
 <script>
-// --- SUPABASE ---
-const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = window.supabase?.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const SUPABASE_URL='https://ejbqlejlgprvwzrptojo.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 
-// --- NAVEGACION ---
-function showSection(id){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.querySelectorAll('#sidebar button').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`).classList.add('active');
+function showToast(msg,timeout=3000){
+  const toast=document.createElement('div'); toast.textContent=msg;
+  Object.assign(toast.style,{position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'});
+  document.body.appendChild(toast); setTimeout(()=>toast.remove(),timeout);
 }
 
-// --- MODAL ---
-const modal=document.getElementById('modal');
-function openModal(title,bodyHtml){ document.getElementById('modalTitle').textContent=title; document.getElementById('modalBody').innerHTML=bodyHtml; modal.style.display='flex'; }
-function closeModal(){ modal.style.display='none'; }
+// --- Modal genérico ---
+function openModal(title,html){ const overlay=document.getElementById('modalOverlay'); const content=document.getElementById('modalContent'); content.innerHTML=`<h3>${title}</h3>`+html; overlay.style.display='flex'; }
+function closeModal(){ document.getElementById('modalOverlay').style.display='none'; }
 
-// --- TOAST ---
-function showToast(msg,timeout=3000){ const t=document.createElement('div'); t.textContent=msg; Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',background:'#6a1b9a',color:'#fff',padding:'10px 15px',borderRadius:'5px',opacity:'0.95'}); document.body.appendChild(t); setTimeout(()=>t.remove(),timeout); }
+// --- Navegación pestañas ---
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.section').forEach(sec=>sec.style.display='none');document.getElementById(btn.dataset.target).style.display='block';});
+});
+document.querySelector('.tab-btn.active').click();
 
-// --- HELPERS ---
-async function safeGetFileUrl(fileName,bucket){ try{ const {data,error}=await supabase.storage.from(bucket).createSignedUrl(fileName,3600); if(error) return null; return data.signedUrl;}catch(e){return null;} }
+// --- Función para cargar imagen como base64 ---
+async function loadImageAsBase64(url){return new Promise((resolve,reject)=>{const img=new Image();img.setAttribute('crossOrigin','anonymous'); img.onload=function(){const canvas=document.createElement('canvas');canvas.width=this.width;canvas.height=this.height;canvas.getContext('2d').drawImage(this,0,0);resolve(canvas.toDataURL('image/jpeg'));}; img.onerror=reject; img.src=url;});}
 
-// --- PROMOCIONES ---
-document.getElementById('addPromoBtn').addEventListener('click', addPromotion);
-
-async function addPromotion(){
-  const nombre=document.getElementById('promoNombre').value.trim();
-  const precio=parseFloat(document.getElementById('promoPrecio').value);
-  const stock=parseInt(document.getElementById('promoStock').value,10);
-  const categoria_id=parseInt(document.getElementById('promoCategoria').value,10);
-  const imagenFile=document.getElementById('promoImagen').files[0];
-  if(!nombre || Number.isNaN(precio)||Number.isNaN(stock)||Number.isNaN(categoria_id)) return alert('Complete todos los campos');
-
-  let imagePath=null;
-  if(imagenFile){
-    const fileName=`${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`;
-    const { error } = await supabase.storage.from('promo_images').upload(fileName,imagenFile,{upsert:true});
-    if(error) return alert('Error subiendo imagen');
-    imagePath=fileName;
-  }
-
-  const { error } = await supabase.from('promociones').insert([{nombre,precio,stock,categoria_id,imagen:imagePath}]);
-  if(error) return alert('Error creando promoción');
-  document.getElementById('promoForm').reset(); fetchPromotions(); showToast('Promoción agregada');
-}
-
-async function fetchPromotions(){
-  const { data,error }=await supabase.from('promociones').select('*').order('id');
-  if(error) return console.error(error);
-  const container=document.getElementById('promoList'); container.innerHTML='';
-  const categorias=await supabase.from('categorias').select('*').then(r=>r.data||[]);
-  for(let p of data){
-    const div=document.createElement('div'); div.className='item-card';
-    const info=document.createElement('div');
-    info.innerHTML=`<strong>${p.nombre}</strong> $${p.precio} Stock:${p.stock} CatID:${p.categoria_id}`;
-    div.appendChild(info);
-    const btnEdit=document.createElement('button'); btnEdit.textContent='Editar'; btnEdit.className='edit-btn';
-    btnEdit.onclick=()=>editPromotionModal(p,categorias);
-    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=()=>deletePromotion(p.id);
-    div.appendChild(btnEdit); div.appendChild(btnDel);
-    container.appendChild(div);
-  }
-}
-
-function editPromotionModal(promo,categorias){
-  let html=`<label>Nombre: <input type="text" id="editPromoNombre" value="${promo.nombre}"></label>`;
-  html+=`<label>Precio: <input type="number" id="editPromoPrecio" value="${promo.precio}" step="0.01"></label>`;
-  html+=`<label>Stock: <input type="number" id="editPromoStock" value="${promo.stock}"></label>`;
-  html+=`<label>Categoría: <select id="editPromoCategoria">`;
-  for(let c of categorias){ html+=`<option value="${c.id}" ${c.id===promo.categoria_id?'selected':''}>${c.nombre}</option>`; }
-  html+=`</select></label>`;
-  html+=`<label>Imagen: <input type="file" id="editPromoImagen"></label>`;
-  html+=`<button class="submit-btn" id="savePromoBtn">Guardar Cambios</button>`;
-  openModal('Editar Promoción',html);
-  document.getElementById('savePromoBtn').onclick=async()=>{
-    const nombre=document.getElementById('editPromoNombre').value.trim();
-    const precio=parseFloat(document.getElementById('editPromoPrecio').value);
-    const stock=parseInt(document.getElementById('editPromoStock').value,10);
-    const categoria_id=parseInt(document.getElementById('editPromoCategoria').value,10);
-    const imagenFile=document.getElementById('editPromoImagen').files[0];
-    if(!nombre || Number.isNaN(precio)||Number.isNaN(stock)||Number.isNaN(categoria_id)) return alert('Complete todos los campos');
-    let imagePath=promo.imagen;
-    if(imagenFile){
-      const fileName=`${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`;
-      const { error } = await supabase.storage.from('promo_images').upload(fileName,imagenFile,{upsert:true});
-      if(error) return alert('Error subiendo imagen');
-      imagePath=fileName;
-    }
-    const { error }=await supabase.from('promociones').update({nombre,precio,stock,categoria_id,imagen:imagePath}).eq('id',promo.id);
-    if(error) return alert('Error editando promoción');
-    closeModal(); fetchPromotions(); showToast('Promoción editada');
-  };
-}
-
-async function deletePromotion(id){ if(confirm('Eliminar promoción?')){ const {error}=await supabase.from('promociones').delete().eq('id',id); if(error) return alert('Error eliminando'); fetchPromotions(); showToast('Promoción eliminada'); }}
-
-// --- CATEGORIAS ---
-document.getElementById('addCategoriaBtn').addEventListener('click', addCategoria);
-async function addCategoria(){
-  const nombre=document.getElementById('categoriaNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error }=await supabase.from('categorias').insert([{nombre}]);
-  if(error) return alert('Error agregando categoría');
-  document.getElementById('categoriaForm').reset(); fetchCategorias(); showToast('Categoría agregada');
-}
-
+// --- Categorías ---
 async function fetchCategorias(){
   const { data,error }=await supabase.from('categorias').select('*').order('id');
   if(error) return console.error(error);
   const container=document.getElementById('categoriaList'); container.innerHTML='';
   const select=document.getElementById('promoCategoria'); select.innerHTML='<option value="">Seleccione</option>';
   for(let c of data){
-    const div=document.createElement('div'); div.className='item-card';
-    div.textContent=c.nombre;
+    const div=document.createElement('div'); div.className='item-card'; div.textContent=c.nombre;
     const btnEdit=document.createElement('button'); btnEdit.textContent='Editar'; btnEdit.className='edit-btn';
     btnEdit.onclick=()=>editCategoriaModal(c);
     const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar categoría?')){ await supabase.from('categorias').delete().eq('id',c.id); fetchCategorias(); showToast('Categoría eliminada'); }}
-    div.appendChild(btnEdit); div.appendChild(btnDel);
-    container.appendChild(div);
+    btnDel.onclick=async()=>{if(confirm('Eliminar categoría?')){await supabase.from('categorias').delete().eq('id',c.id); fetchCategorias(); showToast('Categoría eliminada');}};
+    div.appendChild(btnEdit); div.appendChild(btnDel); container.appendChild(div);
     const opt=document.createElement('option'); opt.value=c.id; opt.textContent=c.nombre; select.appendChild(opt);
   }
 }
-
+document.getElementById('addCategoriaBtn').addEventListener('click',async()=>{
+  const nombre=document.getElementById('categoriaNombre').value.trim(); if(!nombre) return alert('Ingrese nombre');
+  const { error }=await supabase.from('categorias').insert([{nombre}]);
+  if(error) return alert('Error agregando categoría'); document.getElementById('categoriaForm').reset(); fetchCategorias(); showToast('Categoría agregada');
+});
 function editCategoriaModal(cat){
-  const html=`<label>Nombre: <input type="text" id="editCategoriaNombre" value="${cat.nombre}"></label>
-  <button class="submit-btn" id="saveCatBtn">Guardar Cambios</button>`;
-  openModal('Editar Categoría',html);
-  document.getElementById('saveCatBtn').onclick=async()=>{
-    const nombre=document.getElementById('editCategoriaNombre').value.trim();
-    if(!nombre) return alert('Ingrese nombre');
-    const { error }=await supabase.from('categorias').update({nombre}).eq('id',cat.id);
-    if(error) return alert('Error editando'); closeModal(); fetchCategorias(); showToast('Categoría editada');
-  };
+  openModal('Editar Categoría',`<label>Nombre:<input type="text" id="editCategoriaNombre" value="${cat.nombre}"></label><button class="submit-btn" id="saveCatBtn">Guardar Cambios</button>`);
+  document.getElementById('saveCatBtn').onclick=async()=>{const nombre=document.getElementById('editCategoriaNombre').value.trim();if(!nombre) return alert('Ingrese nombre'); const { error}=await supabase.from('categorias').update({nombre}).eq('id',cat.id); if(error) return alert('Error editando'); closeModal(); fetchCategorias(); showToast('Categoría editada');};
 }
 
-// --- LOCALIDADES ---
-document.getElementById('addLocalidadBtn').addEventListener('click', addLocalidad);
-async function addLocalidad(){
-  const nombre=document.getElementById('localidadNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error}=await supabase.from('localidades').insert([{nombre}]);
-  if(error) return alert('Error agregando localidad');
-  document.getElementById('localidadForm').reset(); fetchLocalidades(); showToast('Localidad agregada');
-}
-
+// --- Localidades ---
 async function fetchLocalidades(){
   const { data,error }=await supabase.from('localidades').select('*').order('id');
   if(error) return console.error(error);
   const container=document.getElementById('localidadList'); container.innerHTML='';
   const select=document.getElementById('pedidoLocalidad'); select.innerHTML='<option value="">Seleccione</option>';
   for(let l of data){
-    const div=document.createElement('div'); div.className='item-card';
-    div.textContent=l.nombre;
+    const div=document.createElement('div'); div.className='item-card'; div.textContent=l.nombre;
     const btnEdit=document.createElement('button'); btnEdit.textContent='Editar'; btnEdit.className='edit-btn';
     btnEdit.onclick=()=>editLocalidadModal(l);
     const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
-    btnDel.onclick=async()=>{if(confirm('Eliminar localidad?')){ await supabase.from('localidades').delete().eq('id',l.id); fetchLocalidades(); showToast('Localidad eliminada'); }}
-    div.appendChild(btnEdit); div.appendChild(btnDel);
-    container.appendChild(div);
+    btnDel.onclick=async()=>{if(confirm('Eliminar localidad?')){ await supabase.from('localidades').delete().eq('id',l.id); fetchLocalidades(); showToast('Localidad eliminada');}};
+    div.appendChild(btnEdit); div.appendChild(btnDel); container.appendChild(div);
     const opt=document.createElement('option'); opt.value=l.id; opt.textContent=l.nombre; select.appendChild(opt);
   }
 }
-
+document.getElementById('addLocalidadBtn').addEventListener('click',async()=>{
+  const nombre=document.getElementById('localidadNombre').value.trim(); if(!nombre) return alert('Ingrese nombre');
+  const { error}=await supabase.from('localidades').insert([{nombre}]);
+  if(error) return alert('Error agregando localidad'); document.getElementById('localidadForm').reset(); fetchLocalidades(); showToast('Localidad agregada');
+});
 function editLocalidadModal(loc){
-  const html=`<label>Nombre: <input type="text" id="editLocalidadNombre" value="${loc.nombre}"></label>
-  <button class="submit-btn" id="saveLocBtn">Guardar Cambios</button>`;
-  openModal('Editar Localidad',html);
-  document.getElementById('saveLocBtn').onclick=async()=>{
-    const nombre=document.getElementById('editLocalidadNombre').value.trim();
-    if(!nombre) return alert('Ingrese nombre');
-    const { error}=await supabase.from('localidades').update({nombre}).eq('id',loc.id);
-    if(error) return alert('Error editando'); closeModal(); fetchLocalidades(); showToast('Localidad editada');
+  openModal('Editar Localidad',`<label>Nombre:<input type="text" id="editLocalidadNombre" value="${loc.nombre}"></label><button class="submit-btn" id="saveLocBtn">Guardar Cambios</button>`);
+  document.getElementById('saveLocBtn').onclick=async()=>{const nombre=document.getElementById('editLocalidadNombre').value.trim();if(!nombre) return alert('Ingrese nombre'); const { error}=await supabase.from('localidades').update({nombre}).eq('id',loc.id); if(error) return alert('Error editando'); closeModal(); fetchLocalidades(); showToast('Localidad editada');};
+}
+
+// --- Promociones ---
+async function fetchPromotions(){
+  const { data,error }=await supabase.from('promociones').select('*').order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('promoList'); container.innerHTML='';
+  const { data:categorias }=await supabase.from('categorias').select('*');
+  for(let p of data){
+    const div=document.createElement('div'); div.className='item-card';
+    const text=document.createElement('div'); text.style.flex='1';
+    text.innerHTML=`<strong>${p.nombre}</strong><br> $${p.precio} - Stock: ${p.stock}`;
+    div.appendChild(text);
+    if(p.imagen){
+      const img=document.createElement('img');
+      img.src=await safeGetFileUrl(p.imagen,'promo_images');
+      div.insertBefore(img,text);
+    }
+    const btnEdit=document.createElement('button'); btnEdit.textContent='Editar'; btnEdit.className='edit-btn';
+    btnEdit.onclick=()=>editPromotionModal(p,categorias);
+    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
+    btnDel.onclick=async()=>{if(confirm('Eliminar promoción?')){ await supabase.from('promociones').delete().eq('id',p.id); fetchPromotions(); showToast('Promoción eliminada');}};
+    div.appendChild(btnEdit); div.appendChild(btnDel); container.appendChild(div);
+  }
+}
+document.getElementById('addPromoBtn').addEventListener('click',async()=>{
+  const nombre=document.getElementById('promoNombre').value.trim();
+  const precio=parseFloat(document.getElementById('promoPrecio').value);
+  const stock=parseInt(document.getElementById('promoStock').value,10);
+  const categoria_id=parseInt(document.getElementById('promoCategoria').value,10);
+  const imagenFile=document.getElementById('promoImagen').files[0];
+  if(!nombre||Number.isNaN(precio)||Number.isNaN(stock)||Number.isNaN(categoria_id)) return alert('Complete todos los campos');
+  let imagePath=null;
+  if(imagenFile){ const fileName=`${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`; const { error }=await supabase.storage.from('promo_images').upload(fileName,imagenFile,{upsert:true}); if(error) return alert('Error subiendo imagen'); imagePath=fileName; }
+  const { error }=await supabase.from('promociones').insert([{nombre,precio,stock,categoria_id,imagen:imagePath}]);
+  if(error) return alert('Error agregando promoción'); document.getElementById('promoForm').reset(); fetchPromotions(); showToast('Promoción agregada');
+});
+
+// Modal edición promoción con previsualización
+async function editPromotionModal(promo,categorias){
+  let currentImgUrl=promo.imagen?await safeGetFileUrl(promo.imagen,'promo_images'):null;
+  let html=`<label>Nombre:<input type="text" id="editPromoNombre" value="${promo.nombre}"></label>`;
+  html+=`<label>Precio:<input type="number" id="editPromoPrecio" value="${promo.precio}" step="0.01"></label>`;
+  html+=`<label>Stock:<input type="number" id="editPromoStock" value="${promo.stock}"></label>`;
+  html+=`<label>Categoría:<select id="editPromoCategoria">`;
+  for(let c of categorias){ html+=`<option value="${c.id}" ${c.id===promo.categoria_id?'selected':''}>${c.nombre}</option>`;}
+  html+=`</select></label>`;
+  html+=`<label>Imagen:</label><div style="margin-bottom:8px;">`;
+  if(currentImgUrl) html+=`<img id="previewPromoImg" src="${currentImgUrl}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;margin-bottom:6px;">`;
+  html+=`<input type="file" id="editPromoImagen"></div>`;
+  html+=`<button class="submit-btn" id="savePromoBtn">Guardar Cambios</button>`;
+  openModal('Editar Promoción',html);
+
+  const fileInput=document.getElementById('editPromoImagen');
+  fileInput.addEventListener('change',e=>{
+    const file=e.target.files[0];
+    if(file){
+      const reader=new FileReader();
+      reader.onload=evt=>{
+        let img=document.getElementById('previewPromoImg');
+        if(!img){ img=document.createElement('img'); img.id='previewPromoImg'; img.style.width='80px';img.style.height='80px';img.style.objectFit='cover';img.style.borderRadius='6px';img.style.marginBottom='6px';fileInput.parentNode.insertBefore(img,fileInput);}
+        img.src=evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  document.getElementById('savePromoBtn').onclick=async()=>{
+    const nombre=document.getElementById('editPromoNombre').value.trim();
+    const precio=parseFloat(document.getElementById('editPromoPrecio').value);
+    const stock=parseInt(document.getElementById('editPromoStock').value,10);
+    const categoria_id=parseInt(document.getElementById('editPromoCategoria').value,10);
+    const imagenFile=document.getElementById('editPromoImagen').files[0];
+    if(!nombre||Number.isNaN(precio)||Number.isNaN(stock)||Number.isNaN(categoria_id)) return alert('Complete todos los campos');
+    let imagePath=promo.imagen;
+    if(imagenFile){ const fileName=`${Date.now()}_${imagenFile.name.replaceAll(' ','_')}`; const { error }=await supabase.storage.from('promo_images').upload(fileName,imagenFile,{upsert:true}); if(error) return alert('Error subiendo imagen'); imagePath=fileName;}
+    const { error }=await supabase.from('promociones').update({nombre,precio,stock,categoria_id,imagen:imagePath}).eq('id',promo.id);
+    if(error) return alert('Error editando promoción'); closeModal(); fetchPromotions(); showToast('Promoción editada');
   };
 }
 
-// --- PEDIDOS ---
-document.getElementById('addOrderBtn').addEventListener('click', async()=>{
+// --- Pedidos ---
+async function fetchOrders(){
+  const { data,error }=await supabase.from('pedidos').select('*').order('id');
+  if(error) return console.error(error);
+  const container=document.getElementById('pedidoList'); container.innerHTML='';
+  const { data:localidades }=await supabase.from('localidades').select('*');
+  const locMap={}; for(let l of localidades) locMap[l.id]=l.nombre;
+  for(let p of data){
+    const div=document.createElement('div'); div.className='item-card';
+    div.textContent=`${p.cliente} pidió ${p.cantidad} x ${p.producto} - Localidad: ${locMap[p.localidad_id]||'Sin localidad'}`;
+    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
+    btnDel.onclick=async()=>{if(confirm('Eliminar pedido?')){await supabase.from('pedidos').delete().eq('id',p.id); fetchOrders(); showToast('Pedido eliminado');}};
+    div.appendChild(btnDel); container.appendChild(div);
+  }
+}
+document.getElementById('addOrderBtn').addEventListener('click',async()=>{
   const cliente=document.getElementById('pedidoCliente').value.trim();
   const producto=document.getElementById('pedidoProducto').value.trim();
   const cantidad=parseInt(document.getElementById('pedidoCantidad').value,10);
   const localidad_id=parseInt(document.getElementById('pedidoLocalidad').value,10);
   if(!cliente||!producto||Number.isNaN(cantidad)||Number.isNaN(localidad_id)) return alert('Complete todos los campos');
-  const { error }=await supabase.from('pedidos').insert([{cliente,producto,cantidad,localidad_id}]);
+  const { error}=await supabase.from('pedidos').insert([{cliente,producto,cantidad,localidad_id}]);
   if(error) return alert('Error agregando pedido'); document.getElementById('pedidoForm').reset(); fetchOrders(); showToast('Pedido agregado');
 });
 
-async function fetchOrders(){
-  const { data,error }=await supabase.from('pedidos').select('*').order('id');
-  if(error) return console.error(error);
-  const container=document.getElementById('pedidoList'); container.innerHTML='';
-  for(let p of data){
-    const div=document.createElement('div'); div.className='item-card';
-    div.textContent=`${p.cliente} pidió ${p.cantidad} x ${p.producto} (Localidad ID:${p.localidad_id})`;
-    container.appendChild(div);
+// --- Documentos ---
+document.getElementById('uploadDocsBtn').addEventListener('click',uploadFiles);
+document.getElementById('deleteAllDocsBtn').addEventListener('click',async()=>{
+  if(confirm('Eliminar todos los documentos?')) {
+    const { data }=await supabase.storage.from('private-documents').list('',{limit:100});
+    for(let f of data){ await supabase.storage.from('private-documents').remove([f.name]); }
+    fetchDocuments(); showToast('Todos los documentos eliminados');
   }
-}
-
-// --- DOCUMENTOS ---
-document.getElementById('uploadDocsBtn').addEventListener('click', async()=>{
+});
+async function uploadFiles(){
   const files=document.getElementById('docFiles').files;
   if(!files||files.length===0) return alert('Seleccione archivos');
   const progressElem=document.getElementById('docProgress');
-  const progressText=document.getElementById('docProgressText');
   for(let i=0;i<files.length;i++){
-    const file=files[i]; const fileName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
+    const file=files[i];
+    const fileName=`${Date.now()}_${file.name.replaceAll(' ','_')}`;
     const { error }=await supabase.storage.from('private-documents').upload(fileName,file,{upsert:true});
-    if(error) return alert('Error subiendo '+file.name);
-    const pct=Math.round(((i+1)/files.length)*100); progressElem.style.width=pct+'%'; progressText.textContent=pct+'%';
+    if(error){ alert('Error subiendo '+file.name); progressElem.style.width='0%'; return;}
+    progressElem.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
   }
-  document.getElementById('docFiles').value=''; progressElem.style.width='0%'; progressText.textContent='0%';
-  fetchDocuments(); showToast('Documentos subidos');
-});
-
-document.getElementById('deleteAllDocsBtn').addEventListener('click', async()=>{
-  if(!confirm('Eliminar TODOS los documentos?')) return;
-  const { data,error }=await supabase.storage.from('private-documents').list('',{limit:1000});
-  if(error) return console.error(error);
-  const files=data.map(f=>f.name);
-  if(files.length===0) return;
-  const { error:delErr}=await supabase.storage.from('private-documents').remove(files);
-  if(delErr) return alert('Error eliminando documentos');
-  fetchDocuments(); showToast('Todos los documentos eliminados');
-});
-
+  document.getElementById('docFiles').value='';
+  progressElem.style.width='0%'; fetchDocuments(); showToast('Documentos subidos');
+}
 async function fetchDocuments(){
   const { data,error }=await supabase.storage.from('private-documents').list('',{limit:100});
   if(error) return console.error(error);
   const container=document.getElementById('documentsList'); container.innerHTML='';
   for(let f of data){
     const div=document.createElement('div'); div.className='doc-item';
-    const url=await safeGetFileUrl(f.name,'private-documents');
-    const link=document.createElement('a'); link.href=url||'#'; link.target='_blank'; link.textContent=f.name;
-    const btn=document.createElement('button'); btn.textContent='Eliminar'; btn.className='delete-btn';
-    btn.onclick=async()=>{if(confirm('Eliminar documento?')){await supabase.storage.from('private-documents').remove([f.name]); fetchDocuments(); showToast('Documento eliminado');}};
-    div.appendChild(link); div.appendChild(btn); container.appendChild(div);
+    const link=document.createElement('a'); link.href=await safeGetFileUrl(f.name); link.target='_blank'; link.textContent=f.name;
+    const btnDel=document.createElement('button'); btnDel.textContent='Eliminar'; btnDel.className='delete-btn';
+    btnDel.onclick=async()=>{if(confirm('Eliminar documento?')){await supabase.storage.from('private-documents').remove([f.name]); fetchDocuments();}};
+    div.appendChild(link); div.appendChild(btnDel); container.appendChild(div);
   }
 }
 
-// --- INICIALIZACION ---
-(async function init(){
-  fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocuments();
-})();
+// --- Export PDF Promociones ---
+document.getElementById('exportPromoPDFBtn').addEventListener('click',async()=>{
+  const { jsPDF }=window.jspdf; const doc=new jsPDF('p','mm','a4'); let y=10;
+  const { data:promos,error }=await supabase.from('promociones').select('*').order('id'); if(error) return alert('Error promociones');
+  for(let p of promos){
+    doc.setFontSize(12); doc.text(`${p.nombre} - $${p.precio} - Stock: ${p.stock}`,10,y); y+=6;
+    if(p.imagen){const imgUrl=await safeGetFileUrl(p.imagen,'promo_images'); if(imgUrl){const img=await loadImageAsBase64(imgUrl); doc.addImage(img,'JPEG',10,y,40,40); y+=45;}} else{y+=5;}
+    if(y>250){doc.addPage();y=10;}
+  }
+  doc.save('promociones.pdf');
+});
 
+// --- Export PDF Pedidos ---
+document.getElementById('exportPedidosPDFBtn').addEventListener('click',async()=>{
+  const { jsPDF}=window.jspdf; const doc=new jsPDF('p','mm','a4'); let y=10;
+  const { data:pedidos,error }=await supabase.from('pedidos').select('*').order('localidad_id'); if(error) return alert('Error pedidos');
+  const { data:localidades }=await supabase.from('localidades').select('*'); const locMap={}; for(let l of localidades) locMap[l.id]=l.nombre;
+  let currentLoc=null;
+  for(let p of pedidos){
+    const locName=locMap[p.localidad_id]||'Sin localidad';
+    if(currentLoc!==locName){ currentLoc=locName; doc.setFontSize(14); doc.text(`Localidad: ${locName}`,10,y); y+=8;}
+    doc.setFontSize(12); doc.text(`- ${p.cliente} pidió ${p.cantidad} x ${p.producto}`,10,y); y+=6;
+    if(y>250){doc.addPage();y=10;}
+  }
+  doc.save('pedidos.pdf');
+});
+
+// --- Helper Safe URL ---
+async function safeGetFileUrl(fileName,bucket='private-documents'){
+  if(!supabase) return null;
+  try{const { data,error }=await supabase.storage.from(bucket).createSignedUrl(fileName,3600); if(error) return null; return data.signedUrl;}catch{return null;}
+}
+
+// --- Inicialización ---
+(async function init(){ await fetchCategorias(); await fetchLocalidades(); await fetchPromotions(); await fetchOrders(); await fetchDocuments();})();
 </script>
 </body>
 </html>
-
 
