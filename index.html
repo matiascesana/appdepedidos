@@ -223,39 +223,62 @@ async function fetchPromotions(){
   }
 }
 
-// Exportar catálogo PDF
+// Exportar catálogo PDF mejorado
 document.getElementById('exportPromoPdfBtn').addEventListener('click', async ()=>{
   const {data:promos,error}=await supabase.from('promociones').select('*').order('id');
   if(error) return alert(error.message);
   if(!promos.length) return alert("No hay promociones para exportar.");
 
+  // Convertir imagenes a base64 para que aparezcan en el PDF
+  async function toBase64(url){
+    return new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.setAttribute("crossorigin","anonymous");
+      img.onload=()=>{
+        const canvas=document.createElement("canvas");
+        canvas.width=img.width; canvas.height=img.height;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(img,0,0);
+        resolve(canvas.toDataURL("image/jpeg",0.95));
+      };
+      img.onerror=()=>resolve(null);
+      img.src=url;
+    });
+  }
+
   let html = `<div style="font-family: Arial, sans-serif; width:100%;">
       <h2 style="text-align:center; margin-bottom:20px;">📖 Catálogo de Promociones</h2>`;
-  for(let promo of promos){
+
+  for(let [i,promo] of promos.entries()){
     const url=promo.imagen?await safeGetFileUrl(promo.imagen):null;
+    const img64=url?await toBase64(url):null;
+
     html += `
-      <div style="display:flex; align-items:center; margin-bottom:25px; border:1px solid #ddd; border-radius:10px; padding:12px;">
-        ${url?`<img src="${url}" style="width:120px; height:120px; margin-right:15px; object-fit:cover; border-radius:8px; border:1px solid #ccc;">`:''}
+      <div style="display:flex; align-items:center; margin-bottom:20px; border:1px solid #ddd; border-radius:10px; padding:12px; page-break-inside:avoid;">
+        ${img64?`<img src="${img64}" style="width:120px; height:120px; margin-right:15px; object-fit:cover; border-radius:8px; border:1px solid #ccc;">`:''}
         <div>
           <p style="margin:0; font-size:15px;"><strong>${promo.nombre}</strong></p>
           <p style="margin:6px 0; font-size:14px;">💲 <strong>$${promo.precio.toFixed(2)}</strong></p>
         </div>
       </div>`;
+
+    // Salto de página cada 4 promociones
+    if((i+1)%4===0) html+=`<div style="page-break-after:always;"></div>`;
   }
+
   html += '</div>';
 
   const opt = {
     margin:0.5,
     filename:'catalogo_promociones.pdf',
     image:{ type:'jpeg', quality:1 },
-    html2canvas:{ scale:2 },
-    jsPDF:{ unit:'in', format:'a4', orientation:'portrait' }
+    html2canvas:{ scale:2, useCORS:true },
+    jsPDF:{ unit:'in', format:'a4', orientation:'landscape' } // horizontal
   };
 
   html2pdf().from(html).set(opt).save();
 });
 
-fetchPromotions();
 
 // -------------------- PEDIDOS (simplificado aún) --------------------
 async function fetchOrders(){
@@ -307,3 +330,4 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
