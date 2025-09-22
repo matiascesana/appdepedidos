@@ -24,7 +24,7 @@ button:hover{background:#7b1fa2;}
 #docProgressContainer{width:100%;background:#eee;border-radius:5px;margin-top:5px;}
 #docProgress{width:0%;height:10px;background:green;border-radius:5px;transition:width 300ms;}
 .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999;}
-.modal-content{background:#fff;padding:20px;border-radius:10px;max-width:500px;width:100%;position:relative;}
+.modal-content{background:#fff;padding:20px;border-radius:10px;max-width:600px;width:100%;position:relative; max-height:80vh; overflow-y:auto;}
 .modal-close{position:absolute;top:10px;right:10px;cursor:pointer;font-weight:bold;}
 </style>
 </head>
@@ -61,11 +61,12 @@ button:hover{background:#7b1fa2;}
 <div class="section" id="pedidos">
 <h2>Pedidos</h2>
 <form id="pedidoForm" onsubmit="return false;">
-  <label>Cliente:<input type="text" id="pedidoCliente" required></label>
-  <label>Localidad:<select id="pedidoLocalidad"></select></label>
-  <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
-  <div id="selectedProductsContainer"></div>
-  <button type="button" id="addOrderBtn">Agregar Pedido</button>
+<label>Cliente:<input type="text" id="pedidoCliente" required></label>
+<label>Localidad:<select id="pedidoLocalidad"></select></label>
+<button type="button" id="selectProductsBtn">Seleccionar Productos</button>
+<div id="selectedProductsContainer" style="margin-top:10px"></div>
+<button type="button" id="addOrderBtn">Agregar Pedido</button>
+<button type="button" id="exportPedidosPDFBtn">Exportar PDF</button>
 </form>
 <h3>Lista de Pedidos</h3>
 <div id="pedidoList"></div>
@@ -303,120 +304,173 @@ async function updatePromo(id){
 async function deletePromo(id){ if(confirm('Eliminar promoción?')){ await supabase.from('promociones').delete().eq('id',id); fetchPromotions(); } }
 fetchPromotions();
 
-// -------------------- PEDIDOS --------------------
+// -------------------- PEDIDOS COMPLETO --------------------
 let selectedProducts=[];
-document.getElementById('selectProductsBtn').addEventListener('click',async()=>{
+let editingOrderId=null;
+
+// Abrir modal de selección de productos
+document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
   const {data:promos,error}=await supabase.from('promociones').select('*').order('id');
   if(error) return alert(error.message);
-  let html=''; promos.forEach(p=>{
-    html+=`<div style="margin-bottom:5px;">
-      <input type="number" min="0" max="${p.stock}" value="${getSelectedQty(p.id)}" id="prod_${p.id}" style="width:50px">
-      <strong>${p.nombre}</strong> - $${p.precio} - Stock: ${p.stock}
-    </div>`;
+  
+  let html=`<table border="1" style="width:100%;border-collapse:collapse;text-align:left;">
+    <tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr>`;
+  
+  promos.forEach(p=>{
+    const qty=getSelectedQty(p.id);
+    html+=`<tr>
+      <td>${p.nombre}</td>
+      <td>$${p.precio.toFixed(2)}</td>
+      <td>${p.stock}</td>
+      <td><input type="number" min="0" max="${p.stock}" value="${qty}" id="prod_${p.id}" style="width:60px" oninput="updateSubtotal(${p.id}, ${p.precio})"></td>
+      <td id="sub_${p.id}">$${(qty*p.precio).toFixed(2)}</td>
+    </tr>`;
   });
-  html+='<button onclick="confirmProducts()">Confirmar selección</button>';
-  openModal('Seleccionar Productos',html);
+  
+  html+=`<tr><td colspan="4" style="text-align:right"><strong>Total:</strong></td><td id="totalPedido">$${calculateTotal().toFixed(2)}</td></tr></table>
+    <button style="margin-top:10px" onclick="confirmProducts()">Confirmar selección</button>`;
+  
+  openModal('Seleccionar Productos', html);
 });
+
 function getSelectedQty(id){ const item=selectedProducts.find(p=>p.id===id); return item?item.cantidad:0; }
-function confirmProducts(){
+
+function updateSubtotal(id,precio){
+  const input=document.getElementById(`prod_${id}`);
+  let qty=parseInt(input.value,10)||0;
+  if(qty<0) qty=0;
+  if(qty>parseInt(input.max)) qty=input.max;
+  input.value=qty;
+  document.getElementById(`sub_${id}`).textContent=`$${(qty*precio).toFixed(2)}`;
+  document.getElementById('totalPedido').textContent=`$${calculateTotal().toFixed(2)}`;
+}
+
+function calculateTotal(){
+  let total=0;
   const inputs=document.querySelectorAll('#modalContent input[type=number]');
-  selectedProducts=[]; 
+  inputs.forEach(inp=>{
+    const id=parseInt(inp.id.replace('prod_',''),10);
+    const qty=parseInt(inp.value,10)||0;
+    const price=parseFloat(document.getElementById(`sub_${id}`).textContent.replace('$',''))/qty||0;
+    total+=qty*price;
+  });
+  return total;
+}
+
+function confirmProducts(){
+  selectedProducts=[];
+  const inputs=document.querySelectorAll('#modalContent input[type=number]');
   inputs.forEach(inp=>{
     const qty=parseInt(inp.value,10);
     if(qty>0){
       const id=parseInt(inp.id.replace('prod_',''),10);
-      const name=inp.parentElement.querySelector('strong').textContent;
-      const price=parseFloat(inp.parentElement.textContent.match(/\$(\d+\.?\d*)/)[1]);
+      const name=inp.parentElement.parentElement.cells[0].textContent;
+      const price=parseFloat(inp.parentElement.parentElement.cells[1].textContent.replace('$',''));
       selectedProducts.push({id,nombre:name,cantidad:qty,precio:price});
     }
   });
   closeModal(); renderSelectedProducts();
 }
+
 function renderSelectedProducts(){
   const container=document.getElementById('selectedProductsContainer');
   if(selectedProducts.length===0){ container.innerHTML=''; return; }
-  let html='<ul>'; selectedProducts.forEach(p=>{ html+=`<li>${p.nombre} x ${p.cantidad} = $${(p.cantidad*p.precio).toFixed(2)}</li>`; }); html+='</ul>';
+  let html='<table border="1" style="width:100%;border-collapse:collapse;"><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr>';
+  selectedProducts.forEach(p=>{
+    html+=`<tr><td>${p.nombre}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
+  });
+  const total=selectedProducts.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
+  html+=`<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></table>`;
   container.innerHTML=html;
 }
-document.getElementById('addOrderBtn').addEventListener('click',addPedido);
-async function addPedido(){
+
+// Agregar pedido
+document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
   const cliente=document.getElementById('pedidoCliente').value.trim();
   const localidad_id=document.getElementById('pedidoLocalidad').value||null;
-  if(!cliente||selectedProducts.length===0) return alert('Complete cliente y seleccione productos');
+  if(!cliente||!selectedProducts.length) return alert('Complete los campos y seleccione productos');
+
+  // Actualizar stock y preparar array de productos para pedido
+  let updatedProducts=[];
   for(let p of selectedProducts){
-    const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
-    if(data.stock<p.cantidad) return alert(`Stock insuficiente para ${p.nombre}`);
+    const {data:prod} = await supabase.from('promociones').select('*').eq('id',p.id).single();
+    if(p.cantidad>prod.stock) return alert(`Stock insuficiente para ${p.nombre}`);
+    await supabase.from('promociones').update({stock:prod.stock-p.cantidad}).eq('id',p.id);
+    updatedProducts.push({producto_id:p.id,cantidad:p.cantidad,precio:p.precio});
   }
-  const total=selectedProducts.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
-  const {error}=await supabase.from('pedidos').insert([{cliente,localidad_id,productos:selectedProducts,total}]);
+
+  const {error}=await supabase.from('pedidos').insert([{cliente,localidad_id,productos:updatedProducts,total:selectedProducts.reduce((s,p)=>s+p.precio*p.cantidad,0)}]);
   if(error) return alert(error.message);
-  for(let p of selectedProducts){
-    const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
-    await supabase.from('promociones').update({stock:data.stock - p.cantidad}).eq('id',p.id);
-  }
-  document.getElementById('pedidoForm').reset(); selectedProducts=[]; renderSelectedProducts(); fetchOrders(); showToast('Pedido agregado');
-}
+
+  document.getElementById('pedidoForm').reset();
+  selectedProducts=[]; renderSelectedProducts(); fetchOrders(); showToast('Pedido agregado');
+});
+
+// Mostrar pedidos
 async function fetchOrders(){
   const {data,error}=await supabase.from('pedidos').select('*').order('id');
   if(error) return console.error(error);
   const container=document.getElementById('pedidoList'); container.innerHTML='';
   for(let p of data){
-    let locName=''; if(p.localidad_id){ const loc=await supabase.from('localidades').select('nombre').eq('id',p.localidad_id).single(); locName=loc.data?loc.data.nombre:''; }
+    const locName=p.localidad_id ? (await supabase.from('localidades').select('nombre').eq('id',p.localidad_id).single()).data.nombre : '';
     const div=document.createElement('div'); div.className='item-card';
-    let prodHTML='<ul>'; p.productos.forEach(pr=>{ prodHTML+=`<li>${pr.nombre} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`; }); prodHTML+='</ul>';
-    div.innerHTML=`<strong>${p.cliente}</strong> - ${locName}<br>${prodHTML}<strong>Total: $${p.total.toFixed(2)}</strong>
-      <div>
-        <button onclick="editOrder(${p.id})">Editar</button>
-        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
-      </div>`;
+    let productosHTML='';
+    p.productos.forEach(prod=>{
+      productosHTML+=`${prod.cantidad} x ${prod.producto_id} ($${prod.precio})<br>`;
+    });
+    div.innerHTML=`<span>${p.cliente} - ${locName}<br>${productosHTML}<strong>Total: $${p.total}</strong></span>
+    <div>
+      <button onclick="editOrder(${p.id})">Editar</button>
+      <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+    </div>`;
     container.appendChild(div);
   }
 }
+
+// Editar pedido (devuelve stock anterior, aplica nueva selección)
 async function editOrder(id){
-  const {data:error}=await supabase.from('pedidos').select('*').eq('id',id).single();
+  const {data,error}=await supabase.from('pedidos').select('*').eq('id',id).single();
   if(error) return alert(error.message);
-  const p=error?null:data; selectedProducts=[...p.productos];
-  document.getElementById('pedidoCliente').value=p.cliente;
-  document.getElementById('pedidoLocalidad').value=p.localidad_id||'';
-  renderSelectedProducts(); document.getElementById('selectProductsBtn').click();
-  const btn=document.getElementById('addOrderBtn'); btn.textContent='Actualizar Pedido';
-  btn.onclick=async ()=>{
-    const cliente=document.getElementById('pedidoCliente').value.trim();
-    const localidad_id=document.getElementById('pedidoLocalidad').value||null;
-    if(!cliente||selectedProducts.length===0) return alert('Complete cliente y seleccione productos');
-    const {data: oldOrder}=await supabase.from('pedidos').select('*').eq('id',id).single();
-    for(let oldP of oldOrder.productos){
-      const {data}=await supabase.from('promociones').select('stock').eq('id',oldP.id).single();
-      await supabase.from('promociones').update({stock:data.stock + oldP.cantidad}).eq('id',oldP.id);
-    }
-    for(let p of selectedProducts){
-      const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
-      if(data.stock<p.cantidad) return alert(`Stock insuficiente para ${p.nombre}`);
-    }
-    const total=selectedProducts.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
-    const {error}=await supabase.from('pedidos').update({cliente,localidad_id,productos:selectedProducts,total}).eq('id',id);
-    if(error) return alert(error.message);
-    for(let p of selectedProducts){
-      const {data}=await supabase.from('promociones').select('stock').eq('id',p.id).single();
-      await supabase.from('promociones').update({stock:data.stock - p.cantidad}).eq('id',p.id);
-    }
-    document.getElementById('pedidoForm').reset(); selectedProducts=[]; renderSelectedProducts(); btn.textContent='Agregar Pedido'; btn.onclick=addPedido; fetchOrders(); showToast('Pedido actualizado');
-  };
+  editingOrderId=id;
+
+  // Devolver stock de pedido anterior
+  for(let p of data.productos){
+    const {data:prod} = await supabase.from('promociones').select('*').eq('id',p.producto_id).single();
+    await supabase.from('promociones').update({stock:prod.stock+p.cantidad}).eq('id',p.producto_id);
+  }
+
+  selectedProducts=[];
+  for(let prod of data.productos){
+    const {data:p} = await supabase.from('promociones').select('*').eq('id',prod.producto_id).single();
+    selectedProducts.push({id:p.id,nombre:p.nombre,cantidad:prod.cantidad,precio:prod.precio});
+  }
+
+  document.getElementById('pedidoCliente').value=data.cliente;
+  document.getElementById('pedidoLocalidad').value=data.localidad_id;
+  renderSelectedProducts();
 }
+
+// Eliminar pedido (devuelve stock)
 async function deleteOrder(id){
   if(!confirm('Eliminar pedido?')) return;
-  const {data: p}=await supabase.from('pedidos').select('*').eq('id',id).single();
-  for(let prod of p.productos){
-    const {data}=await supabase.from('promociones').select('stock').eq('id',prod.id).single();
-    await supabase.from('promociones').update({stock:data.stock + prod.cantidad}).eq('id',prod.id);
-  }
-  await supabase.from('pedidos').delete().eq('id',id);
-  fetchOrders();
-}
-fetchOrders();
-</script>
+  const {data,error}=await supabase.from('pedidos').select('*').eq('id',id).single();
+  if(error) return alert(error.message);
 
+  for(let p of data.productos){
+    const {data:prod} = await supabase.from('promociones').select('*').eq('id',p.producto_id).single();
+    await supabase.from('promociones').update({stock:prod.stock+p.cantidad}).eq('id',p.producto_id);
+  }
+
+  await supabase.from('pedidos').delete().eq('id',id);
+  fetchOrders(); showToast('Pedido eliminado');
+}
+
+fetchOrders();
+
+// Resto de funciones de pedidos como agregar, editar, eliminar pedidos deberían actualizar stock automáticamente
+// Puedes usar selectedProducts como base y hacer update a tabla 'promociones' descontando stock según cantidades
+
+</script>
 </body>
 </html>
-
 
