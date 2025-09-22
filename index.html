@@ -1,3 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>App Completa de Pedidos y Documentos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
+<style>
+body { margin:0; font-family:'Roboto',sans-serif; background:#f9f9f9; color:#333; display:flex; height:100vh; overflow:hidden;}
+.sidebar { width:200px; background:#6a1b9a; display:flex; flex-direction:column; padding:20px;}
+.sidebar button { margin-bottom:10px; padding:10px; border:none; border-radius:6px; font-weight:600; cursor:pointer; color:#fff; background:#7b1fa2;}
+.sidebar button.active { background:#fff; color:#6a1b9a;}
+.main { flex:1; overflow-y:auto; padding:20px;}
+h1,h2{font-family:'Playfair Display',serif;}
+.section { display:none; background:#fff; padding:20px; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08); margin-bottom:20px;}
+.item-card, .doc-item { display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:10px; background:#f4f4f4; margin-bottom:10px;}
+.item-card img { width:50px;height:50px;object-fit:cover;border-radius:6px;margin-right:10px;}
+button { cursor:pointer; border:none; border-radius:6px; padding:6px 10px; font-weight:600; background:#6a1b9a; color:#fff;}
+button:hover{background:#7b1fa2;}
+.delete-btn{background:#e53935;}
+.delete-btn:hover{background:#f44336;}
+#docProgressContainer{width:100%;background:#eee;border-radius:5px;margin-top:5px;}
+#docProgress{width:0%;height:10px;background:green;border-radius:5px;transition:width 300ms;}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999;}
+.modal-content{background:#fff;padding:20px;border-radius:10px;max-width:500px;width:100%;position:relative;}
+.modal-close{position:absolute;top:10px;right:10px;cursor:pointer;font-weight:bold;}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <button class="tab-btn active" data-tab="promos">Promociones</button>
+  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
+  <button class="tab-btn" data-tab="categorias">Categorías</button>
+  <button class="tab-btn" data-tab="localidades">Localidades</button>
+  <button class="tab-btn" data-tab="documentos">Documentos</button>
+</div>
+
+<div class="main">
+<h1>App Completa de Pedidos y Documentos</h1>
+
+<!-- PROMOCIONES -->
+<div class="section" id="promos">
+<h2>Promociones</h2>
+<form id="promoForm" onsubmit="return false;">
+<label>Nombre:<input type="text" id="promoNombre" required></label>
+<label>Precio:<input type="number" id="promoPrecio" step="0.01" required></label>
+<label>Stock:<input type="number" id="promoStock" required></label>
+<label>Categoría:<select id="promoCategoria"></select></label>
+<label>Imagen:<input type="file" id="promoImagen" accept="image/*"></label>
+<button type="button" id="addPromoBtn">Agregar Promoción</button>
+<button type="button" id="exportPromoPDFBtn">Exportar PDF</button>
+</form>
+<h3>Lista de Promociones</h3>
+<div id="promoList"></div>
+</div>
+
+<!-- PEDIDOS -->
+<div class="section" id="pedidos">
+<h2>Pedidos</h2>
+<form id="pedidoForm" onsubmit="return false;">
+<label>Cliente:<input type="text" id="pedidoCliente" required></label>
+<label>Producto:<input type="text" id="pedidoProducto" required></label>
+<label>Cantidad:<input type="number" id="pedidoCantidad" required></label>
+<label>Localidad:<select id="pedidoLocalidad"></select></label>
+<button type="button" id="addOrderBtn">Agregar Pedido</button>
+<button type="button" id="exportPedidosPDFBtn">Exportar PDF</button>
+</form>
+<h3>Lista de Pedidos</h3>
+<div id="pedidoList"></div>
+</div>
+
+<!-- CATEGORÍAS -->
+<div class="section" id="categorias">
+<h2>Categorías de Promociones</h2>
+<form id="categoriaForm" onsubmit="return false;">
+<label>Nombre:<input type="text" id="categoriaNombre" required></label>
+<button type="button" id="addCategoriaBtn">Agregar Categoría</button>
+</form>
+<h3>Lista de Categorías</h3>
+<div id="categoriaList"></div>
+</div>
+
+<!-- LOCALIDADES -->
+<div class="section" id="localidades">
+<h2>Localidades</h2>
+<form id="localidadForm" onsubmit="return false;">
+<label>Nombre:<input type="text" id="localidadNombre" required></label>
+<button type="button" id="addLocalidadBtn">Agregar Localidad</button>
+</form>
+<h3>Lista de Localidades</h3>
+<div id="localidadList"></div>
+</div>
+
+<!-- DOCUMENTOS -->
+<div class="section" id="documentos">
+<h2>Documentos</h2>
+<label>Buscar por DNI:</label>
+<input type="text" id="searchDoc" placeholder="Escriba DNI...">
+<input type="file" id="docFiles" multiple>
+<button id="uploadDocsBtn">Subir Documentos</button>
+<button id="deleteAllDocsBtn">Eliminar Todos</button>
+<div id="docProgressContainer">
+  <div id="docProgress"></div>
+</div>
+<h3>Documentos subidos:</h3>
+<div id="documentsList"></div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal" style="display:none;">
+  <div class="modal-content" id="modalContent">
+    <span class="modal-close" onclick="closeModal()">×</span>
+  </div>
+</div>
+
 <script>
 // -------------------- Supabase --------------------
 const SUPABASE_URL='https://ejbqlejlgprvwzrptojo.supabase.co';
@@ -45,10 +163,11 @@ async function fetchCategorias(){
   data.forEach(cat=>{
     select.innerHTML+=`<option value="${cat.id}">${cat.nombre}</option>`;
     const div=document.createElement('div'); div.className='item-card';
-    div.innerHTML=`<span>${cat.nombre}</span> <div>
-      <button onclick="editCategoria(${cat.id},'${cat.nombre}')">Editar</button>
-      <button class="delete-btn" onclick="deleteCategoria(${cat.id})">Eliminar</button>
-    </div>`;
+    div.innerHTML=`<span>${cat.nombre}</span> 
+      <div>
+        <button onclick="editCategoria(${cat.id},'${cat.nombre}')">Editar</button>
+        <button class="delete-btn" onclick="deleteCategoria(${cat.id})">Eliminar</button>
+      </div>`;
     container.appendChild(div);
   });
 }
@@ -70,7 +189,12 @@ async function updateCategoria(id){
   if(error) return alert(error.message);
   closeModal(); fetchCategorias(); fetchPromotions();
 }
-async function deleteCategoria(id){ if(confirm('Eliminar categoría?')){ await supabase.from('categorias').delete().eq('id',id); fetchCategorias(); fetchPromotions(); } }
+async function deleteCategoria(id){ 
+  if(confirm('Eliminar categoría?')){ 
+    await supabase.from('categorias').delete().eq('id',id); 
+    fetchCategorias(); fetchPromotions(); 
+  } 
+}
 document.getElementById('addCategoriaBtn').addEventListener('click',addCategoria);
 fetchCategorias();
 
@@ -83,10 +207,11 @@ async function fetchLocalidades(){
   data.forEach(loc=>{
     select.innerHTML+=`<option value="${loc.id}">${loc.nombre}</option>`;
     const div=document.createElement('div'); div.className='item-card';
-    div.innerHTML=`<span>${loc.nombre}</span> <div>
-      <button onclick="editLocalidad(${loc.id},'${loc.nombre}')">Editar</button>
-      <button class="delete-btn" onclick="deleteLocalidad(${loc.id})">Eliminar</button>
-    </div>`;
+    div.innerHTML=`<span>${loc.nombre}</span> 
+      <div>
+        <button onclick="editLocalidad(${loc.id},'${loc.nombre}')">Editar</button>
+        <button class="delete-btn" onclick="deleteLocalidad(${loc.id})">Eliminar</button>
+      </div>`;
     container.appendChild(div);
   });
 }
@@ -98,9 +223,22 @@ async function addLocalidad(){
   document.getElementById('localidadForm').reset();
   fetchLocalidades();
 }
-async function editLocalidad(id,nombre){ openModal('Editar Localidad',`<input id="editLocName" value="${nombre}"><button onclick="updateLocalidad(${id})">Guardar</button>`);}
-async function updateLocalidad(id){ const nombre=document.getElementById('editLocName').value.trim(); if(!nombre) return alert('Ingrese nombre'); const {error}=await supabase.from('localidades').update({nombre}).eq('id',id); if(error) return alert(error.message); closeModal(); fetchLocalidades(); fetchOrders();}
-async function deleteLocalidad(id){ if(confirm('Eliminar localidad?')){ await supabase.from('localidades').delete().eq('id',id); fetchLocalidades(); fetchOrders(); }}
+async function editLocalidad(id,nombre){ 
+  openModal('Editar Localidad',`<input id="editLocName" value="${nombre}"><button onclick="updateLocalidad(${id})">Guardar</button>`);
+}
+async function updateLocalidad(id){ 
+  const nombre=document.getElementById('editLocName').value.trim(); 
+  if(!nombre) return alert('Ingrese nombre'); 
+  const {error}=await supabase.from('localidades').update({nombre}).eq('id',id); 
+  if(error) return alert(error.message); 
+  closeModal(); fetchLocalidades(); fetchOrders();
+}
+async function deleteLocalidad(id){ 
+  if(confirm('Eliminar localidad?')){ 
+    await supabase.from('localidades').delete().eq('id',id); 
+    fetchLocalidades(); fetchOrders(); 
+  }
+}
 document.getElementById('addLocalidadBtn').addEventListener('click',addLocalidad);
 fetchLocalidades();
 
@@ -112,7 +250,7 @@ async function fetchPromotions(){
   for(let promo of data){
     const catName=await getCategoriaName(promo.categoria_id);
     const card=document.createElement('div'); card.className='item-card';
-    let imgHTML=promo.imagen?`<img src="${await safeGetFileUrl(promo.imagen)}">`:'';
+    let imgHTML=promo.imagen?`<img src="${await safeGetFileUrl(promo.imagen,'promo_images')}">`:'';
     card.innerHTML=`${imgHTML}<div><strong>${promo.nombre}</strong><br>$${promo.precio} - Stock: ${promo.stock} - ${catName}</div>
     <div>
       <button onclick="editPromo(${promo.id})">Editar</button>
@@ -229,7 +367,7 @@ async function fetchDocuments(filter=''){
     const url=await safeGetFileUrl(file.name);
     const div=document.createElement('div'); div.className='doc-item';
     div.innerHTML=`<a href="${url}" target="_blank">${file.name}</a>
-    <button class="delete-btn" onclick="deleteDoc('${file.name}')">Eliminar</button>`;
+      <button class="delete-btn" onclick="deleteDoc('${file.name}')">Eliminar</button>`;
     container.appendChild(div);
   });
 }
@@ -244,48 +382,20 @@ document.getElementById('uploadDocsBtn').addEventListener('click',async()=>{
     if(error) return alert(error.message);
     progress.style.width=`${Math.round(((i+1)/files.length)*100)}%`;
   }
-  document.getElementById('docFiles').value='';
-  progress.style.width='0%'; showToast('Documentos subidos'); fetchDocuments();
+  document.getElementById('docFiles').value=''; progress.style.width='0%'; showToast('Documentos subidos'); fetchDocuments();
 });
 document.getElementById('searchDoc').addEventListener('input',(e)=>fetchDocuments(e.target.value));
 async function deleteDoc(name){ if(confirm('Eliminar documento?')){ await supabase.storage.from('private-documents').remove([name]); fetchDocuments(); } }
-document.getElementById('deleteAllDocsBtn').addEventListener('click',async()=>{ if(confirm('Eliminar todos los documentos?')){ const {data}=await supabase.storage.from('private-documents').list(''); await supabase.storage.from('private-documents').remove(data.map(f=>f.name)); fetchDocuments(); } });
+document.getElementById('deleteAllDocsBtn').addEventListener('click',async()=>{
+  if(confirm('Eliminar todos los documentos?')){
+    const {data}=await supabase.storage.from('private-documents').list('');
+    await supabase.storage.from('private-documents').remove(data.map(f=>f.name));
+    fetchDocuments();
+  }
+});
 fetchDocuments();
 
-// -------------------- EXPORT PDF --------------------
-document.getElementById('exportPromoPDFBtn').addEventListener('click',async()=>{
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const {data}=await supabase.from('promociones').select('*').order('id');
-  let y=10;
-  for(let p of data){
-    doc.setFontSize(12); doc.text(`Nombre: ${p.nombre}`,10,y); y+=6;
-    doc.text(`Precio: ${p.precio} - Stock: ${p.stock}`,10,y); y+=6;
-    if(p.imagen){
-      const url=await safeGetFileUrl(p.imagen,'promo_images');
-      if(url){ const img=await loadImageToCanvas(url); doc.addImage(img, 'JPEG', 10, y, 40, 40); }
-      y+=45;
-    }
-    y+=5; if(y>270){ doc.addPage(); y=10;}
-  }
-  doc.save('promociones.pdf');
-});
-async function loadImageToCanvas(url){
-  const img=await new Promise(res=>{ const i=new Image(); i.crossOrigin="Anonymous"; i.onload=()=>res(i); i.src=url; });
-  const canvas=document.createElement('canvas'); canvas.width=img.width; canvas.height=img.height;
-  const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); return canvas.toDataURL('image/jpeg');
-}
-document.getElementById('exportPedidosPDFBtn').addEventListener('click',async()=>{
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const {data}=await supabase.from('pedidos').select('*').order('localidad_id');
-  let y=10; let currentLoc='';
-  for(let p of data){
-    const locName=await getLocalidadName(p.localidad_id);
-    if(locName!==currentLoc){ currentLoc=locName; doc.setFontSize(14); doc.text(`Localidad: ${locName}`,10,y); y+=7;}
-    doc.setFontSize(12); doc.text(`${p.cliente} pidió ${p.cantidad} x ${p.producto}`,10,y); y+=6;
-    if(y>270){ doc.addPage(); y=10;}
-  }
-  doc.save('pedidos.pdf');
-});
+
 </script>
+</body>
+</html>
