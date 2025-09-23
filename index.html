@@ -717,8 +717,8 @@ document.getElementById('exportPromoPdfBtn').addEventListener('click', async ()=
         <div style="font-size:14px">💲 <strong>$${Number(promo.precio).toFixed(2)}</strong></div>
       </div>
     </div>`;
-    // cada 4 promociones -> salto de página
-    if((i+1) % 4 === 0) html += `<div style="page-break-after:always"></div>`;
+    // cada 6 promociones -> salto de página
+    if((i+1) % 6 === 0) html += `<div style="page-break-after:always"></div>`;
   }
   html += `</div>`;
 
@@ -749,3 +749,4 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
