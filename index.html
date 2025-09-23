@@ -12,6 +12,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
 
 <style>
+/* -----------------------
+   Estilos (mantener formato inicial)
+   ----------------------- */
 :root{--accent:#6a1b9a;--accent-2:#7b1fa2;--danger:#e53935}
 *{box-sizing:border-box}
 body{margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:#f9f9f9;color:#222;display:flex;min-height:100vh}
@@ -107,16 +110,6 @@ button:hover{background:var(--accent-2)}
           <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
         </label>
       </div>
-      <div style="width:120px">
-        <label>DNI
-          <input id="pedidoDNI" type="text" placeholder="DNI">
-        </label>
-      </div>
-      <div style="width:100px">
-        <label>Saldo
-          <input id="pedidoSaldo" type="number" placeholder="Saldo" step="0.01">
-        </label>
-      </div>
       <div style="width:220px">
         <label>Localidad
           <select id="pedidoLocalidad"></select>
@@ -163,225 +156,597 @@ button:hover{background:var(--accent-2)}
 
   <!-- DOCUMENTOS -->
   <div class="section" id="documentos">
-    <h2>Buscar Comprobantes</h2>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-      <input type="text" id="searchDoc" placeholder="Ingresar DNI" />
-      <button id="searchDocBtn">Buscar</button>
+    <h2>Documentos</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <input id="searchDoc" placeholder="Buscar por DNI">
+      <input id="docFiles" type="file" multiple>
+      <button id="uploadDocsBtn">Subir Documentos</button>
+      <button id="deleteAllDocsBtn" class="delete-btn">Eliminar Todos</button>
     </div>
-    <div id="saldoCliente" class="small-muted" style="margin-bottom:6px"></div>
-    <div id="documentList"></div>
+
+    <div id="docProgressContainer" style="width:100%;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:8px;display:none">
+      <div id="docProgress" style="width:0;height:8px;background:green"></div>
+    </div>
+
+    <h3>Documentos subidos</h3>
+    <div id="documentsList"></div>
   </div>
+
 </div>
 
-<!-- MODAL PRODUCTOS -->
-<div class="modal" id="productsModal">
+<!-- MODAL -->
+<div id="modal" class="modal">
   <div class="modal-content">
-    <span class="modal-close" id="closeProductsModal">X</span>
-    <h3>Seleccionar Productos</h3>
-    <div id="modalProductsList"></div>
-    <button id="saveSelectedProductsBtn" style="margin-top:12px">Guardar Selección</button>
+    <span class="modal-close" onclick="closeModal()">×</span>
+    <div id="modalInner"></div>
   </div>
 </div>
 
 <script>
-const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+/* ============================
+   CONFIG: Supabase (usar tus credenciales)
+   ============================ */
+const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let selectedProducts = [];
-
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.section').forEach(sec=>sec.style.display='none');
-    document.getElementById(btn.dataset.tab).style.display='block';
-    if(btn.dataset.tab==='promos') fetchPromos();
-    if(btn.dataset.tab==='pedidos') fetchOrders();
-    if(btn.dataset.tab==='categorias') fetchCategorias();
-    if(btn.dataset.tab==='localidades') fetchLocalidades();
+/* ============================
+   HELPERS UI
+   ============================ */
+function showToast(msg, ms=3000){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style,{
+    position:'fixed',right:'20px',bottom:'20px',background: 'var(--accent)', color:'#fff', padding:'10px 14px',
+    borderRadius:'8px', boxShadow:'0 6px 18px rgba(0,0,0,0.12)', zIndex:9999
   });
-});
-document.querySelector('.tab-btn.active').click();
-
-// === CARGA DE PROMOCIONES ===
-async function fetchPromos(){
-  const { data } = await supabase.from('promociones').select('*');
-  const container = document.getElementById('promoList');
-  container.innerHTML='';
-  data.forEach(p=>{
-    const div = document.createElement('div');
-    div.className='item-card';
-    div.innerHTML=`<div style="display:flex;align-items:center"><img src="${p.imagen_url}" /><div>${p.nombre}<br><small>$${p.precio}</small></div></div>
-      <button class="delete-btn" onclick="deletePromo(${p.id})">Eliminar</button>`;
-    container.appendChild(div);
-  });
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
 }
-document.getElementById('addPromoBtn').addEventListener('click',async()=>{
-  const nombre=document.getElementById('promoNombre').value.trim();
-  const precio=parseFloat(document.getElementById('promoPrecio').value)||0;
-  const stock=parseInt(document.getElementById('promoStock').value)||0;
-  const categoria=parseInt(document.getElementById('promoCategoria').value)||null;
-  const imagen=document.getElementById('promoImagen').files[0];
-  let imagen_url='';
-  if(imagen){
-    const { data } = await supabase.storage.from('promo-images').upload(`${Date.now()}_${imagen.name}`,imagen);
-    imagen_url= supabase.storage.from('promo-images').getPublicUrl(data.path).publicUrl;
-  }
-  await supabase.from('promociones').insert([{nombre,precio,stock,categoria,imagen_url}]);
-  fetchPromos();
-});
-
-// === PEDIDOS ===
-async function fetchOrders(){
-  const { data } = await supabase.from('pedidos').select('*');
-  const container = document.getElementById('pedidoList');
-  container.innerHTML='';
-  for(let p of data){
-    let cliente=null;
-    if(p.cliente_id){
-      const { data: c } = await supabase.from('clientes').select('*').eq('id',p.cliente_id).single();
-      cliente=c;
-    }
-    const prodHTML = JSON.parse(p.productos||'[]').map(pr=>`${pr.nombre} x ${pr.cantidad}`).join(', ');
-    const saldoHTML = cliente ? `<div class="small-muted">Saldo pendiente: $${Number(cliente.saldo).toFixed(2)}</div>` : '';
-    const clienteNombre = cliente ? cliente.nombre : p.cliente;
-    const div=document.createElement('div');
-    div.className='item-card';
-    div.innerHTML=`<div style="flex:1"><strong>${clienteNombre}</strong>${saldoHTML}<div class="small-muted">${prodHTML}<br>Total: $${Number(p.total).toFixed(2)}</div></div>
-      <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>`;
-    container.appendChild(div);
-  }
+function openModal(title, html){
+  document.getElementById('modalInner').innerHTML = `<h3>${title}</h3>${html}`;
+  document.getElementById('modal').style.display = 'flex';
 }
+function closeModal(){ document.getElementById('modal').style.display = 'none'; }
+function escapeHtml(str){ if(!str && str!==0) return ''; return String(str).replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
 
-document.getElementById('addOrderBtn').addEventListener('click',async()=>{
-  const cliente=document.getElementById('pedidoCliente').value.trim();
-  const dni=document.getElementById('pedidoDNI').value.trim();
-  const saldo=parseFloat(document.getElementById('pedidoSaldo').value)||0;
-  const localidad_id=parseInt(document.getElementById('pedidoLocalidad').value)||null;
-  const productosPayload=selectedProducts;
+/* ============================
+   TABS (sidebar)
+   ============================ */
+const tabBtns = document.querySelectorAll('.tab-btn');
+tabBtns.forEach(btn => btn.addEventListener('click', () => {
+  tabBtns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+  document.getElementById(btn.dataset.tab).style.display = 'block';
+}));
+document.getElementById('promos').style.display = 'block'; // vista por defecto
 
-  let cliente_id=null;
-  if(dni){
-    const { data: existingClient } = await supabase.from('clientes').select('*').eq('dni',dni).single();
-    if(existingClient){
-      cliente_id=existingClient.id;
-      if(saldo!==existingClient.saldo){
-        await supabase.from('clientes').update({saldo}).eq('id',cliente_id);
-      }
-    } else {
-      const { data: newClient } = await supabase.from('clientes').insert([{nombre:cliente,dni,saldo,localidad_id}]).select().single();
-      cliente_id=newClient.id;
-    }
-  }
-
-  const total=productosPayload.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
-  await supabase.from('pedidos').insert([{cliente_id,cliente,productos:JSON.stringify(productosPayload),total,localidad_id}]);
-  selectedProducts=[];
-  document.getElementById('selectedProductsContainer').innerHTML='';
-  fetchOrders();
-});
-
-// === DOCUMENTOS ===
-document.getElementById('searchDocBtn').addEventListener('click',async()=>{
-  const dni=document.getElementById('searchDoc').value.trim();
-  document.getElementById('saldoCliente').textContent='';
-  if(!dni) return;
-  const { data: client } = await supabase.from('clientes').select('*').eq('dni',dni).single();
-  if(client) document.getElementById('saldoCliente').textContent=`Saldo pendiente: $${client.saldo}`;
-  // Buscar documentos en bucket
-  const { data: docs } = await supabase.storage.from('private-documents').list('', {search:dni});
-  const container=document.getElementById('documentList');
-  container.innerHTML='';
-  if(!docs || docs.length===0){
-    container.innerHTML='<div>No hay documentos para ese DNI.</div>'; return;
-  }
-  for(let doc of docs){
-    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(doc.name,60);
-    const div=document.createElement('div');
-    div.className='doc-item';
-    div.innerHTML=`<div>${doc.name}</div><a href="${urlData.signedUrl}" target="_blank">Descargar</a>`;
-    container.appendChild(div);
-  }
-});
-
-// === MODAL PRODUCTOS ===
-const productsModal=document.getElementById('productsModal');
-document.getElementById('selectProductsBtn').addEventListener('click',async()=>{
-  productsModal.style.display='flex';
-  const { data } = await supabase.from('promociones').select('*');
-  const list=document.getElementById('modalProductsList');
-  list.innerHTML='';
-  data.forEach(p=>{
-    const div=document.createElement('div');
-    div.className='flex';
-    div.innerHTML=`<input type="number" min="0" value="0" style="width:60px"/> ${p.nombre} ($${p.precio})`;
-    list.appendChild(div);
-  });
-});
-document.getElementById('closeProductsModal').addEventListener('click',()=>productsModal.style.display='none');
-document.getElementById('saveSelectedProductsBtn').addEventListener('click',()=>{
-  const list=document.getElementById('modalProductsList');
-  selectedProducts=[];
-  list.querySelectorAll('div').forEach((div,i)=>{
-    const cantidad=parseInt(div.querySelector('input').value);
-    if(cantidad>0) selectedProducts.push({nombre:div.textContent.replace(/\(\$\d+(\.\d+)?\)/,''),cantidad,precio:parseFloat(div.textContent.match(/\$(\d+(\.\d+)?)/)[1])});
-  });
-  document.getElementById('selectedProductsContainer').textContent=selectedProducts.map(p=>`${p.nombre} x ${p.cantidad}`).join(', ');
-  productsModal.style.display='none';
-});
-
-// === BORRAR ===
-async function deletePromo(id){await supabase.from('promociones').delete().eq('id',id);fetchPromos();}
-async function deleteOrder(id){await supabase.from('pedidos').delete().eq('id',id);fetchOrders();}
-
-// === CATEGORÍAS ===
+/* ============================
+   CATEGORÍAS
+   ============================ */
 async function fetchCategorias(){
-  const { data } = await supabase.from('categorias').select('*');
-  const container=document.getElementById('categoriaList');
-  container.innerHTML='';
-  const select=document.getElementById('promoCategoria');
-  select.innerHTML='<option value="">Sin categoría</option>';
-  data.forEach(c=>{
-    const div=document.createElement('div');
-    div.className='item-card';
-    div.innerHTML=`${c.nombre} <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button>`;
+  const { data, error } = await supabase.from('categorias').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('categoriaList');
+  container.innerHTML = '';
+  const select = document.getElementById('promoCategoria');
+  select.innerHTML = '<option value="">Sin categoría</option>';
+  data.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `<span>${escapeHtml(c.nombre)}</span>
+      <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
+      <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
     container.appendChild(div);
-    select.innerHTML+=`<option value="${c.id}">${c.nombre}</option>`;
+    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
   });
 }
-document.getElementById('addCategoriaBtn').addEventListener('click',async()=>{
-  const nombre=document.getElementById('categoriaNombre').value.trim();
-  if(!nombre) return;
-  await supabase.from('categorias').insert([{nombre}]);
-  document.getElementById('categoriaNombre').value='';
+window.addCategoria = async function(){
+  const nombre = document.getElementById('categoriaNombre').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('categorias').insert([{ nombre }]);
+  if(error) return alert(error.message);
+  document.getElementById('categoriaNombre').value = '';
   fetchCategorias();
-});
-async function deleteCategoria(id){await supabase.from('categorias').delete().eq('id',id);fetchCategorias();}
+};
+window.editCategoria = function(id,nombre){
+  openModal('Editar Categoría', `<input id="editCatName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateCategoria(${id})">Guardar</button></div>`);
+};
+window.updateCategoria = async function(id){
+  const nombre = document.getElementById('editCatName').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('categorias').update({ nombre }).eq('id', id);
+  if(error) return alert(error.message);
+  closeModal(); fetchCategorias();
+};
+window.deleteCategoria = async function(id){
+  if(!confirm('Eliminar categoría?')) return;
+  await supabase.from('categorias').delete().eq('id', id);
+  fetchCategorias();
+};
+fetchCategorias();
 
-// === LOCALIDADES ===
+/* ============================
+   LOCALIDADES
+   ============================ */
 async function fetchLocalidades(){
-  const { data } = await supabase.from('localidades').select('*');
-  const container=document.getElementById('localidadList');
-  const select=document.getElementById('pedidoLocalidad');
-  container.innerHTML='';
-  select.innerHTML='<option value="">Sin localidad</option>';
+  const { data, error } = await supabase.from('localidades').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('localidadList');
+  const sel = document.getElementById('pedidoLocalidad');
+  container.innerHTML = ''; sel.innerHTML = '<option value="">Seleccione</option>';
   data.forEach(l=>{
-    const div=document.createElement('div');
-    div.className='item-card';
-    div.innerHTML=`${l.nombre} <button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button>`;
-    container.appendChild(div);
-    select.innerHTML+=`<option value="${l.id}">${l.nombre}</option>`;
+    container.innerHTML += `<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div><button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button><button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
+    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
   });
 }
-document.getElementById('addLocalidadBtn').addEventListener('click',async()=>{
-  const nombre=document.getElementById('localidadNombre').value.trim();
-  if(!nombre) return;
-  await supabase.from('localidades').insert([{nombre}]);
+window.addLocalidad = async function(){
+  const nombre = document.getElementById('localidadNombre').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('localidades').insert([{ nombre }]);
+  if(error) return alert(error.message);
   document.getElementById('localidadNombre').value='';
   fetchLocalidades();
+};
+window.editLocalidad = function(id,nombre){
+  openModal('Editar Localidad', `<input id="editLocName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateLocalidad(${id})">Guardar</button></div>`);
+};
+window.updateLocalidad = async function(id){
+  const nombre = document.getElementById('editLocName').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('localidades').update({ nombre }).eq('id', id);
+  if(error) return alert(error.message);
+  closeModal(); fetchLocalidades();
+};
+window.deleteLocalidad = async function(id){
+  if(!confirm('Eliminar localidad?')) return;
+  await supabase.from('localidades').delete().eq('id', id);
+  fetchLocalidades();
+};
+fetchLocalidades();
+
+/* ============================
+   PROMOCIONES
+   - fetchPromotions limpia el contenedor para evitar duplicados
+   - upload imagen al bucket 'promo_images'
+   - safeGetFileUrl para obtener signed URL (temporal) para mostrar o para PDF
+   ============================ */
+async function safeGetFileUrl(fileName, bucket='promo_images'){
+  if(!fileName) return null;
+  try{
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName, 60*60);
+    return error ? null : data.signedUrl;
+  }catch{return null;}
+}
+
+async function fetchPromotions(){
+  console.log('👉 fetchPromotions ejecutado');
+  const { data, error } = await supabase.from('promociones').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('promoList');
+  container.innerHTML = ''; // <-- limpiar siempre antes de renderizar
+
+  // render
+  for(const promo of data){
+    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
+    const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `${imgHTML}<div style="flex:1"><strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong><div class="small-muted">$${Number(promo.precio).toFixed(2)} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div></div>
+      <div>
+        <button onclick="editPromo(${promo.id})">Editar</button>
+        <button class="delete-btn" onclick="deletePromo(${promo.id})">Eliminar</button>
+      </div>`;
+    container.appendChild(div);
+  }
+}
+
+// Agregar promoción (sube imagen luego inserta registro)
+document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
+  const nombre = document.getElementById('promoNombre').value.trim();
+  const precio = parseFloat(document.getElementById('promoPrecio').value);
+  const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
+  const categoria_id = document.getElementById('promoCategoria').value || null;
+  const file = document.getElementById('promoImagen').files[0];
+  if(!nombre || isNaN(precio) || !file) return alert('Complete nombre, precio e imagen');
+  const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
+  const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
+  if(upErr) return alert(upErr.message);
+  const publicUrl = await safeGetFileUrl(fileName);
+  const { error } = await supabase.from('promociones').insert([{ nombre, precio, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
+  if(error) return alert(error.message);
+  // limpiar form y recargar promos
+  document.getElementById('promoNombre').value=''; document.getElementById('promoPrecio').value=''; document.getElementById('promoStock').value=''; document.getElementById('promoImagen').value='';
+  fetchPromotions(); showToast('Promoción agregada');
 });
-async function deleteLocalidad(id){await supabase.from('localidades').delete().eq('id',id);fetchLocalidades();}
+
+// editar promoción (simple)
+window.editPromo = async function(id){
+  const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
+  if(error) return alert(error.message);
+  const p = data;
+  openModal('Editar Promoción', `
+    <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||p.descripcion||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Precio<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <div style="margin-top:10px"><button onclick="updatePromo(${p.id})">Guardar</button></div>
+  `);
+};
+
+window.updatePromo = async function(id){
+  const nombre = document.getElementById('editPromoNombre').value.trim();
+  const precio = parseFloat(document.getElementById('editPromoPrecio').value);
+  const stock = parseInt(document.getElementById('editPromoStock').value,10)||0;
+  if(!nombre || isNaN(precio)) return alert('Complete campos');
+  const { error } = await supabase.from('promociones').update({ nombre, precio, stock }).eq('id', id);
+  if(error) return alert(error.message);
+  closeModal(); fetchPromotions(); showToast('Promoción actualizada');
+};
+window.deletePromo = async function(id){
+  if(!confirm('Eliminar promoción?')) return;
+  await supabase.from('promociones').delete().eq('id', id);
+  fetchPromotions();
+};
+document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
+
+/* ============================
+   PEDIDOS
+   - selección múltiple desde modal tipo tabla
+   - control stock antes de guardar
+   - edición: devuelve stock anterior, aplica nuevo
+   - eliminación: devuelve stock
+   ============================ */
+
+let selectedProducts = []; // {id,nombre,cantidad,precio}
+let editingOrderId = null;
+
+// Abre modal con tabla de promos y inputs de cantidad
+document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
+  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
+  if(error) return alert(error.message);
+  // construir tabla HTML
+  let html = `<table class="table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+  for(const p of promos){
+    const qty = getSelectedQty(p.id);
+    html += `<tr>
+      <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
+      <td>$${Number(p.precio).toFixed(2)}</td>
+      <td>${p.stock ?? 0}</td>
+      <td><input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)})"></td>
+      <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
+    </tr>`;
+  }
+  html += `<tr><td colspan="3" style="text-align:right"><strong>Total:</strong></td><td colspan="2" id="totalPedido">$0.00</td></tr></tbody></table>
+    <div style="margin-top:10px"><button onclick="confirmProducts()">Confirmar selección</button></div>`;
+  openModal('Seleccionar Productos', html);
+  // set initial total (after modal rendered)
+  setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
+});
+
+// retorna cantidad si ya está seleccionado
+function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
+
+// update subtotal UI y total
+function updateSubtotal(id, price){
+  const input = document.getElementById(`prod_${id}`);
+  if(!input) return;
+  let qty = parseInt(input.value,10) || 0;
+  if(qty < 0) qty = 0;
+  if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
+  input.value = qty;
+  const sub = document.getElementById(`sub_${id}`);
+  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
+  const tot = document.getElementById('totalPedido');
+  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
+}
+
+// calcular total en modal
+function calculateTotal(){
+  let total = 0;
+  const inputs = document.querySelectorAll('#modalInner input[type=number]');
+  inputs.forEach(inp=>{
+    const id = parseInt(inp.id.replace('prod_',''),10);
+    const qty = parseInt(inp.value,10) || 0;
+    const price = parseFloat(inp.getAttribute('data-price')) || 0;
+    total += qty * price;
+  });
+  return total;
+}
+
+// confirmar selección -> guarda en selectedProducts y render outside
+function confirmProducts(){
+  selectedProducts = [];
+  const inputs = document.querySelectorAll('#modalInner input[type=number]');
+  inputs.forEach(inp=>{
+    const qty = parseInt(inp.value,10) || 0;
+    if(qty > 0){
+      const id = parseInt(inp.id.replace('prod_',''),10);
+      const row = inp.closest('tr');
+      const nombre = row.cells[0].textContent;
+      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
+      selectedProducts.push({ id, nombre, cantidad: qty, precio });
+    }
+  });
+  closeModal(); renderSelectedProducts();
+
+  // if editing an order, trigger update flow
+  if(editingOrderId){
+    // button will call updateOrder when user clicks 'Actualizar' (we handle editing on a separate button)
+  }
+}
+
+// render summary of selected products in pedido form
+function renderSelectedProducts(){
+  const c = document.getElementById('selectedProductsContainer');
+  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
+  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+  selectedProducts.forEach(p=>{
+    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
+  });
+  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
+  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
+  c.innerHTML = html;
+}
+
+/* GET promo by id helper */
+async function getPromoById(id){
+  const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
+  if(error) throw new Error(error.message);
+  return data;
+}
+
+/* AGREGAR pedido -> actualiza stock, inserta pedido */
+document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
+  const cliente = document.getElementById('pedidoCliente').value.trim();
+  const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
+
+  // chequear stock localmente contra DB
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
+  }
+
+  // restar stock en DB
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    const newStock = (promo.stock || 0) - p.cantidad;
+    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+  }
+
+  // insertar pedido (productos como JSON)
+  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
+  if(error) return alert(error.message);
+
+  // limpiar
+  document.getElementById('pedidoForm').reset();
+  selectedProducts = []; renderSelectedProducts();
+  fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
+});
+
+/* FETCH and render orders */
+async function fetchOrders(){
+  const { data, error } = await supabase.from('pedidos').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('pedidoList'); container.innerHTML = '';
+  for(const p of data){
+    const div = document.createElement('div'); div.className = 'item-card';
+    let prodHTML = '<ul style="margin:6px 0;padding-left:18px">';
+    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
+    prodHTML += '</ul>';
+    div.innerHTML = `<div style="flex:1"><strong>${escapeHtml(p.cliente)}</strong><div class="small-muted">${p.localidad_id?('Localidad ID:'+p.localidad_id):''}</div>${prodHTML}<strong>Total: $${Number(p.total).toFixed(2)}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button onclick="openEditOrder(${p.id})">Editar</button>
+        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+      </div>`;
+    container.appendChild(div);
+  }
+}
+fetchOrders();
+
+/* Edit order:
+   - restore old stock (add back quantities from old.order)
+   - load order into selectedProducts and form
+   - set editingOrderId
+*/
+async function openEditOrder(id){
+  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+  if(error) return alert(error.message);
+  const order = data;
+
+  // devolver stock del pedido anterior
+  if(order.productos && order.productos.length){
+    for(const pr of order.productos){
+      // pr.id stored in payload
+      const promo = await getPromoById(pr.id);
+      const newStock = (promo.stock || 0) + pr.cantidad;
+      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+  }
+
+  // cargar pedido en formulario para editar
+  selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
+  document.getElementById('pedidoCliente').value = order.cliente;
+  document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
+  renderSelectedProducts();
+  editingOrderId = id;
+
+  // change Add button behaviour: we will use confirmProducts flow to update after selecting new products
+  showToast('Editando pedido: ajusta productos y presiona "Actualizar" en la misma sección.');
+  // When user opens selection modal and confirms (confirmProducts), if editingOrderId set, we will call updateOrder
+  // Provide a direct "Actualizar Pedido" quick button:
+  const addBtn = document.getElementById('addOrderBtn');
+  addBtn.textContent = 'Actualizar Pedido';
+  addBtn.onclick = async function(){ await updateOrder(editingOrderId); addBtn.textContent = 'Agregar Pedido'; addBtn.onclick = async ()=>{ /* restore listener */ document.getElementById('addOrderBtn').dispatchEvent(new Event('click')); }; };
+}
+
+/* Update order: after new selection (selectedProducts) */
+async function updateOrder(id){
+  if(!id) return alert('No hay pedido seleccionado para actualizar');
+  const cliente = document.getElementById('pedidoCliente').value.trim();
+  if(!cliente) return alert('Ingrese cliente');
+  if(!selectedProducts.length) return alert('Seleccione productos');
+
+  // verify stock for new selection
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
+  }
+  // subtract stock for new selection
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    const newStock = (promo.stock || 0) - p.cantidad;
+    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+  }
+
+  // update pedido record
+  const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+  const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+  const { error } = await supabase.from('pedidos').update({ cliente, productos: payload, total }).eq('id', id);
+  if(error) return alert(error.message);
+
+  // reset
+  editingOrderId = null;
+  selectedProducts = []; renderSelectedProducts();
+  document.getElementById('pedidoCliente').value = '';
+  document.getElementById('pedidoLocalidad').value = '';
+  fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
+}
+
+/* Delete order: return stock, delete row */
+async function deleteOrder(id){
+  if(!confirm('Eliminar pedido?')) return;
+  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+  if(error) return alert(error.message);
+  if(data.productos && data.productos.length){
+    for(const pr of data.productos){
+      const promo = await getPromoById(pr.id);
+      const newStock = (promo.stock || 0) + pr.cantidad;
+      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+  }
+  await supabase.from('pedidos').delete().eq('id', id);
+  fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
+}
+
+/* ============================
+   DOCUMENTOS (storage)
+   - subir, listar, eliminar
+   ============================ */
+async function fetchDocuments(filter=''){
+  const { data, error } = await supabase.storage.from('private-documents').list('', { limit: 500 });
+  if(error) return console.error(error);
+  const container = document.getElementById('documentsList'); container.innerHTML = '';
+  for(const f of data){
+    if(filter && !f.name.includes(filter)) continue;
+    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(f.name, 60*60);
+    const div = document.createElement('div'); div.className = 'doc-item';
+    div.innerHTML = `<a href="${urlData.signedUrl}" target="_blank">${f.name}</a>
+      <div><button class="delete-btn" onclick="deleteDoc('${f.name}')">Eliminar</button></div>`;
+    container.appendChild(div);
+  }
+}
+document.getElementById('uploadDocsBtn').addEventListener('click', async ()=>{
+  const files = document.getElementById('docFiles').files;
+  if(!files.length) return alert('Seleccione archivos');
+  document.getElementById('docProgressContainer').style.display = 'block';
+  const progressEl = document.getElementById('docProgress');
+  for(let i=0;i<files.length;i++){
+    const file = files[i];
+    const name = `${Date.now()}_${file.name.replaceAll(' ','_')}`;
+    const { error } = await supabase.storage.from('private-documents').upload(name, file, { upsert:true });
+    if(error){ alert(error.message); break; }
+    progressEl.style.width = `${Math.round(((i+1)/files.length)*100)}%`;
+  }
+  setTimeout(()=>{ document.getElementById('docProgressContainer').style.display='none'; document.getElementById('docProgress').style.width='0%'; }, 600);
+  document.getElementById('docFiles').value='';
+  showToast('Documentos subidos');
+  fetchDocuments();
+});
+window.deleteDoc = async function(name){
+  if(!confirm('Eliminar archivo?')) return;
+  await supabase.storage.from('private-documents').remove([name]);
+  fetchDocuments();
+};
+document.getElementById('searchDoc').addEventListener('input', (e)=>fetchDocuments(e.target.value));
+fetchDocuments();
+
+/* ============================
+   EXPORTAR CATALOGO PDF (4 promos por página)
+   - convertimos imágenes a base64 para que aparezcan siempre
+   - usamos page-break para que no corte tarjetas
+   ============================ */
+
+async function toBase64(url){
+  return new Promise((resolve)=>{
+    if(!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      try{
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0);
+        const data = canvas.toDataURL('image/jpeg', 0.95);
+        resolve(data);
+      }catch(e){ resolve(null); }
+    };
+    img.onerror = ()=> resolve(null);
+    img.src = url;
+  });
+}
+
+document.getElementById('exportPromoPdfBtn').addEventListener('click', async ()=>{
+  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
+  if(error) return alert(error.message);
+  if(!promos || promos.length === 0) return alert('No hay promociones');
+
+  let html = `<div style="font-family: Arial, sans-serif; width:100%;"><h2 style="text-align:center;margin-bottom:12px">📖 Catálogo de Promociones</h2>`;
+  for(const [i,promo] of promos.entries()){
+    const signedUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || null);
+    const img64 = signedUrl ? await toBase64(signedUrl) : null;
+    html += `<div style="display:flex;align-items:center;margin-bottom:12px;border:1px solid #ddd;border-radius:10px;padding:10px;page-break-inside:avoid;">
+      ${img64 ? `<img src="${img64}" style="width:120px;height:120px;object-fit:cover;margin-right:12px;border-radius:8px;border:1px solid #ccc">` : ''}
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">${escapeHtml(promo.nombre||promo.descripcion||'')}</div>
+        <div style="font-size:14px">💲 <strong>$${Number(promo.precio).toFixed(2)}</strong></div>
+      </div>
+    </div>`;
+    // cada 6 promociones -> salto de página
+    if((i+1) % 6 === 0) html += `<div style="page-break-after:always"></div>`;
+  }
+  html += `</div>`;
+
+  const opt = {
+    margin: 0.5,
+    filename: 'catalogo_promociones.pdf',
+    image: { type: 'jpeg', quality: 1 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().from(html).set(opt).save();
+});
+
+/* ============================
+   Inicialización final
+   ============================ */
+document.getElementById('addCategoriaBtn').addEventListener('click', ()=>window.addCategoria?.());
+document.getElementById('addLocalidadBtn').addEventListener('click', ()=>window.addLocalidad?.());
+document.getElementById('addPromoBtn').addEventListener('click', ()=>{}); // ya bound above
+// llamadas iniciales (solo una vez)
+fetchCategorias();
+fetchLocalidades();
+fetchPromotions();
+fetchOrders? fetchOrders() : null;
+fetchDocuments();
+
 </script>
 </body>
 </html>
+
