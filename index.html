@@ -42,6 +42,7 @@ button:hover{background:var(--accent-2)}
 </head>
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">App Pedidos</div>
   <button class="tab-btn active" data-tab="promos">Promociones</button>
@@ -52,6 +53,7 @@ button:hover{background:var(--accent-2)}
   <div style="margin-top:auto;font-size:12px;opacity:.9">Integrado · PDF catálogo · Stock</div>
 </div>
 
+<!-- MAIN -->
 <div class="main">
   <h1>App Completa de Pedidos y Documentos</h1>
 
@@ -105,6 +107,16 @@ button:hover{background:var(--accent-2)}
           <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
         </label>
       </div>
+      <div style="width:120px">
+        <label>DNI
+          <input id="pedidoDNI" type="text" placeholder="DNI">
+        </label>
+      </div>
+      <div style="width:100px">
+        <label>Saldo
+          <input id="pedidoSaldo" type="number" placeholder="Saldo" step="0.01">
+        </label>
+      </div>
       <div style="width:220px">
         <label>Localidad
           <select id="pedidoLocalidad"></select>
@@ -151,186 +163,225 @@ button:hover{background:var(--accent-2)}
 
   <!-- DOCUMENTOS -->
   <div class="section" id="documentos">
-    <h2>Documentos y Clientes</h2>
-
-    <!-- FORMULARIO CLIENTES -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;border-bottom:1px solid #ccc;padding-bottom:12px">
-      <div style="width:180px"><label>DNI<input id="clienteDNI" type="text"></label></div>
-      <div style="width:180px"><label>Nombre<input id="clienteNombre" type="text"></label></div>
-      <div style="width:180px"><label>Apellido<input id="clienteApellido" type="text"></label></div>
-      <div style="width:180px"><label>Localidad<select id="clienteLocalidad"></select></label></div>
-      <div style="width:120px"><label>Saldo Pendiente<input id="clienteSaldo" type="number" step="0.01"></label></div>
-      <div style="display:flex;gap:8px">
-        <button id="addClienteBtn">Agregar Cliente</button>
-        <button id="refreshClientesBtn" style="background:#444">Refrescar</button>
-      </div>
-    </div>
-
-    <!-- FORMULARIO DOCUMENTOS -->
-    <form id="docForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
-      <div style="width:220px">
-        <label>Subir Documento
-          <input id="docFile" type="file" multiple accept=".pdf">
-        </label>
-      </div>
-      <div style="width:180px">
-        <label>DNI Cliente (opcional)
-          <input id="docDNI" type="text">
-        </label>
-      </div>
-      <div>
-        <button id="uploadDocsBtn">Cargar Documento(s)</button>
-      </div>
-    </form>
-
-    <!-- BÚSQUEDA DOCUMENTOS -->
+    <h2>Buscar Comprobantes</h2>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-      <input id="searchDNIInput" type="text" placeholder="Buscar por DNI">
-      <button id="searchDNIBtn">Buscar</button>
+      <input type="text" id="searchDoc" placeholder="Ingresar DNI" />
+      <button id="searchDocBtn">Buscar</button>
     </div>
-
-    <div id="docList"></div>
+    <div id="saldoCliente" class="small-muted" style="margin-bottom:6px"></div>
+    <div id="documentList"></div>
   </div>
+</div>
 
+<!-- MODAL PRODUCTOS -->
+<div class="modal" id="productsModal">
+  <div class="modal-content">
+    <span class="modal-close" id="closeProductsModal">X</span>
+    <h3>Seleccionar Productos</h3>
+    <div id="modalProductsList"></div>
+    <button id="saveSelectedProductsBtn" style="margin-top:12px">Guardar Selección</button>
+  </div>
 </div>
 
 <script>
-const supabase = supabase.createClient('https://ejbqlejlgprvwzrptojo.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8');
+const supabaseUrl = 'https://ejbqlejlgprvwzrptojo.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
+const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
 
-// ------------------- TABS -------------------
-const tabs = document.querySelectorAll('.tab-btn');
-const sections = document.querySelectorAll('.section');
-tabs.forEach(btn => {
+let selectedProducts = [];
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    tabs.forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    sections.forEach(s=>s.style.display='none');
+    document.querySelectorAll('.section').forEach(sec=>sec.style.display='none');
     document.getElementById(btn.dataset.tab).style.display='block';
+    if(btn.dataset.tab==='promos') fetchPromos();
+    if(btn.dataset.tab==='pedidos') fetchOrders();
+    if(btn.dataset.tab==='categorias') fetchCategorias();
+    if(btn.dataset.tab==='localidades') fetchLocalidades();
   });
 });
-// mostrar primera sección
-sections[0].style.display='block';
+document.querySelector('.tab-btn.active').click();
 
-// ------------------- CARGA CLIENTES -------------------
-async function fetchLocalidades(selectId){
-  const {data,error} = await supabase.from('localidades').select('nombre');
-  if(!error){
-    const sel = document.getElementById(selectId);
-    sel.innerHTML='';
-    data.forEach(l=>{
-      const opt = document.createElement('option'); opt.value=l.nombre; opt.textContent=l.nombre;
-      sel.appendChild(opt);
-    });
+// === CARGA DE PROMOCIONES ===
+async function fetchPromos(){
+  const { data } = await supabase.from('promociones').select('*');
+  const container = document.getElementById('promoList');
+  container.innerHTML='';
+  data.forEach(p=>{
+    const div = document.createElement('div');
+    div.className='item-card';
+    div.innerHTML=`<div style="display:flex;align-items:center"><img src="${p.imagen_url}" /><div>${p.nombre}<br><small>$${p.precio}</small></div></div>
+      <button class="delete-btn" onclick="deletePromo(${p.id})">Eliminar</button>`;
+    container.appendChild(div);
+  });
+}
+document.getElementById('addPromoBtn').addEventListener('click',async()=>{
+  const nombre=document.getElementById('promoNombre').value.trim();
+  const precio=parseFloat(document.getElementById('promoPrecio').value)||0;
+  const stock=parseInt(document.getElementById('promoStock').value)||0;
+  const categoria=parseInt(document.getElementById('promoCategoria').value)||null;
+  const imagen=document.getElementById('promoImagen').files[0];
+  let imagen_url='';
+  if(imagen){
+    const { data } = await supabase.storage.from('promo-images').upload(`${Date.now()}_${imagen.name}`,imagen);
+    imagen_url= supabase.storage.from('promo-images').getPublicUrl(data.path).publicUrl;
+  }
+  await supabase.from('promociones').insert([{nombre,precio,stock,categoria,imagen_url}]);
+  fetchPromos();
+});
+
+// === PEDIDOS ===
+async function fetchOrders(){
+  const { data } = await supabase.from('pedidos').select('*');
+  const container = document.getElementById('pedidoList');
+  container.innerHTML='';
+  for(let p of data){
+    let cliente=null;
+    if(p.cliente_id){
+      const { data: c } = await supabase.from('clientes').select('*').eq('id',p.cliente_id).single();
+      cliente=c;
+    }
+    const prodHTML = JSON.parse(p.productos||'[]').map(pr=>`${pr.nombre} x ${pr.cantidad}`).join(', ');
+    const saldoHTML = cliente ? `<div class="small-muted">Saldo pendiente: $${Number(cliente.saldo).toFixed(2)}</div>` : '';
+    const clienteNombre = cliente ? cliente.nombre : p.cliente;
+    const div=document.createElement('div');
+    div.className='item-card';
+    div.innerHTML=`<div style="flex:1"><strong>${clienteNombre}</strong>${saldoHTML}<div class="small-muted">${prodHTML}<br>Total: $${Number(p.total).toFixed(2)}</div></div>
+      <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>`;
+    container.appendChild(div);
   }
 }
 
-async function addCliente(){
-  const dni=document.getElementById('clienteDNI').value.trim();
-  const nombre=document.getElementById('clienteNombre').value.trim();
-  const apellido=document.getElementById('clienteApellido').value.trim();
-  const localidad=document.getElementById('clienteLocalidad').value;
-  const saldo=parseFloat(document.getElementById('clienteSaldo').value)||0;
-  if(!dni||!nombre||!apellido){alert('Completa los datos');return;}
-  const {error}=await supabase.from('clientes').upsert({dni,nombre,apellido,localidad,saldo_pendiente:saldo});
-  if(error){alert('Error al guardar');console.error(error);}else{alert('Cliente guardado');fetchClientes();}
-}
+document.getElementById('addOrderBtn').addEventListener('click',async()=>{
+  const cliente=document.getElementById('pedidoCliente').value.trim();
+  const dni=document.getElementById('pedidoDNI').value.trim();
+  const saldo=parseFloat(document.getElementById('pedidoSaldo').value)||0;
+  const localidad_id=parseInt(document.getElementById('pedidoLocalidad').value)||null;
+  const productosPayload=selectedProducts;
 
-async function fetchClientes(){
-  const {data,error}=await supabase.from('clientes').select('*').order('apellido');
-  if(!error){
-    const container = document.getElementById('docList');
-    container.innerHTML='<h4>Clientes Registrados:</h4>';
-    data.forEach(c=>{
-      const div = document.createElement('div');
-      div.className='doc-item';
-      div.innerHTML=`<div>${c.apellido}, ${c.nombre} | ${c.dni} | ${c.localidad}</div>
-                      <div>Saldo: $${c.saldo_pendiente.toFixed(2)}</div>`;
-      container.appendChild(div);
-    });
+  let cliente_id=null;
+  if(dni){
+    const { data: existingClient } = await supabase.from('clientes').select('*').eq('dni',dni).single();
+    if(existingClient){
+      cliente_id=existingClient.id;
+      if(saldo!==existingClient.saldo){
+        await supabase.from('clientes').update({saldo}).eq('id',cliente_id);
+      }
+    } else {
+      const { data: newClient } = await supabase.from('clientes').insert([{nombre:cliente,dni,saldo,localidad_id}]).select().single();
+      cliente_id=newClient.id;
+    }
   }
-}
 
-// ------------------- SUBIDA DOCUMENTOS -------------------
-async function uploadDocs(){
-  const files = document.getElementById('docFile').files;
-  const dni=document.getElementById('docDNI').value.trim();
-  if(!files.length){alert('Selecciona archivos');return;}
-  for(let file of files){
-    const fileName = dni ? `${dni}_${file.name}` : file.name;
-    const {data,error}=await supabase.storage.from('private-documents').upload(fileName,file,{upsert:true});
-    if(error){console.error(error);alert('Error al subir '+file.name);} 
+  const total=productosPayload.reduce((sum,p)=>sum+p.precio*p.cantidad,0);
+  await supabase.from('pedidos').insert([{cliente_id,cliente,productos:JSON.stringify(productosPayload),total,localidad_id}]);
+  selectedProducts=[];
+  document.getElementById('selectedProductsContainer').innerHTML='';
+  fetchOrders();
+});
+
+// === DOCUMENTOS ===
+document.getElementById('searchDocBtn').addEventListener('click',async()=>{
+  const dni=document.getElementById('searchDoc').value.trim();
+  document.getElementById('saldoCliente').textContent='';
+  if(!dni) return;
+  const { data: client } = await supabase.from('clientes').select('*').eq('dni',dni).single();
+  if(client) document.getElementById('saldoCliente').textContent=`Saldo pendiente: $${client.saldo}`;
+  // Buscar documentos en bucket
+  const { data: docs } = await supabase.storage.from('private-documents').list('', {search:dni});
+  const container=document.getElementById('documentList');
+  container.innerHTML='';
+  if(!docs || docs.length===0){
+    container.innerHTML='<div>No hay documentos para ese DNI.</div>'; return;
   }
-  alert('Documentos cargados');document.getElementById('docFile').value='';
-}
-
-// ------------------- BUSQUEDA DOCUMENTOS -------------------
-async function searchDocsByDNI(){
-  const dni = document.getElementById('searchDNIInput').value.trim();
-  if(!dni){alert('Ingresa DNI');return;}
-  const {data:error1}=await supabase.from('clientes').select('*').eq('dni',dni).single();
-  const cliente = error1 ? null : error1;
-  const {data:files,error}=await supabase.storage.from('private-documents').list('',{limit:100});
-  const filtered = files.filter(f=>f.name.startsWith(dni));
-  const container = document.getElementById('docList');
-  container.innerHTML=`<h4>Resultados para DNI: ${dni}</h4>`;
-  if(cliente){
+  for(let doc of docs){
+    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(doc.name,60);
     const div=document.createElement('div');
     div.className='doc-item';
-    div.innerHTML=`<b>Cliente:</b> ${cliente.nombre} ${cliente.apellido} | <b>Localidad:</b> ${cliente.localidad} | <b>Saldo:</b> $${cliente.saldo_pendiente.toFixed(2)}`;
+    div.innerHTML=`<div>${doc.name}</div><a href="${urlData.signedUrl}" target="_blank">Descargar</a>`;
     container.appendChild(div);
   }
-  if(!filtered.length){container.innerHTML+='<p>No hay documentos para este DNI</p>';return;}
-  for(let f of filtered){
-    const div=document.createElement('div');div.className='doc-item';
-    div.innerHTML=`<div>${f.name}</div>
-      <button onclick="downloadDoc('${f.name}')">Descargar</button>`;
+});
+
+// === MODAL PRODUCTOS ===
+const productsModal=document.getElementById('productsModal');
+document.getElementById('selectProductsBtn').addEventListener('click',async()=>{
+  productsModal.style.display='flex';
+  const { data } = await supabase.from('promociones').select('*');
+  const list=document.getElementById('modalProductsList');
+  list.innerHTML='';
+  data.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='flex';
+    div.innerHTML=`<input type="number" min="0" value="0" style="width:60px"/> ${p.nombre} ($${p.precio})`;
+    list.appendChild(div);
+  });
+});
+document.getElementById('closeProductsModal').addEventListener('click',()=>productsModal.style.display='none');
+document.getElementById('saveSelectedProductsBtn').addEventListener('click',()=>{
+  const list=document.getElementById('modalProductsList');
+  selectedProducts=[];
+  list.querySelectorAll('div').forEach((div,i)=>{
+    const cantidad=parseInt(div.querySelector('input').value);
+    if(cantidad>0) selectedProducts.push({nombre:div.textContent.replace(/\(\$\d+(\.\d+)?\)/,''),cantidad,precio:parseFloat(div.textContent.match(/\$(\d+(\.\d+)?)/)[1])});
+  });
+  document.getElementById('selectedProductsContainer').textContent=selectedProducts.map(p=>`${p.nombre} x ${p.cantidad}`).join(', ');
+  productsModal.style.display='none';
+});
+
+// === BORRAR ===
+async function deletePromo(id){await supabase.from('promociones').delete().eq('id',id);fetchPromos();}
+async function deleteOrder(id){await supabase.from('pedidos').delete().eq('id',id);fetchOrders();}
+
+// === CATEGORÍAS ===
+async function fetchCategorias(){
+  const { data } = await supabase.from('categorias').select('*');
+  const container=document.getElementById('categoriaList');
+  container.innerHTML='';
+  const select=document.getElementById('promoCategoria');
+  select.innerHTML='<option value="">Sin categoría</option>';
+  data.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='item-card';
+    div.innerHTML=`${c.nombre} <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button>`;
     container.appendChild(div);
-  }
+    select.innerHTML+=`<option value="${c.id}">${c.nombre}</option>`;
+  });
 }
+document.getElementById('addCategoriaBtn').addEventListener('click',async()=>{
+  const nombre=document.getElementById('categoriaNombre').value.trim();
+  if(!nombre) return;
+  await supabase.from('categorias').insert([{nombre}]);
+  document.getElementById('categoriaNombre').value='';
+  fetchCategorias();
+});
+async function deleteCategoria(id){await supabase.from('categorias').delete().eq('id',id);fetchCategorias();}
 
-async function downloadDoc(name){
-  const {data,error}=await supabase.storage.from('private-documents').download(name);
-  if(error){alert('Error al descargar');return;}
-  const url = URL.createObjectURL(data);
-  const a=document.createElement('a');a.href=url;a.download=name;a.click();
+// === LOCALIDADES ===
+async function fetchLocalidades(){
+  const { data } = await supabase.from('localidades').select('*');
+  const container=document.getElementById('localidadList');
+  const select=document.getElementById('pedidoLocalidad');
+  container.innerHTML='';
+  select.innerHTML='<option value="">Sin localidad</option>';
+  data.forEach(l=>{
+    const div=document.createElement('div');
+    div.className='item-card';
+    div.innerHTML=`${l.nombre} <button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button>`;
+    container.appendChild(div);
+    select.innerHTML+=`<option value="${l.id}">${l.nombre}</option>`;
+  });
 }
-
-// ------------------- INIT -------------------
-fetchLocalidades('clienteLocalidad');
-fetchClientes();
-
-document.getElementById('addClienteBtn').addEventListener('click',addCliente);
-document.getElementById('refreshClientesBtn').addEventListener('click',fetchClientes);
-document.getElementById('uploadDocsBtn').addEventListener('click',uploadDocs);
-document.getElementById('searchDNIBtn').addEventListener('click',searchDocsByDNI);
-
-// ------------------- EJEMPLO updateOrder COMPLETO -------------------
-async function updateOrder(orderId,newProducts){
-  // 1. Obtener pedido actual
-  const {data:oldOrder,error:getOld} = await supabase.from('pedidos').select('*').eq('id',orderId).single();
-  if(getOld){console.error(getOld);return;}
-
-  // 2. Restaurar stock anterior
-  for(let p of oldOrder.products){
-    const {data:prod,error:prodErr}=await supabase.from('productos').select('stock').eq('id',p.id).single();
-    if(!prodErr){
-      await supabase.from('productos').update({stock:prod.stock+p.cantidad}).eq('id',p.id);
-    }
-  }
-
-  // 3. Restar stock por productos nuevos
-  for(let p of newProducts){
-    const {data:prod,error:prodErr}=await supabase.from('productos').select('stock').eq('id',p.id).single();
-    if(!prodErr){
-      await supabase.from('productos').update({stock:prod.stock-p.cantidad}).eq('id',p.id);
-    }
-  }
-
-  // 4. Actualizar pedido
-  const total = newProducts.reduce((acc,p)=>acc+p.precio*p.cantidad,0);
-  const {error:updateErr}=await supabase.from('pedidos').update({products:newProducts,total}).eq('id',orderId);
-  if(updateErr){console.error(updateErr);}else{alert('Pedido actualizado');}
-}
+document.getElementById('addLocalidadBtn').addEventListener('click',async()=>{
+  const nombre=document.getElementById('localidadNombre').value.trim();
+  if(!nombre) return;
+  await supabase.from('localidades').insert([{nombre}]);
+  document.getElementById('localidadNombre').value='';
+  fetchLocalidades();
+});
+async function deleteLocalidad(id){await supabase.from('localidades').delete().eq('id',id);fetchLocalidades();}
 </script>
 </body>
 </html>
