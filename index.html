@@ -45,7 +45,6 @@ button:hover{background:var(--accent-2)}
 </head>
 <body>
 
-
 <!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">App Pedidos</div>
@@ -61,37 +60,46 @@ button:hover{background:var(--accent-2)}
 <div class="main">
   <h1>App Completa de Pedidos y Documentos</h1>
 
-  <div id="promoForm">
-  <label>Nombre / Descripción
-    <input id="promoNombre" type="text" placeholder="Ej: Pizza Especial">
-  </label>
-  <label>Precio actual
-    <input id="promoPrecio" type="number" step="0.01" placeholder="Ej: 1000.00">
-  </label>
-  <label>Precio anterior
-    <input id="promoPrecioAnterior" type="number" step="0.01" placeholder="Ej: 1200.00">
-  </label>
-  <label>Stock
-    <input id="promoStock" type="number" placeholder="Ej: 20">
-  </label>
-  <label>Categoría
-    <select id="promoCategoria">
-      <option value="">-- Ninguna --</option>
-      <option value="1">Bebidas</option>
-      <option value="2">Comidas</option>
-      <option value="3">Postres</option>
-    </select>
-  </label>
-  <!-- Imagen debajo de la descripción -->
-  <label>Imagen
-    <input id="promoImagen" type="file" accept="image/*">
-  </label>
-  <button id="addPromoBtn">Agregar Promoción</button>
-  <button id="refreshPromosBtn">Refrescar</button>
-</div>
+  <!-- PROMOCIONES -->
+  <div class="section" id="promos">
+    <h2>Promociones</h2>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:220px">
+        <label>Nombre / Descripción
+          <input id="promoNombre" type="text" placeholder="Ej: Combo Hamburguesa + Papas">
+        </label>
+      </div>
+      <div style="width:140px">
+        <label>Precio
+          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
+        </label>
+      </div>
+      <div style="width:140px">
+        <label>Stock
+          <input id="promoStock" type="number" placeholder="0">
+        </label>
+      </div>
+      <div style="width:220px">
+        <label>Categoría
+          <select id="promoCategoria"></select>
+        </label>
+      </div>
+      <div style="width:220px">
+        <label>Imagen (jpg/png)
+          <input id="promoImagen" type="file" accept="image/*">
+        </label>
+      </div>
+    </div>
 
-<div id="promoList"></div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <button id="addPromoBtn">Agregar Promoción</button>
+      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
+      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
+    </div>
 
+    <h3>Lista de Promociones</h3>
+    <div id="promoList"></div>
+  </div>
 
   <!-- PEDIDOS -->
   <div class="section" id="pedidos">
@@ -299,94 +307,33 @@ window.deleteLocalidad = async function(id){
 fetchLocalidades();
 
 /* ============================
-   CRUD PROMOCIONES CORREGIDO
-============================ */
-
+   PROMOCIONES
+   - fetchPromotions limpia el contenedor para evitar duplicados
+   - upload imagen al bucket 'promo_images'
+   - safeGetFileUrl para obtener signed URL (temporal) para mostrar o para PDF
+   ============================ */
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
-  try {
+  try{
     const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName, 60*60);
     return error ? null : data.signedUrl;
-  } catch {
-    return null;
-  }
+  }catch{return null;}
 }
 
-function escapeHtml(text){ 
-  return text?.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) || ''; 
-}
-function showToast(msg){ alert(msg); }
-function openModal(title, content){
-  document.getElementById('modalContent').innerHTML = `<h3>${title}</h3>${content}<div style="text-align:right;margin-top:10px"><button onclick="closeModal()">Cerrar</button></div>`;
-  document.getElementById('modal').style.display = 'flex';
-}
-function closeModal(){ document.getElementById('modal').style.display = 'none'; }
+async function fetchPromotions(){
+  console.log('👉 fetchPromotions ejecutado');
+  const { data, error } = await supabase.from('promociones').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('promoList');
+  container.innerHTML = ''; // <-- limpiar siempre antes de renderizar
 
-/* ============================
-   FETCH PROMOCIONES
-============================ */
-for(const promo of data){
-  const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : '';
-
-  let precioHTML = '';
-  if(promo.precio_anterior && promo.precio_anterior > promo.precio){
-    precioHTML = `<div><span style="text-decoration:line-through;color:#888;margin-right:4px">$${promo.precio_anterior.toFixed(2)}</span>
-                   <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-                 </div>`;
-  } else {
-    precioHTML = `<div><span style="font-weight:bold;color:#2e7d32">$${promo.precio.toFixed(2)}</span></div>`;
-  }
-
-  // calcular porcentaje de descuento
-  let badgeHTML = '';
-  if(promo.precio_anterior && promo.precio_anterior > promo.precio){
-    const pct = Math.round((promo.precio_anterior - promo.precio) / promo.precio_anterior * 100);
-    badgeHTML = `<div class="promo-badge">-${pct}%</div>`;
-  }
-
-  const div = document.createElement('div');
-  div.className='promo-card';
-  div.innerHTML=`
-    ${imgUrl ? `<div class="image-container"><img src="${imgUrl}" alt="${escapeHtml(promo.nombre||'')}">${badgeHTML}</div>` : ''}
-    <div class="card-content">
-      <strong>${escapeHtml(promo.nombre||'')}</strong>
-      ${precioHTML}
-      <div class="small-muted">Stock: ${promo.stock ?? 0}</div>
-    </div>
-    <div class="actions">
-      <button onclick="editPromo(${promo.id})">Editar</button>
-      <button onclick="deletePromo(${promo.id})">Eliminar</button>
-    </div>
-  `;
-  container.appendChild(div);
-}
-
-
-    // precio y descuento
-    let precioHTML = '';
-    if(promo.precio_anterior && promo.precio_anterior > promo.precio){
-      precioHTML = `<div>
-        <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
-        <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-      </div>`;
-    } else if(promo.precio_anterior && promo.precio_anterior <= promo.precio){
-      precioHTML = `<div>
-        <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
-        <span style="color:#2e7d32;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-      </div>`;
-    } else {
-      precioHTML = `<div><span style="font-weight:bold;color:#2e7d32">$${promo.precio.toFixed(2)}</span></div>`;
-    }
-
+  // render
+  for(const promo of data){
+    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
+    const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
     const div = document.createElement('div');
     div.className = 'item-card';
-    div.innerHTML = `
-      ${imgHTML}
-      <div style="flex:1">
-        <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
-        ${precioHTML}
-        <div class="small-muted">Stock: ${promo.stock ?? 0}</div>
-      </div>
+    div.innerHTML = `${imgHTML}<div style="flex:1"><strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong><div class="small-muted">$${Number(promo.precio).toFixed(2)} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div></div>
       <div>
         <button onclick="editPromo(${promo.id})">Editar</button>
         <button class="delete-btn" onclick="deletePromo(${promo.id})">Eliminar</button>
@@ -395,95 +342,53 @@ for(const promo of data){
   }
 }
 
-/* ============================
-   AGREGAR PROMOCIÓN
-============================ */
+// Agregar promoción (sube imagen luego inserta registro)
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const nombre = document.getElementById('promoNombre').value.trim();
   const precio = parseFloat(document.getElementById('promoPrecio').value);
-  const precio_anterior = parseFloat(document.getElementById('promoPrecioAnterior').value) || null;
   const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
   const categoria_id = document.getElementById('promoCategoria').value || null;
   const file = document.getElementById('promoImagen').files[0];
-
-  if(!nombre) return alert('Falta el nombre');
-  if(isNaN(precio)) return alert('Precio inválido');
-  if(!file) return alert('Debe seleccionar una imagen');
-
+  if(!nombre || isNaN(precio) || !file) return alert('Complete nombre, precio e imagen');
   const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
   const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
   if(upErr) return alert(upErr.message);
-
-  const { error } = await supabase.from('promociones').insert([{ 
-    nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName 
-  }]);
+  const publicUrl = await safeGetFileUrl(fileName);
+  const { error } = await supabase.from('promociones').insert([{ nombre, precio, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
   if(error) return alert(error.message);
-
-  // limpiar form
-  document.getElementById('promoNombre').value='';
-  document.getElementById('promoPrecio').value='';
-  document.getElementById('promoPrecioAnterior').value='';
-  document.getElementById('promoStock').value='';
-  document.getElementById('promoImagen').value='';
-
+  // limpiar form y recargar promos
+  document.getElementById('promoNombre').value=''; document.getElementById('promoPrecio').value=''; document.getElementById('promoStock').value=''; document.getElementById('promoImagen').value='';
   fetchPromotions(); showToast('Promoción agregada');
 });
 
-/* ============================
-   EDITAR PROMOCIÓN
-============================ */
+// editar promoción (simple)
 window.editPromo = async function(id){
   const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
   if(error) return alert(error.message);
   const p = data;
   openModal('Editar Promoción', `
-    <label>Nombre / Descripción<input id="editPromoNombre" value="${escapeHtml(p.nombre||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio actual<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio anterior<input id="editPromoPrecioAnterior" type="number" step="0.01" value="${p.precio_anterior || ''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||p.descripcion||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Precio<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <div style="margin-top:10px"><button onclick="updatePromo(${p.id})">Guardar</button></div>
   `);
 };
 
-/* ============================
-   ACTUALIZAR PROMOCIÓN
-============================ */
 window.updatePromo = async function(id){
   const nombre = document.getElementById('editPromoNombre').value.trim();
   const precio = parseFloat(document.getElementById('editPromoPrecio').value);
-  const precio_anterior = parseFloat(document.getElementById('editPromoPrecioAnterior').value) || null;
   const stock = parseInt(document.getElementById('editPromoStock').value,10)||0;
-
-  if(!nombre) return alert('Falta el nombre');
-  if(isNaN(precio)) return alert('Precio inválido');
-
-  const { error } = await supabase.from('promociones').update({ 
-    nombre, precio, precio_anterior, stock 
-  }).eq('id', id);
-
+  if(!nombre || isNaN(precio)) return alert('Complete campos');
+  const { error } = await supabase.from('promociones').update({ nombre, precio, stock }).eq('id', id);
   if(error) return alert(error.message);
-
   closeModal(); fetchPromotions(); showToast('Promoción actualizada');
 };
-
-/* ============================
-   ELIMINAR PROMOCIÓN
-============================ */
 window.deletePromo = async function(id){
   if(!confirm('Eliminar promoción?')) return;
-  const { data: promo } = await supabase.from('promociones').select('imagen').eq('id', id).single();
-  if(promo?.imagen){
-    await supabase.storage.from('promo_images').remove([promo.imagen]);
-  }
   await supabase.from('promociones').delete().eq('id', id);
-  fetchPromotions(); showToast('Promoción eliminada');
+  fetchPromotions();
 };
-
-/* ============================
-   REFRESCAR
-============================ */
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
-fetchPromotions();
 
 /* ============================
    PEDIDOS
@@ -770,7 +675,7 @@ document.getElementById('searchDoc').addEventListener('input', (e)=>fetchDocumen
 fetchDocuments();
 
 /* ============================
-   EXPORTAR CATALOGO PDF (4 promos por página)
+   EXPORTAR CATALOGO PDF (6 promos por página)
    - convertimos imágenes a base64 para que aparezcan siempre
    - usamos page-break para que no corte tarjetas
    ============================ */
@@ -844,7 +749,6 @@ fetchDocuments();
 </script>
 </body>
 </html>
-
 
 
 
