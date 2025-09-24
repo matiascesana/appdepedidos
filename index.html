@@ -41,9 +41,31 @@ button:hover{background:var(--accent-2)}
 .small-muted{font-size:13px;color:#666}
 .flex{display:flex;gap:10px;align-items:center}
 .row{display:flex;gap:12px}
+.promo-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.promo-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+  position: relative;
+}
+.promo-card .image-container {
+  position: relative;
+}
 </style>
 </head>
 <body>
+
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -324,25 +346,42 @@ function closeModal(){ document.getElementById('modal').style.display = 'none'; 
 /* ============================
    FETCH PROMOCIONES
 ============================ */
-async function fetchPromotions(){
-  const { data, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('promoList');
-  container.innerHTML = ''; // <-- limpiar contenedor para evitar duplicados
+for(const promo of data){
+  const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : '';
 
-  for(const promo of data){
-    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : '';
-    const badge = (promo.precio_anterior && promo.precio_anterior > promo.precio)
-      ? `<div style="position:absolute;top:6px;right:6px;background:#d32f2f;color:#fff;padding:2px 6px;border-radius:6px;font-size:12px;font-weight:bold">
-           -${Math.round((promo.precio_anterior - promo.precio)/promo.precio_anterior*100)}%
-         </div>`
-      : '';
-    const imgHTML = imgUrl 
-      ? `<div style="position:relative;display:inline-block;margin-right:10px">
-           <img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px">
-           ${badge}
-         </div>`
-      : '';
+  let precioHTML = '';
+  if(promo.precio_anterior && promo.precio_anterior > promo.precio){
+    precioHTML = `<div><span style="text-decoration:line-through;color:#888;margin-right:4px">$${promo.precio_anterior.toFixed(2)}</span>
+                   <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
+                 </div>`;
+  } else {
+    precioHTML = `<div><span style="font-weight:bold;color:#2e7d32">$${promo.precio.toFixed(2)}</span></div>`;
+  }
+
+  // calcular porcentaje de descuento
+  let badgeHTML = '';
+  if(promo.precio_anterior && promo.precio_anterior > promo.precio){
+    const pct = Math.round((promo.precio_anterior - promo.precio) / promo.precio_anterior * 100);
+    badgeHTML = `<div class="promo-badge">-${pct}%</div>`;
+  }
+
+  const div = document.createElement('div');
+  div.className='promo-card';
+  div.innerHTML=`
+    ${imgUrl ? `<div class="image-container"><img src="${imgUrl}" alt="${escapeHtml(promo.nombre||'')}">${badgeHTML}</div>` : ''}
+    <div class="card-content">
+      <strong>${escapeHtml(promo.nombre||'')}</strong>
+      ${precioHTML}
+      <div class="small-muted">Stock: ${promo.stock ?? 0}</div>
+    </div>
+    <div class="actions">
+      <button onclick="editPromo(${promo.id})">Editar</button>
+      <button onclick="deletePromo(${promo.id})">Eliminar</button>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
 
     // precio y descuento
     let precioHTML = '';
@@ -826,6 +865,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
