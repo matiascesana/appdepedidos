@@ -307,28 +307,33 @@ window.deleteLocalidad = async function(id){
 fetchLocalidades();
 
 /* ============================
-   PROMOCIONES (CRUD COMPLETO)
-   ============================ */
+   CRUD PROMOCIONES
+============================ */
+
+// Obtener signed URL temporal para imagen
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
-  try{
+  try {
     const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName, 60*60);
     return error ? null : data.signedUrl;
-  }catch{return null;}
+  } catch {
+    return null;
+  }
 }
 
+// Limpiar y renderizar listado
 async function fetchPromotions(){
   console.log('👉 fetchPromotions ejecutado');
   const { data, error } = await supabase.from('promociones').select('*').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
-  container.innerHTML = ''; // limpiar siempre
+  container.innerHTML = ''; // limpiar
 
   for(const promo of data){
     const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : '';
     const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
 
-    // calcular precio y descuento
+    // precio y descuento
     let precioHTML = '';
     if(promo.precio_anterior && promo.precio_anterior > promo.precio){
       const dif = promo.precio_anterior - promo.precio;
@@ -338,6 +343,13 @@ async function fetchPromotions(){
           <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
           <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
           <span style="color:green;font-weight:bold;margin-left:6px">-${pct}%</span>
+        </div>
+      `;
+    } else if(promo.precio_anterior && promo.precio_anterior <= promo.precio){
+      precioHTML = `
+        <div>
+          <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
+          <span style="color:#2e7d32;font-weight:bold">$${promo.precio.toFixed(2)}</span>
         </div>
       `;
     } else {
@@ -361,7 +373,9 @@ async function fetchPromotions(){
   }
 }
 
-// ➕ Crear promoción
+/* ============================
+   AGREGAR PROMOCIÓN
+============================ */
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const nombre = document.getElementById('promoNombre').value.trim();
   const precio = parseFloat(document.getElementById('promoPrecio').value);
@@ -389,11 +403,13 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   document.getElementById('promoPrecioAnterior').value='';
   document.getElementById('promoStock').value='';
   document.getElementById('promoImagen').value='';
-  
+
   fetchPromotions(); showToast('Promoción agregada');
 });
 
-// ✏️ Editar promoción
+/* ============================
+   EDITAR PROMOCIÓN
+============================ */
 window.editPromo = async function(id){
   const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
   if(error) return alert(error.message);
@@ -407,7 +423,9 @@ window.editPromo = async function(id){
   `);
 };
 
-// 💾 Guardar edición
+/* ============================
+   ACTUALIZAR PROMOCIÓN
+============================ */
 window.updatePromo = async function(id){
   const nombre = document.getElementById('editPromoNombre').value.trim();
   const precio = parseFloat(document.getElementById('editPromoPrecio').value);
@@ -425,7 +443,9 @@ window.updatePromo = async function(id){
   closeModal(); fetchPromotions(); showToast('Promoción actualizada');
 };
 
-// 🗑️ Eliminar promoción
+/* ============================
+   ELIMINAR PROMOCIÓN
+============================ */
 window.deletePromo = async function(id){
   if(!confirm('Eliminar promoción?')) return;
   const { data: promo } = await supabase.from('promociones').select('imagen').eq('id', id).single();
@@ -436,8 +456,14 @@ window.deletePromo = async function(id){
   fetchPromotions(); showToast('Promoción eliminada');
 };
 
-// 🔄 Refrescar
+/* ============================
+   REFRESCAR
+============================ */
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
+
+// Cargar al inicio
+fetchPromotions();
+
 
 
 /* ============================
@@ -799,5 +825,6 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
