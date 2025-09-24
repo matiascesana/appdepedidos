@@ -60,46 +60,37 @@ button:hover{background:var(--accent-2)}
 <div class="main">
   <h1>App Completa de Pedidos y Documentos</h1>
 
-  <!-- PROMOCIONES -->
-  <div class="section" id="promos">
-    <h2>Promociones</h2>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:220px">
-        <label>Nombre / Descripción
-          <input id="promoNombre" type="text" placeholder="Ej: Combo Hamburguesa + Papas">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Precio
-          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Stock
-          <input id="promoStock" type="number" placeholder="0">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Categoría
-          <select id="promoCategoria"></select>
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Imagen (jpg/png)
-          <input id="promoImagen" type="file" accept="image/*">
-        </label>
-      </div>
-    </div>
+  <div id="promoForm">
+  <label>Nombre / Descripción
+    <input id="promoNombre" type="text" placeholder="Ej: Pizza Especial">
+  </label>
+  <label>Precio actual
+    <input id="promoPrecio" type="number" step="0.01" placeholder="Ej: 1000.00">
+  </label>
+  <label>Precio anterior
+    <input id="promoPrecioAnterior" type="number" step="0.01" placeholder="Ej: 1200.00">
+  </label>
+  <label>Stock
+    <input id="promoStock" type="number" placeholder="Ej: 20">
+  </label>
+  <label>Categoría
+    <select id="promoCategoria">
+      <option value="">-- Ninguna --</option>
+      <option value="1">Bebidas</option>
+      <option value="2">Comidas</option>
+      <option value="3">Postres</option>
+    </select>
+  </label>
+  <!-- Imagen debajo de la descripción -->
+  <label>Imagen
+    <input id="promoImagen" type="file" accept="image/*">
+  </label>
+  <button id="addPromoBtn">Agregar Promoción</button>
+  <button id="refreshPromosBtn">Refrescar</button>
+</div>
 
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="addPromoBtn">Agregar Promoción</button>
-      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
-      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
-    </div>
+<div id="promoList"></div>
 
-    <h3>Lista de Promociones</h3>
-    <div id="promoList"></div>
-  </div>
 
   <!-- PEDIDOS -->
   <div class="section" id="pedidos">
@@ -307,7 +298,7 @@ window.deleteLocalidad = async function(id){
 fetchLocalidades();
 
 /* ============================
-   CRUD PROMOCIONES CON BADGE
+   CRUD PROMOCIONES CORREGIDO
 ============================ */
 
 async function safeGetFileUrl(fileName, bucket='promo_images'){
@@ -320,11 +311,24 @@ async function safeGetFileUrl(fileName, bucket='promo_images'){
   }
 }
 
+function escapeHtml(text){ 
+  return text?.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) || ''; 
+}
+function showToast(msg){ alert(msg); }
+function openModal(title, content){
+  document.getElementById('modalContent').innerHTML = `<h3>${title}</h3>${content}<div style="text-align:right;margin-top:10px"><button onclick="closeModal()">Cerrar</button></div>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal(){ document.getElementById('modal').style.display = 'none'; }
+
+/* ============================
+   FETCH PROMOCIONES
+============================ */
 async function fetchPromotions(){
   const { data, error } = await supabase.from('promociones').select('*').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
-  container.innerHTML = '';
+  container.innerHTML = ''; // <-- limpiar contenedor para evitar duplicados
 
   for(const promo of data){
     const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : '';
@@ -340,15 +344,18 @@ async function fetchPromotions(){
          </div>`
       : '';
 
+    // precio y descuento
     let precioHTML = '';
     if(promo.precio_anterior && promo.precio_anterior > promo.precio){
-      precioHTML = `<div><span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
-                     <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-                   </div>`;
-    } else if (promo.precio_anterior && promo.precio_anterior <= promo.precio){
-      precioHTML = `<div><span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
-                     <span style="color:#2e7d32;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-                   </div>`;
+      precioHTML = `<div>
+        <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
+        <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
+      </div>`;
+    } else if(promo.precio_anterior && promo.precio_anterior <= promo.precio){
+      precioHTML = `<div>
+        <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
+        <span style="color:#2e7d32;font-weight:bold">$${promo.precio.toFixed(2)}</span>
+      </div>`;
     } else {
       precioHTML = `<div><span style="font-weight:bold;color:#2e7d32">$${promo.precio.toFixed(2)}</span></div>`;
     }
@@ -394,6 +401,7 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   }]);
   if(error) return alert(error.message);
 
+  // limpiar form
   document.getElementById('promoNombre').value='';
   document.getElementById('promoPrecio').value='';
   document.getElementById('promoPrecioAnterior').value='';
@@ -411,7 +419,7 @@ window.editPromo = async function(id){
   if(error) return alert(error.message);
   const p = data;
   openModal('Editar Promoción', `
-    <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Nombre / Descripción<input id="editPromoNombre" value="${escapeHtml(p.nombre||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Precio actual<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Precio anterior<input id="editPromoPrecioAnterior" type="number" step="0.01" value="${p.precio_anterior || ''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
@@ -454,15 +462,10 @@ window.deletePromo = async function(id){
 };
 
 /* ============================
-   REFRESCAR LISTADO
+   REFRESCAR
 ============================ */
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
-
-// Cargar al inicio
 fetchPromotions();
-
-
-
 
 /* ============================
    PEDIDOS
@@ -823,6 +826,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
