@@ -307,10 +307,9 @@ window.deleteLocalidad = async function(id){
 fetchLocalidades();
 
 /* ============================
-   CRUD PROMOCIONES
+   CRUD PROMOCIONES CON BADGE
 ============================ */
 
-// Obtener signed URL temporal para imagen
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
   try {
@@ -321,37 +320,35 @@ async function safeGetFileUrl(fileName, bucket='promo_images'){
   }
 }
 
-// Limpiar y renderizar listado
 async function fetchPromotions(){
-  console.log('👉 fetchPromotions ejecutado');
   const { data, error } = await supabase.from('promociones').select('*').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
-  container.innerHTML = ''; // limpiar
+  container.innerHTML = '';
 
   for(const promo of data){
     const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : '';
-    const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
+    const badge = (promo.precio_anterior && promo.precio_anterior > promo.precio)
+      ? `<div style="position:absolute;top:6px;right:6px;background:#d32f2f;color:#fff;padding:2px 6px;border-radius:6px;font-size:12px;font-weight:bold">
+           -${Math.round((promo.precio_anterior - promo.precio)/promo.precio_anterior*100)}%
+         </div>`
+      : '';
+    const imgHTML = imgUrl 
+      ? `<div style="position:relative;display:inline-block;margin-right:10px">
+           <img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px">
+           ${badge}
+         </div>`
+      : '';
 
-    // precio y descuento
     let precioHTML = '';
     if(promo.precio_anterior && promo.precio_anterior > promo.precio){
-      const dif = promo.precio_anterior - promo.precio;
-      const pct = ((dif / promo.precio_anterior) * 100).toFixed(0);
-      precioHTML = `
-        <div>
-          <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
-          <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-          <span style="color:green;font-weight:bold;margin-left:6px">-${pct}%</span>
-        </div>
-      `;
-    } else if(promo.precio_anterior && promo.precio_anterior <= promo.precio){
-      precioHTML = `
-        <div>
-          <span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
-          <span style="color:#2e7d32;font-weight:bold">$${promo.precio.toFixed(2)}</span>
-        </div>
-      `;
+      precioHTML = `<div><span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
+                     <span style="color:#d32f2f;font-weight:bold">$${promo.precio.toFixed(2)}</span>
+                   </div>`;
+    } else if (promo.precio_anterior && promo.precio_anterior <= promo.precio){
+      precioHTML = `<div><span style="text-decoration:line-through;color:#888;margin-right:6px">$${promo.precio_anterior.toFixed(2)}</span>
+                     <span style="color:#2e7d32;font-weight:bold">$${promo.precio.toFixed(2)}</span>
+                   </div>`;
     } else {
       precioHTML = `<div><span style="font-weight:bold;color:#2e7d32">$${promo.precio.toFixed(2)}</span></div>`;
     }
@@ -397,7 +394,6 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   }]);
   if(error) return alert(error.message);
 
-  // limpiar form
   document.getElementById('promoNombre').value='';
   document.getElementById('promoPrecio').value='';
   document.getElementById('promoPrecioAnterior').value='';
@@ -438,6 +434,7 @@ window.updatePromo = async function(id){
   const { error } = await supabase.from('promociones').update({ 
     nombre, precio, precio_anterior, stock 
   }).eq('id', id);
+
   if(error) return alert(error.message);
 
   closeModal(); fetchPromotions(); showToast('Promoción actualizada');
@@ -457,12 +454,13 @@ window.deletePromo = async function(id){
 };
 
 /* ============================
-   REFRESCAR
+   REFRESCAR LISTADO
 ============================ */
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
 
 // Cargar al inicio
 fetchPromotions();
+
 
 
 
@@ -825,6 +823,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
