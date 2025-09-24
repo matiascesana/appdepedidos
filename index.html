@@ -61,45 +61,57 @@ button:hover{background:var(--accent-2)}
   <h1>App Completa de Promociones y Pedidos</h1>
 
   <!-- PROMOCIONES -->
-  <div class="section" id="promos">
-    <h2>Promociones</h2>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:180px">
-        <label>Nombre / Descripción
-          <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Precio
-          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Stock
-          <input id="promoStock" type="number" placeholder="0">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Categoría
-          <select id="promoCategoria"></select>
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Imagen (jpg/png)
-          <input id="promoImagen" type="file" accept="image/*">
-        </label>
-      </div>
+<div class="section" id="promos">
+  <h2>Promociones</h2>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="flex:1;min-width:180px">
+      <label>Nombre / Descripción
+        <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
+      </label>
     </div>
 
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="addPromoBtn">Agregar Promoción</button>
-      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
-      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
+    <div style="width:140px">
+      <label>Precio
+        <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
+      </label>
     </div>
 
-    <h3>Lista de Promociones</h3>
-    <div id="promoList"></div>
+    <!-- NUEVO: Precio anterior -->
+    <div style="width:140px">
+      <label>Precio Anterior
+        <input id="promoPrecioAnterior" type="number" step="0.01" placeholder="0.00">
+      </label>
+    </div>
+
+    <div style="width:140px">
+      <label>Stock
+        <input id="promoStock" type="number" placeholder="0">
+      </label>
+    </div>
+
+    <div style="width:220px">
+      <label>Categoría
+        <select id="promoCategoria"></select>
+      </label>
+    </div>
+
+    <div style="width:220px">
+      <label>Imagen (jpg/png)
+        <input id="promoImagen" type="file" accept="image/*">
+      </label>
+    </div>
   </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:12px">
+    <button id="addPromoBtn">Agregar Promoción</button>
+    <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
+    <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
+  </div>
+
+  <h3>Lista de Promociones</h3>
+  <div id="promoList"></div>
+</div>
+
 
   <!-- PEDIDOS -->
   <div class="section" id="pedidos">
@@ -749,6 +761,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
