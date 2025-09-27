@@ -11,20 +11,66 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
 
-<style>
 /* -----------------------
    Estilos (mantener formato inicial)
    ----------------------- */
+<style>
+/* -----------------------
+   Estilos (Optimizado para Layout de 2 Columnas)
+   ----------------------- */
 :root{--accent:#6a1b9a;--accent-2:#7b1fa2;--danger:#e53935}
 *{box-sizing:border-box}
-body{margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:#ffffff;color:#222;min-height:100vh}
-.sidebar{width:220px;background:var(--accent);color:#fff;padding:18px;display:flex;flex-direction:column}
+
+/* --- CAMBIO CLAVE 1: Configurar el body como contenedor Flex --- */
+body{
+    margin:0;
+    font-family:Roboto,Arial,Helvetica,sans-serif;
+    background:#f0f0f0; /* Color de fondo ligero para el body */
+    color:#222;
+    min-height:100vh;
+    display:flex; /* Habilita Flexbox */
+}
+
+/* --- CAMBIO CLAVE 2: Sidebar ocupa 100% del alto y ancho fijo --- */
+.sidebar{
+    width:220px;
+    background:var(--accent);
+    color:#fff;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    /* Asegura que la sidebar se estire para ocupar todo el alto de la ventana */
+    min-height: 100vh;
+}
+
+/* --- CAMBIO CLAVE 3: El contenido principal ocupa el espacio restante --- */
+.main{
+    flex:1; /* Permite que .main crezca y ocupe todo el espacio sobrante */
+    padding:20px;
+    overflow-y: auto; /* Permite desplazamiento interno si el contenido es largo */
+    background: #ffffff; /* Fondo blanco para el contenido principal */
+}
+
+h1,h2{font-family:'Playfair Display',serif;margin:0 0 12px 0}
 .sidebar .logo{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:12px}
 .sidebar button{background:transparent;border:0;color:#fff;padding:10px;border-radius:8px;text-align:left;cursor:pointer;margin-bottom:8px;font-weight:700}
 .sidebar button.active{background:#fff;color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,0.08)}
-.main{flex:1;padding:20px;overflow:auto}
-h1,h2{font-family:'Playfair Display',serif;margin:0 0 12px 0}
-.section{display:none;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.06);margin-bottom:18px}
+
+/* La clase .section ya no necesita 'display:none' aquí porque JS lo manejará */
+.section{
+    background:#fff;
+    padding:18px;
+    border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+    margin-bottom:18px;
+    /* Los estilos de 'display:none' están ahora en el JS para la navegación exclusiva */
+} 
+/* Estilo del contenedor principal para que las secciones se vean como bloques */
+.main .section:not(:last-child) {
+    /* Si decides que el main tenga un fondo diferente al blanco, ajusta esto */
+}
+
+/* Resto de estilos (mantener) */
 .item-card,.doc-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:#f4f4f4;margin-bottom:10px}
 .item-card img{width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px}
 label{display:block;margin:8px 0;font-size:14px}
@@ -42,8 +88,6 @@ button:hover{background:var(--accent-2)}
 .flex{display:flex;gap:10px;align-items:center}
 .row{display:flex;gap:12px}
 </style>
-</head>
-<body>
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -826,6 +870,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
