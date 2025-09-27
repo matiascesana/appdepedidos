@@ -185,6 +185,81 @@ button:hover{background:var(--accent-2)}
 </div>
 
 <script>
+
+   /* -----------------------
+   Navegación de Sidebar (Solución)
+   ----------------------- */
+
+// 1. Ocultar todas las secciones al inicio para controlarlas con JS
+document.querySelectorAll('.section').forEach(section => {
+    section.style.display = 'none';
+});
+
+// 2. Mostrar la sección inicial (Promociones) y activar el botón
+const initialTab = 'promos';
+document.getElementById(initialTab).style.display = 'block';
+
+// 3. Función para manejar el cambio de pestaña (la lógica principal)
+function changeTab(tabId) {
+    // A. Oculta TODAS las secciones
+    document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // B. Muestra SOLO la sección seleccionada
+    const activeSection = document.getElementById(tabId);
+    if (activeSection) {
+        activeSection.style.display = 'block';
+    }
+
+    // C. Actualiza el estado 'active' de los botones de la sidebar
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const activeButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+
+    // D. Opcional: Actualiza el título principal según la pestaña
+    const titleMap = {
+        'promos': 'Gestión de Promociones',
+        'pedidos': 'Gestión de Pedidos',
+        'categorias': 'Administración de Categorías',
+        'localidades': 'Administración de Localidades',
+        'documentos': 'Gestión de Documentos'
+    };
+    const mainTitle = document.querySelector('.main h1');
+    if (mainTitle) {
+        mainTitle.textContent = titleMap[tabId] || 'Panel de Administración';
+    }
+}
+
+// 4. Asigna el evento click a todos los botones de la sidebar
+document.querySelectorAll('.tab-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const tabId = this.getAttribute('data-tab');
+        changeTab(tabId);
+    });
+});
+
+// 5. Función para manejar el Modal (debes añadirla para que funcione)
+function openModal() {
+    document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+// También puedes añadir un listener para cerrar el modal al hacer click fuera:
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') {
+        closeModal();
+    }
+});
+
+// Opcional: Asegúrate de que el botón inicial esté activo al cargar
+changeTab(initialTab);
 /* ============================
    CONFIG: Supabase (usar tus credenciales)
    ============================ */
@@ -751,6 +826,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
