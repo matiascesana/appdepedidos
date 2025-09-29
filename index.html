@@ -406,10 +406,15 @@ window.deleteLocalidad = async function(id){
 };
 fetchLocalidades();
 
-/* ============================
-   PROMOCIONES Y CATEGORÍAS (Agrupadas)
-   ============================ */
+/* =========================================================
+   CÓDIGO COMPLETO DE GESTIÓN DE PROMOCIONES (CON MEJORAS)
+   - Agrupación por Categoría en el Listado.
+   - Checkbox para Selección de Exportación.
+   - Edición de Imagen en el modal de Editar.
+   - Campo de Precio Anterior (tachado) para descuentos.
+   ========================================================= */
 
+// Funciones auxiliares
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
   try{
@@ -420,10 +425,12 @@ async function safeGetFileUrl(fileName, bucket='promo_images'){
 
 /**
  * Función auxiliar para agrupar las promociones por el nombre de la categoría.
+ * @param {Array<Object>} promotions - Lista de promociones.
+ * @returns {Object} Promociones agrupadas por nombre de categoría.
  */
 function groupPromosByCategory(promotions) {
     return promotions.reduce((groups, promo) => {
-        // Usamos el nombre de la categoría o 'Sin Categoría' si es null
+        // Usa el nombre de la categoría (si existe) o 'Sin Categoría'
         const categoryName = promo.categorias ? promo.categorias.nombre : 'Sin Categoría';
         if (!groups[categoryName]) {
             groups[categoryName] = [];
@@ -433,14 +440,16 @@ function groupPromosByCategory(promotions) {
     }, {});
 }
 
-// ⚠️ MODIFICACIÓN CLAVE: Incluir la categoría y renderizar agrupando.
+// ---------------------------------------------------------
+// FETCH Y RENDERIZADO (Con Agrupación y Precio Anterior)
+// ---------------------------------------------------------
 async function fetchPromotions(){
   console.log('👉 fetchPromotions ejecutado');
   // 1. OBTENER DATOS: Se usa '*, categorias(nombre)' para obtener el nombre de la categoría.
   const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
-  container.innerHTML = ''; // <-- limpiar siempre antes de renderizar
+  container.innerHTML = ''; 
 
   // 2. AGRUPAR: Agrupa las promociones por nombre de categoría
    const groupedPromos = groupPromosByCategory(data);
@@ -462,20 +471,31 @@ async function fetchPromotions(){
            const div = document.createElement('div');
            div.className = 'item-card';
            
-           // El checkbox ahora también incluye el nombre de la categoría para una posible exportación agrupada (si se quisiera retomar)
+           // Lógica de Precios (Precio Anterior Tachado)
+           let precioHTML = '';
+           if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
+               // Precio con descuento: Anterior tachado y actual resaltado
+               precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
+                             <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
+           } else {
+               // Solo precio actual
+               precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
+           }
+
            div.innerHTML = `
                <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
                     id: promo.id, 
                     nombre: promo.nombre, 
                     precio: promo.precio, 
+                    precio_anterior: promo.precio_anterior,
                     stock: promo.stock, 
                     imgUrl: imgUrl, 
-                    categoria: categoryName // Incluye el nombre de la categoría
+                    categoria: categoryName 
                })}' checked style="margin-right: 12px; transform: scale(1.4);">
                ${imgHTML}
                <div style="flex:1">
                    <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
-                   <div class="small-muted">$${Number(promo.precio).toFixed(2)} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
+                   <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
                </div>
                <div>
                    <button onclick="editPromo(${promo.id})">Editar</button>
@@ -487,11 +507,16 @@ async function fetchPromotions(){
   }
 }
 
+// ---------------------------------------------------------
+// CRUD (Creación, Edición y Eliminación)
+// ---------------------------------------------------------
 
-// Agregar promoción (código original se mantiene)
+// Agregar promoción (con Precio Anterior)
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const nombre = document.getElementById('promoNombre').value.trim();
   const precio = parseFloat(document.getElementById('promoPrecio').value);
+  const precio_anterior_val = document.getElementById('promoPrecioAnterior').value;
+  const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
   const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
   const categoria_id = document.getElementById('promoCategoria').value || null;
   const file = document.getElementById('promoImagen').files[0];
@@ -500,26 +525,30 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
   if(upErr) return alert(upErr.message);
   const publicUrl = await safeGetFileUrl(fileName);
-  const { error } = await supabase.from('promociones').insert([{ nombre, precio, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
+  
+  const { error } = await supabase.from('promociones').insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
   if(error) return alert(error.message);
+  
   // limpiar form y recargar promos
-  document.getElementById('promoNombre').value=''; document.getElementById('promoPrecio').value=''; document.getElementById('promoStock').value=''; document.getElementById('promoImagen').value='';
+  document.getElementById('promoNombre').value=''; 
+  document.getElementById('promoPrecio').value=''; 
+  document.getElementById('promoPrecioAnterior').value='';
+  document.getElementById('promoStock').value=''; 
+  document.getElementById('promoImagen').value='';
   fetchPromotions(); showToast('Promoción agregada');
 });
 
-// Edición y Actualización de Promoción (código original con gestión de imagen se mantiene)
+// Edición de Promoción (con Precio Anterior e Imagen)
 window.editPromo = async function(id){
   const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
   if(error) return alert(error.message);
   const p = data;
+  const currentImgHtml = p.imagen_url ? `<img src="${p.imagen_url}" style="max-width:150px;max-height:150px;object-fit:contain;margin-bottom:10px;display:block;border-radius:6px;">` : 'No hay imagen actual.';
 
-    // Mostrar imagen actual
-    const currentImgHtml = p.imagen_url ? `<img src="${p.imagen_url}" style="max-width:150px;max-height:150px;object-fit:contain;margin-bottom:10px;display:block;border-radius:6px;">` : 'No hay imagen actual.';
-
-    // Se añade el campo de archivo y se pasa el nombre del archivo antiguo a updatePromo
   openModal('Editar Promoción', `
     <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||p.descripcion||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Precio Actual<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Precio Anterior (Tachado)<input id="editPromoPrecioAnterior" type="number" step="0.01" value="${p.precio_anterior||''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Imagen Actual: ${currentImgHtml}
         Subir nueva imagen (jpg/png)
@@ -529,70 +558,85 @@ window.editPromo = async function(id){
   `);
 };
 
+// Actualización de Promoción (con gestión de Imagen y Precio Anterior)
 window.updatePromo = async function(id, oldFileName){
   const nombre = document.getElementById('editPromoNombre').value.trim();
   const precio = parseFloat(document.getElementById('editPromoPrecio').value);
+  const precio_anterior_val = document.getElementById('editPromoPrecioAnterior').value;
+  const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
   const stock = parseInt(document.getElementById('editPromoStock').value,10)||0;
-  const file = document.getElementById('editPromoImagen').files[0]; // Nuevo archivo de imagen
+  const file = document.getElementById('editPromoImagen').files[0]; 
 
   if(!nombre || isNaN(precio)) return alert('Complete campos');
 
-  let updateData = { nombre, precio, stock };
+  let updateData = { nombre, precio, precio_anterior, stock };
 
-  // Lógica para actualizar la imagen si se seleccionó un nuevo archivo
+  // Lógica para actualizar la imagen (se mantiene)
   if (file) {
-      // 1. Subir nueva imagen
       const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
       const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
       if(upErr) return alert(upErr.message);
 
       const publicUrl = await safeGetFileUrl(fileName);
 
-      // 2. Actualizar el objeto de datos con la nueva info de imagen
       updateData.imagen = fileName;
       updateData.imagen_url = publicUrl;
 
-      // 3. (Opcional) Eliminar imagen antigua del Storage para liberar espacio
       if (oldFileName) {
           await supabase.storage.from('promo_images').remove([oldFileName]);
       }
   }
 
-  // 4. Actualizar registro en la base de datos
   const { error } = await supabase.from('promociones').update(updateData).eq('id', id);
 
   if(error) return alert(error.message);
   closeModal(); fetchPromotions(); showToast('Promoción actualizada');
 };
 
-// Eliminación de Promoción (código original con gestión de imagen se mantiene)
+// Eliminación de Promoción (incluye eliminación de imagen)
 window.deletePromo = async function(id, fileNameToDelete){
   if(!confirm('Eliminar promoción?')) return;
-  
-  // Eliminar la imagen del Storage antes de eliminar el registro
+  
   if (fileNameToDelete) {
     await supabase.storage.from('promo_images').remove([fileNameToDelete]);
   }
-  
-  // Eliminar el registro de la base de datos
+  
   await supabase.from('promociones').delete().eq('id', id);
   fetchPromotions();
 };
+
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
 
-// Exportación Selectiva (código original sin agrupar se mantiene)
+// ---------------------------------------------------------
+// EXPORTACIÓN A PDF (Selectiva y Agrupada por Categoría)
+// ---------------------------------------------------------
 document.getElementById('exportPromoPdfBtn').addEventListener('click', () => {
   const selectedChecks = document.querySelectorAll('#promoList .promo-export-check:checked');
+  
   if (selectedChecks.length === 0) {
     alert('Seleccione al menos una promoción para exportar.');
     return;
   }
-  const promocionesParaPDF = Array.from(selectedChecks).map(checkbox => {
+  
+  // 1. Extraer los datos de las promociones seleccionadas
+  const promocionesSeleccionadas = Array.from(selectedChecks).map(checkbox => {
     return JSON.parse(checkbox.dataset.promo);
   });
-  console.log('Promociones seleccionadas para exportar:', promocionesParaPDF);
-  // Reemplaza la siguiente línea con tu función real de generación de PDF:
-  alert(`Se exportarán ${promocionesParaPDF.length} promociones al PDF. (Ver en consola)`);
+
+  // 2. Agrupar las promociones seleccionadas por categoría
+  const promocionesAgrupadasMap = groupPromosByCategory(promocionesSeleccionadas);
+    
+  // 3. Convertir el mapa de grupos a una lista ordenada para el PDF
+  const listaFinalParaPDF = Object.keys(promocionesAgrupadasMap).sort().map(categoria => ({
+    categoria: categoria,
+    promociones: promocionesAgrupadasMap[categoria]
+  }));
+
+  console.log('Estructura de datos agrupada y ordenada para PDF:', listaFinalParaPDF);
+  
+  // NOTA: Tu función de generación de PDF DEBE procesar 'listaFinalParaPDF'
+  // imprimiendo 'categoria' como título y luego iterando sobre 'promociones'.
+  alert(`Se exportarán ${promocionesSeleccionadas.length} promociones, agrupadas por ${listaFinalParaPDF.length} categorías. (Ver estructura en consola)`);
 });
 
 /* ============================
@@ -954,6 +998,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
