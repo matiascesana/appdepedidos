@@ -1,1027 +1,237 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Pedidos - Panel de Administración</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    
-    <style>
-/* -----------------------
-    Estilos (Diseño de 2 Columnas y Reseteo)
-    ----------------------- */
-:root{--accent:#6a1b9a;--accent-2:#7b1fa2;--danger:#e53935}
-*{box-sizing:border-box}
-
-/* --- LAYOUT PRINCIPAL (Flexbox) --- */
-body{
-    margin:0;
-    font-family:Roboto,Arial,Helvetica,sans-serif;
-    background:#f0f0f0; /* Color de fondo ligero */
-    color:#222;
-    min-height:100vh;
-    display:flex; /* Habilita Flexbox */
-}
-
-/* --- SIDEBAR (Fija a la izquierda) --- */
-.sidebar{
-    width:220px;
-    background:var(--accent);
-    color:#fff;
-    padding:18px;
-    display:flex;
-    flex-direction:column;
-    min-height: 100vh; /* Ocupa 100% del alto */
-    position: sticky; /* Opcional: mantiene la sidebar visible al hacer scroll */
-    top: 0;
-}
-.sidebar .logo{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:12px}
-.sidebar button{background:transparent;border:0;color:#fff;padding:10px;border-radius:8px;text-align:left;cursor:pointer;margin-bottom:8px;font-weight:700;transition: all 0.2s;}
-.sidebar button.active{background:#fff;color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,0.08)}
-
-/* --- CONTENIDO PRINCIPAL (Ocupa el resto del espacio) --- */
-.main{
-    flex:1; /* Permite que .main crezca y ocupe todo el espacio sobrante */
-    padding:20px;
-    overflow-y: auto; /* Permite scroll interno */
-    background: #ffffff; 
-}
-
-/* --- ESTILOS DE COMPONENTES --- */
-h1,h2{font-family:'Playfair Display',serif;margin:0 0 12px 0}
-.section{
-    /* display: none; <-- ¡Importante! Lo manejamos con JavaScript */
-    background:#fff;
-    padding:18px;
-    border-radius:12px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.06);
-    margin-bottom:18px;
-}
-.item-card,.doc-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:#f4f4f4;margin-bottom:10px}
-.item-card img{width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px}
-label{display:block;margin:8px 0;font-size:14px}
-input[type=text],input[type=number],select{padding:8px;margin-top:4px;border-radius:8px;border:1px solid #ddd;width:100%}
-button{cursor:pointer;border:0;border-radius:8px;padding:8px 12px;background:var(--accent);color:#fff;font-weight:700}
-button:hover{background:var(--accent-2)}
-.delete-btn{background:var(--danger)}
-.delete-btn:hover{background:#c62828}
-.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:999}
-.modal-content{background:#fff;padding:16px;border-radius:10px;max-width:860px;width:96%;max-height:86vh;overflow:auto;position:relative}
-.modal-close{position:absolute;right:12px;top:8px;cursor:pointer;font-weight:700}
-.table {width:100%;border-collapse:collapse;margin:8px 0}
-.table th,.table td{padding:8px;border:1px solid #e6e6e6}
-.small-muted{font-size:13px;color:#666}
-.flex{display:flex;gap:10px;align-items:center}
-.row{display:flex;gap:12px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD Promociones</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-top: 30px; }
+    .item-card {
+      display: flex; align-items: center; padding: 10px; margin: 5px 0;
+      border: 1px solid #ddd; border-radius: 6px; background: #fafafa;
+    }
+    button { margin-left: 8px; cursor: pointer; }
+    .delete-btn { color: red; }
+    .small-muted { font-size: 0.9em; color: #555; }
+  </style>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  <h1>Gestión de Promociones</h1>
 
-<div class="sidebar">
-    <div class="logo">App Pedidos</div>
-    <button class="tab-btn" data-tab="promos">Promociones</button>
-    <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-    <button class="tab-btn" data-tab="categorias">Categorías</button>
-    <button class="tab-btn" data-tab="localidades">Localidades</button>
-    <button class="tab-btn" data-tab="documentos">Documentos</button>
-    <div style="margin-top:auto;font-size:12px;opacity:.9">Integrado · PDF catálogo · Stock</div>
-</div>
+  <!-- FORMULARIO NUEVA PROMOCIÓN -->
+  <form id="promoForm" onsubmit="event.preventDefault(); addPromo();" style="margin:20px 0;">
+    <input type="text" id="promoNombre" placeholder="Nombre" required><br><br>
+    <textarea id="promoDescripcion" placeholder="Descripción"></textarea><br><br>
+    <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required><br><br>
+    <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01"><br><br>
+    <input type="number" id="promoStock" placeholder="Stock"><br><br>
+    <select id="promoCategoria">
+      <option value="">-- Selecciona categoría --</option>
+      <!-- Aquí podés cargar categorías dinámicamente -->
+    </select><br><br>
+    <input type="file" id="promoImagen" accept="image/*"><br><br>
+    <button type="submit">Agregar promoción</button>
+  </form>
 
-<div class="main">
-    <h1>Panel de Administración</h1>
+  <!-- LISTADO DE PROMOS -->
+  <h2>Listado de Promociones</h2>
+  <div id="promoList"></div>
 
-    <div class="section" id="promos">
-        <h2>Promociones</h2>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-            <div style="flex:1;min-width:220px">
-                <label>Nombre / Descripción
-                    <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
-                </label>
-            </div>
-            <div style="width:140px">
-                <label>Precio
-                    <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
-                </label>
-            </div>
-            <div style="width:140px">
-                <label>Stock
-                    <input id="promoStock" type="number" placeholder="0">
-                </label>
-            </div>
-            <div style="width:220px">
-                <label>Categoría
-                    <select id="promoCategoria"></select>
-                </label>
-            </div>
-        </div>
+  <script>
+    // Inicializar Supabase
+    const supabase = window.supabase.createClient("https://ejbqlejlgprvwzrptojo.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8");
 
-        <div style="width:220px;margin-bottom:12px;">
-            <label>Imagen (jpg/png)
-                <input id="promoImagen" type="file" accept="image/*">
-            </label>
-        </div> 
-        <button id="addPromoBtn">Agregar Promoción</button>
-
-        <div style="display:flex;gap:10px;margin-top:20px;margin-bottom:12px">
-            <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
-            <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
-        </div>
-
-        <h3>Lista de Promociones</h3>
-        <div id="promoList"></div>
-    </div>
-
-    <div class="section" id="pedidos">
-        <h2>Pedidos</h2>
-        <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-            <div style="flex:1;min-width:220px">
-                <label>Cliente
-                    <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
-                </label>
-            </div>
-            <div style="width:220px">
-                <label>Localidad
-                    <select id="pedidoLocalidad"></select>
-                </label>
-            </div>
-
-            <div style="display:flex;gap:8px;align-items:center">
-                <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
-            </div>
-
-            <div style="width:100%;margin-top:6px">
-                <div id="selectedProductsContainer" class="small-muted"></div>
-            </div>
-
-            <div style="display:flex;gap:8px">
-                <button type="button" id="addOrderBtn">Agregar Pedido</button>
-                <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-            </div>
-        </form>
-
-        <h3>Lista de Pedidos</h3>
-        <div id="pedidoList"></div>
-    </div>
-
-    <div class="section" id="categorias">
-        <h2>Categorías</h2>
-        <form id="categoriaForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
-            <input id="categoriaNombre" placeholder="Nombre categoría" />
-            <button id="addCategoriaBtn">Agregar Categoría</button>
-        </form>
-        <div id="categoriaList"></div>
-    </div>
-
-    <div class="section" id="localidades">
-        <h2>Localidades</h2>
-        <form id="localidadForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
-            <input id="localidadNombre" placeholder="Nombre localidad" />
-            <button id="addLocalidadBtn">Agregar Localidad</button>
-        </form>
-        <div id="localidadList"></div>
-    </div>
-
-    <div class="section" id="documentos">
-        <h2>Documentos</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-            <input id="searchDoc" placeholder="Buscar por DNI">
-            <input id="docFiles" type="file" multiple>
-            <button id="uploadDocsBtn">Subir Documentos</button>
-            <button id="deleteAllDocsBtn" class="delete-btn">Eliminar Todos</button>
-        </div>
-
-        <div id="docProgressContainer" style="width:100%;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:8px;display:none">
-            <div id="docProgress" style="width:0;height:8px;background:green"></div>
-        </div>
-
-        <h3>Documentos subidos</h3>
-        <div id="documentsList"></div>
-    </div>
-
-</div>
-
-<div id="modal" class="modal">
-    <div class="modal-content">
-        <span class="modal-close" onclick="closeModal()">×</span>
-        <div id="modalInner"></div>
-    </div>
-</div>
-
-<script>
-/* -----------------------------------------------------
-    Lógica de Navegación Exclusiva (Solución a las páginas fijas)
-    ----------------------------------------------------- */
-
-// Estado inicial: 'promos'
-const initialTab = 'promos';
-
-/**
- * Cambia la vista activa y oculta todas las demás secciones.
- * @param {string} tabId - El ID de la sección a mostrar (e.g., 'promos', 'pedidos').
- */
-function changeTab(tabId) {
-    // 1. Oculta TODAS las secciones para asegurar exclusividad
-    document.querySelectorAll('.section').forEach(section => {
-        section.style.display = 'none';
-    });
-
-    // 2. Muestra SOLO la sección seleccionada
-    const activeSection = document.getElementById(tabId);
-    if (activeSection) {
-        activeSection.style.display = 'block';
+    // Helpers
+    function escapeHtml(text) {
+      var div = document.createElement("div");
+      div.innerText = text;
+      return div.innerHTML;
     }
-
-    // 3. Actualiza el estado 'active' de los botones de la sidebar
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    const activeButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
+    function groupPromosByCategory(promos) {
+      const grouped = {};
+      promos.forEach(p => {
+        const cat = p.categorias?.nombre || "Sin categoría";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(p);
+      });
+      return grouped;
     }
-
-    // 4. Actualiza el título principal
-    const titleMap = {
-        'promos': 'Gestión de Promociones',
-        'pedidos': 'Gestión de Pedidos',
-        'categorias': 'Administración de Categorías',
-        'localidades': 'Administración de Localidades',
-        'documentos': 'Gestión de Documentos'
-    };
-    const mainTitle = document.querySelector('.main h1');
-    if (mainTitle) {
-        mainTitle.textContent = titleMap[tabId] || 'Panel de Administración';
+    async function safeGetFileUrl(path) {
+      if (!path) return "";
+      const { data } = supabase.storage.from("promo_images").getPublicUrl(path);
+      return data?.publicUrl || "";
     }
-}
-
-// 5. Asigna el evento click a todos los botones de la sidebar
-document.querySelectorAll('.tab-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        const tabId = this.getAttribute('data-tab');
-        changeTab(tabId);
-    });
-});
-
-// 6. Funciones de control del Modal (necesarias)
-function openModal() {
-    document.getElementById('modal').style.display = 'flex';
-}
-function closeModal() {
-    document.getElementById('modal').style.display = 'none';
-}
-// Cierra el modal al hacer click fuera
-document.getElementById('modal').addEventListener('click', (e) => {
-    if (e.target.id === 'modal') {
-        closeModal();
+    function showToast(msg) { alert(msg); }
+    function openModal(title, content) {
+      const modal = document.createElement("div");
+      modal.id = "modal";
+      modal.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:#0008;display:flex;align-items:center;justify-content:center;";
+      modal.innerHTML = `
+        <div style="background:#fff;padding:20px;border-radius:8px;max-width:400px;width:100%">
+          <h3>${title}</h3>
+          ${content}
+          <br><br>
+          <button onclick="closeModal()">Cerrar</button>
+        </div>`;
+      document.body.appendChild(modal);
     }
-});
+    function closeModal() { document.getElementById("modal")?.remove(); }
 
-// 7. Establece la vista inicial al cargar la página
-changeTab(initialTab);
-/* ============================
-   CONFIG: Supabase (usar tus credenciales)
-   ============================ */
-const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    /* ============================
+       CRUD PROMOCIONES
+       ============================ */
 
-/* ============================
-   HELPERS UI
-   ============================ */
-function showToast(msg, ms=3000){
-  const t = document.createElement('div');
-  t.textContent = msg;
-  Object.assign(t.style,{
-    position:'fixed',right:'20px',bottom:'20px',background: 'var(--accent)', color:'#fff', padding:'10px 14px',
-    borderRadius:'8px', boxShadow:'0 6px 18px rgba(0,0,0,0.12)', zIndex:9999
-  });
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), ms);
-}
-function openModal(title, html){
-  document.getElementById('modalInner').innerHTML = `<h3>${title}</h3>${html}`;
-  document.getElementById('modal').style.display = 'flex';
-}
-function closeModal(){ document.getElementById('modal').style.display = 'none'; }
-function escapeHtml(str){ if(!str && str!==0) return ''; return String(str).replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+    // Obtener y mostrar promociones
+    async function fetchPromotions() {
+      const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
+      if (error) return console.error(error);
 
-/* ============================
-   TABS (sidebar)
-   ============================ */
-const tabBtns = document.querySelectorAll('.tab-btn');
-tabBtns.forEach(btn => btn.addEventListener('click', () => {
-  tabBtns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-  document.getElementById(btn.dataset.tab).style.display = 'block';
-}));
-document.getElementById('promos').style.display = 'block'; // vista por defecto
+      const container = document.getElementById('promoList');
+      container.innerHTML = '';
 
-/* ============================
-   CATEGORÍAS
-   ============================ */
-async function fetchCategorias(){
-  const { data, error } = await supabase.from('categorias').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('categoriaList');
-  container.innerHTML = '';
-  const select = document.getElementById('promoCategoria');
-  select.innerHTML = '<option value="">Sin categoría</option>';
-  data.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'item-card';
-    div.innerHTML = `<span>${escapeHtml(c.nombre)}</span>
-      <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
-      <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
-    container.appendChild(div);
-    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
-  });
-}
-window.addCategoria = async function(){
-  const nombre = document.getElementById('categoriaNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('categorias').insert([{ nombre }]);
-  if(error) return alert(error.message);
-  document.getElementById('categoriaNombre').value = '';
-  fetchCategorias();
-};
-window.editCategoria = function(id,nombre){
-  openModal('Editar Categoría', `<input id="editCatName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateCategoria(${id})">Guardar</button></div>`);
-};
-window.updateCategoria = async function(id){
-  const nombre = document.getElementById('editCatName').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('categorias').update({ nombre }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchCategorias();
-};
-window.deleteCategoria = async function(id){
-  if(!confirm('Eliminar categoría?')) return;
-  await supabase.from('categorias').delete().eq('id', id);
-  fetchCategorias();
-};
-fetchCategorias();
+      const groupedPromos = groupPromosByCategory(data);
+      const categoryNames = Object.keys(groupedPromos).sort();
 
-/* ============================
-   LOCALIDADES
-   ============================ */
-async function fetchLocalidades(){
-  const { data, error } = await supabase.from('localidades').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('localidadList');
-  const sel = document.getElementById('pedidoLocalidad');
-  container.innerHTML = ''; sel.innerHTML = '<option value="">Seleccione</option>';
-  data.forEach(l=>{
-    container.innerHTML += `<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div><button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button><button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
-    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
-  });
-}
-window.addLocalidad = async function(){
-  const nombre = document.getElementById('localidadNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('localidades').insert([{ nombre }]);
-  if(error) return alert(error.message);
-  document.getElementById('localidadNombre').value='';
-  fetchLocalidades();
-};
-window.editLocalidad = function(id,nombre){
-  openModal('Editar Localidad', `<input id="editLocName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateLocalidad(${id})">Guardar</button></div>`);
-};
-window.updateLocalidad = async function(id){
-  const nombre = document.getElementById('editLocName').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('localidades').update({ nombre }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchLocalidades();
-};
-window.deleteLocalidad = async function(id){
-  if(!confirm('Eliminar localidad?')) return;
-  await supabase.from('localidades').delete().eq('id', id);
-  fetchLocalidades();
-};
-fetchLocalidades();
+      for (const categoryName of categoryNames) {
+        const promos = groupedPromos[categoryName];
 
-/* =========================================================
-   CÓDIGO COMPLETO (FINAL REVISIÓN)
-   ========================================================= */
+        const titleDiv = document.createElement('div');
+        titleDiv.innerHTML = `<h3 style="margin-top:20px; margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:4px;">
+          ${categoryName}</h3>`;
+        container.appendChild(titleDiv);
 
-// ===================================
-// I. FUNCIONES AUXILIARES Y LÓGICA DE AGRUPACIÓN
-// ===================================
+        for (const promo of promos) {
+          const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
+          const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
+          const div = document.createElement('div');
+          div.className = 'item-card';
 
-async function safeGetFileUrl(fileName, bucket='promo_images'){
-  if(!fileName) return null;
-  try{
-    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName, 60*60);
-    return error ? null : data.signedUrl;
-  }catch{return null;}
-}
+          let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
+          if (promo.precio_anterior && !isNaN(promo.precio_anterior) && Number(promo.precio_anterior) > Number(promo.precio)) {
+            precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">
+                            $${Number(promo.precio_anterior).toFixed(2)}</span>
+                          <strong style="color: #ff4d4f; font-size: 1.1em;">
+                            $${Number(promo.precio).toFixed(2)}</strong>`;
+          }
 
-/** * Asegura la obtención del nombre de la categoría, clave para la agrupación.
- */
-function groupPromosByCategory(promotions) {
-    return promotions.reduce((groups, promo) => {
-        // Accede al nombre de la categoría anidado (en fetch) o guardado (en data-promo)
-        const categoryName = (promo.categorias && promo.categorias.nombre) || promo.categoria || 'Sin Categoría';
-        if (!groups[categoryName]) {
-            groups[categoryName] = [];
+          div.innerHTML = `
+            ${imgHTML}
+            <div style="flex:1">
+              <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
+              <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
+            </div>
+            <div>
+              <button onclick="editPromo(${promo.id})">Editar</button>
+              <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
+            </div>
+          `;
+          container.appendChild(div);
         }
-        groups[categoryName].push(promo);
-        return groups;
-    }, {});
-}
-
-/** Simula el llenado de la barra de progreso. */
-function simulateProgress(duration = 2000) {
-    const fill = document.getElementById('progressFill');
-    fill.style.width = '0%';
-    
-    const interval = setInterval(() => {
-        let currentWidth = parseInt(fill.style.width, 10);
-        if (currentWidth < 90) { 
-            fill.style.width = (currentWidth + 10) + '%';
-        }
-    }, duration / 9); 
-    
-    return new Promise(resolve => setTimeout(() => {
-        clearInterval(interval);
-        fill.style.width = '100%';
-        resolve();
-    }, duration));
-}
-
-// ===================================
-// II. FETCH Y RENDERIZADO (Agrupado)
-// ===================================
-
-async function fetchPromotions(){
-  console.log('👉 fetchPromotions ejecutado');
-  // Consulta CLAVE: Usa 'categorias(nombre)' para el JOIN
-  const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('promoList');
-  container.innerHTML = ''; 
-
-  // Agrupar y obtener nombres de categorías
-   const groupedPromos = groupPromosByCategory(data);
-   const categoryNames = Object.keys(groupedPromos).sort(); 
-
-  for(const categoryName of categoryNames){
-       const promos = groupedPromos[categoryName];
-
-       const titleDiv = document.createElement('div');
-       titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${categoryName}</h3>`;
-       container.appendChild(titleDiv);
-
-       for(const promo of promos){
-           const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
-           const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
-           const div = document.createElement('div');
-           div.className = 'item-card';
-           
-           // Lógica de Precios
-           let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
-           if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
-               precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
-                             <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
-           } 
-
-           div.innerHTML = `
-               <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
-                    id: promo.id, 
-                    nombre: promo.nombre, 
-                    precio: promo.precio, 
-                    precio_anterior: promo.precio_anterior,
-                    stock: promo.stock, 
-                    imgUrl: imgUrl, 
-                    categoria: categoryName // Incluye el nombre de la categoría para la exportación
-               })}' checked style="margin-right: 12px; transform: scale(1.4);">
-               ${imgHTML}
-               <div style="flex:1">
-                   <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
-                   <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
-               </div>
-               <div>
-                   <button onclick="editPromo(${promo.id})">Editar</button>
-                   <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
-               </div>
-           `;
-           container.appendChild(div);
-       }
-  }
-}
-
-// ===================================
-// III. CRUD (Creación, Edición, Eliminación) - [Manteniendo el código anterior]
-// ===================================
-
-document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
-  const nombre = document.getElementById('promoNombre').value.trim();
-  const precio = parseFloat(document.getElementById('promoPrecio').value);
-  const precio_anterior_val = document.getElementById('promoPrecioAnterior').value;
-  const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
-  const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
-  const categoria_id = document.getElementById('promoCategoria').value || null;
-  const file = document.getElementById('promoImagen').files[0];
-  if(!nombre || isNaN(precio) || !file) return alert('Complete nombre, precio e imagen');
-  const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
-  const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
-  if(upErr) return alert(upErr.message);
-  const publicUrl = await safeGetFileUrl(fileName);
-  
-  const { error } = await supabase.from('promociones').insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
-  if(error) return alert(error.message);
-  
-  document.getElementById('promoNombre').value=''; 
-  document.getElementById('promoPrecio').value=''; 
-  document.getElementById('promoPrecioAnterior').value='';
-  document.getElementById('promoStock').value=''; 
-  document.getElementById('promoImagen').value='';
-  fetchPromotions(); showToast('Promoción agregada');
-});
-
-window.editPromo = async function(id){
-  const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
-  if(error) return alert(error.message);
-  const p = data;
-  const currentImgHtml = p.imagen_url ? `<img src="${p.imagen_url}" style="max-width:150px;max-height:150px;object-fit:contain;margin-bottom:10px;display:block;border-radius:6px;">` : 'No hay imagen actual.';
-
-  openModal('Editar Promoción', `
-    <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||p.descripcion||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio Actual<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio Anterior (Tachado)<input id="editPromoPrecioAnterior" type="number" step="0.01" value="${p.precio_anterior||''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Imagen Actual: ${currentImgHtml}
-        Subir nueva imagen (jpg/png)
-        <input id="editPromoImagen" type="file" accept="image/*" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd">
-    </label>
-    <div style="margin-top:10px"><button onclick="updatePromo(${p.id}, '${p.imagen || ''}')">Guardar</button></div>
-  `);
-};
-
-window.updatePromo = async function(id, oldFileName){
-  const nombre = document.getElementById('editPromoNombre').value.trim();
-  const precio = parseFloat(document.getElementById('editPromoPrecio').value);
-  const precio_anterior_val = document.getElementById('editPromoPrecioAnterior').value;
-  const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
-  const stock = parseInt(document.getElementById('editPromoStock').value,10)||0;
-  const file = document.getElementById('editPromoImagen').files[0]; 
-
-  if(!nombre || isNaN(precio)) return alert('Complete campos');
-
-  let updateData = { nombre, precio, precio_anterior, stock };
-
-  if (file) {
-      const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
-      const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
-      if(upErr) return alert(upErr.message);
-
-      const publicUrl = await safeGetFileUrl(fileName);
-
-      updateData.imagen = fileName;
-      updateData.imagen_url = publicUrl;
-
-      if (oldFileName) {
-          await supabase.storage.from('promo_images').remove([oldFileName]);
-      }
-  }
-
-  const { error } = await supabase.from('promociones').update(updateData).eq('id', id);
-
-  if(error) return alert(error.message);
-  closeModal(); fetchPromotions(); showToast('Promoción actualizada');
-};
-
-window.deletePromo = async function(id, fileNameToDelete){
-  if(!confirm('Eliminar promoción?')) return;
-  
-  if (fileNameToDelete) {
-    await supabase.storage.from('promo_images').remove([fileNameToDelete]);
-  }
-  
-  await supabase.from('promociones').delete().eq('id', id);
-  fetchPromotions();
-};
-
-document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
-
-// ===================================
-// IV. EXPORTACIÓN A PDF (Agrupada y con Progreso)
-// ===================================
-
-document.getElementById('exportPromoPdfBtn').addEventListener('click', async () => {
-  const selectedChecks = document.querySelectorAll('#promoList .promo-export-check:checked');
-  const container = document.getElementById('pdfProgressBarContainer');
-  
-  if (selectedChecks.length === 0) {
-    alert('Seleccione al menos una promoción para exportar.');
-    return;
-  }
-  
-  // MOSTRAR BARRA DE PROGRESO
-   if (container) container.style.display = 'block';
-
-  // 1. Extraer y Agrupar los datos (usa la categoría guardada en data-promo)
-  const promocionesSeleccionadas = Array.from(selectedChecks).map(checkbox => {
-    return JSON.parse(checkbox.dataset.promo);
-  });
-
-  const promocionesAgrupadasMap = groupPromosByCategory(promocionesSeleccionadas);
-  const listaFinalParaPDF = Object.keys(promocionesAgrupadasMap).sort().map(categoria => ({
-    categoria: categoria,
-    promociones: promocionesAgrupadasMap[categoria]
-  }));
-
-  try {
-        // Iniciar simulación de progreso
-        const progressPromise = simulateProgress(2000); 
-        
-        // ⚠️ COLOCA TU FUNCIÓN DE GENERACIÓN DE PDF AQUÍ. 
-        // Debe ser ASÍNCRONA y usar 'listaFinalParaPDF'
-        // Ejemplo: await generatePdfFromGroupedPromos(listaFinalParaPDF); 
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulación de tiempo de generación
-
-        await progressPromise; // Esperar que la simulación termine
-
-        console.log('Estructura de datos AGRUPADA lista para el PDF:', listaFinalParaPDF);
-        alert(`PDF generado exitosamente con ${promocionesSeleccionadas.length} promociones. Revise la consola y el PDF.`);
-        
-  } catch (error) {
-        console.error("Error al generar el PDF:", error);
-        alert("Ocurrió un error al generar el PDF.");
-  } finally {
-        // OCULTAR BARRA DE PROGRESO
-        if (container) {
-            container.style.display = 'none';
-            document.getElementById('progressFill').style.width = '0%';
-        }
-  }
-});
-
-/* ============================
-   PEDIDOS
-   - selección múltiple desde modal tipo tabla
-   - control stock antes de guardar
-   - edición: devuelve stock anterior, aplica nuevo
-   - eliminación: devuelve stock
-   ============================ */
-
-let selectedProducts = []; // {id,nombre,cantidad,precio}
-let editingOrderId = null;
-
-// Abre modal con tabla de promos y inputs de cantidad
-document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
-  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return alert(error.message);
-  // construir tabla HTML
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  for(const p of promos){
-    const qty = getSelectedQty(p.id);
-    html += `<tr>
-      <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
-      <td>$${Number(p.precio).toFixed(2)}</td>
-      <td>${p.stock ?? 0}</td>
-      <td><input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)})"></td>
-      <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
-    </tr>`;
-  }
-  html += `<tr><td colspan="3" style="text-align:right"><strong>Total:</strong></td><td colspan="2" id="totalPedido">$0.00</td></tr></tbody></table>
-    <div style="margin-top:10px"><button onclick="confirmProducts()">Confirmar selección</button></div>`;
-  openModal('Seleccionar Productos', html);
-  // set initial total (after modal rendered)
-  setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
-});
-
-// retorna cantidad si ya está seleccionado
-function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
-
-// update subtotal UI y total
-function updateSubtotal(id, price){
-  const input = document.getElementById(`prod_${id}`);
-  if(!input) return;
-  let qty = parseInt(input.value,10) || 0;
-  if(qty < 0) qty = 0;
-  if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
-  input.value = qty;
-  const sub = document.getElementById(`sub_${id}`);
-  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
-  const tot = document.getElementById('totalPedido');
-  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
-}
-
-// calcular total en modal
-function calculateTotal(){
-  let total = 0;
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const id = parseInt(inp.id.replace('prod_',''),10);
-    const qty = parseInt(inp.value,10) || 0;
-    const price = parseFloat(inp.getAttribute('data-price')) || 0;
-    total += qty * price;
-  });
-  return total;
-}
-
-// confirmar selección -> guarda en selectedProducts y render outside
-function confirmProducts(){
-  selectedProducts = [];
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const qty = parseInt(inp.value,10) || 0;
-    if(qty > 0){
-      const id = parseInt(inp.id.replace('prod_',''),10);
-      const row = inp.closest('tr');
-      const nombre = row.cells[0].textContent;
-      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
-      selectedProducts.push({ id, nombre, cantidad: qty, precio });
+      }
     }
-  });
-  closeModal(); renderSelectedProducts();
 
-  // if editing an order, trigger update flow
-  if(editingOrderId){
-    // button will call updateOrder when user clicks 'Actualizar' (we handle editing on a separate button)
-  }
-}
+    // Crear nueva promoción
+    async function addPromo() {
+      const nombre = document.getElementById('promoNombre').value.trim();
+      const descripcion = document.getElementById('promoDescripcion').value.trim();
+      const precio = parseFloat(document.getElementById('promoPrecio').value);
+      const precioAnterior = parseFloat(document.getElementById('promoPrecioAnterior').value);
+      const stock = parseInt(document.getElementById('promoStock').value);
+      const categoria_id = document.getElementById('promoCategoria').value || null;
+      const file = document.getElementById('promoImagen').files[0];
 
-// render summary of selected products in pedido form
-function renderSelectedProducts(){
-  const c = document.getElementById('selectedProductsContainer');
-  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  selectedProducts.forEach(p=>{
-    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
-  });
-  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
-  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
-  c.innerHTML = html;
-}
+      if (!nombre || isNaN(precio)) {
+        return alert('Debe ingresar al menos nombre y precio válido');
+      }
 
-/* GET promo by id helper */
-async function getPromoById(id){
-  const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
-  if(error) throw new Error(error.message);
-  return data;
-}
+      let imagen = null;
+      if (file) {
+        const filePath = `${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage.from('promo_images').upload(filePath, file);
+        if (uploadError) return alert('Error al subir imagen: ' + uploadError.message);
+        imagen = filePath;
+      }
 
-/* AGREGAR pedido -> actualiza stock, inserta pedido */
-// Cambiar el botón para que llame a updateOrder
-const addBtn = document.getElementById('addOrderBtn');
-addBtn.textContent = 'Actualizar Pedido';
-addBtn.onclick = async function(){ 
-    await updateOrder(editingOrderId); 
-    
-    // Al finalizar la actualización, limpiar la propiedad onclick.
-    // El listener original (addEventListener) seguirá activo.
-    addBtn.textContent = 'Agregar Pedido';
-    addBtn.onclick = null; // <-- Restauración limpia
-};
-  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
+      const { error } = await supabase.from('promociones').insert([{
+        nombre, descripcion, precio, precio_anterior: precioAnterior || null, stock: stock || 0, categoria_id, imagen
+      }]);
+      if (error) return alert(error.message);
 
-  // chequear stock localmente contra DB
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
-  }
-
-  // restar stock en DB
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    const newStock = (promo.stock || 0) - p.cantidad;
-    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
-  }
-
-  // insertar pedido (productos como JSON)
-  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
-  if(error) return alert(error.message);
-
-  // limpiar
-  document.getElementById('pedidoForm').reset();
-  selectedProducts = []; renderSelectedProducts();
-  fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
-});
-
-/* FETCH and render orders */
-async function fetchOrders(){
-  const { data, error } = await supabase.from('pedidos').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('pedidoList'); container.innerHTML = '';
-  for(const p of data){
-    const div = document.createElement('div'); div.className = 'item-card';
-    let prodHTML = '<ul style="margin:6px 0;padding-left:18px">';
-    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
-    prodHTML += '</ul>';
-    div.innerHTML = `<div style="flex:1"><strong>${escapeHtml(p.cliente)}</strong><div class="small-muted">${p.localidad_id?('Localidad ID:'+p.localidad_id):''}</div>${prodHTML}<strong>Total: $${Number(p.total).toFixed(2)}</strong></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <button onclick="openEditOrder(${p.id})">Editar</button>
-        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
-      </div>`;
-    container.appendChild(div);
-  }
-}
-fetchOrders();
-
-/* Edit order:
-   - restore old stock (add back quantities from old.order)
-   - load order into selectedProducts and form
-   - set editingOrderId
-*/
-async function openEditOrder(id){
-  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(error) return alert(error.message);
-  const order = data;
-
-  // devolver stock del pedido anterior
-  if(order.productos && order.productos.length){
-    for(const pr of order.productos){
-      // pr.id stored in payload
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+      showToast('Promoción creada');
+      document.getElementById('promoForm').reset();
+      fetchPromotions();
     }
-  }
 
-  // cargar pedido en formulario para editar
-  selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
-  document.getElementById('pedidoCliente').value = order.cliente;
-  document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
-  renderSelectedProducts();
-  editingOrderId = id;
+    // Editar promoción
+    async function editPromo(id) {
+      const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
+      if (error) return alert(error.message);
 
-  // change Add button behaviour: we will use confirmProducts flow to update after selecting new products
-  showToast('Editando pedido: ajusta productos y presiona "Actualizar" en la misma sección.');
-  // When user opens selection modal and confirms (confirmProducts), if editingOrderId set, we will call updateOrder
-  // Provide a direct "Actualizar Pedido" quick button:
-  const addBtn = document.getElementById('addOrderBtn');
-  addBtn.textContent = 'Actualizar Pedido';
-  addBtn.onclick = async function(){ await updateOrder(editingOrderId); addBtn.textContent = 'Agregar Pedido'; addBtn.onclick = async ()=>{ /* restore listener */ document.getElementById('addOrderBtn').dispatchEvent(new Event('click')); }; };
-}
-
-/* Update order: after new selection (selectedProducts) */
-async function updateOrder(id){
-  if(!id) return alert('No hay pedido seleccionado para actualizar');
-  const cliente = document.getElementById('pedidoCliente').value.trim();
-  if(!cliente) return alert('Ingrese cliente');
-  if(!selectedProducts.length) return alert('Seleccione productos');
-
-  // verify stock for new selection
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
-  }
-  // subtract stock for new selection
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    const newStock = (promo.stock || 0) - p.cantidad;
-    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
-  }
-
-  // update pedido record
-  const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').update({ cliente, productos: payload, total }).eq('id', id);
-  if(error) return alert(error.message);
-
-  // reset
-  editingOrderId = null;
-  selectedProducts = []; renderSelectedProducts();
-  document.getElementById('pedidoCliente').value = '';
-  document.getElementById('pedidoLocalidad').value = '';
-  fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
-}
-
-/* Delete order: return stock, delete row */
-async function deleteOrder(id){
-  if(!confirm('Eliminar pedido?')) return;
-  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(error) return alert(error.message);
-  if(data.productos && data.productos.length){
-    for(const pr of data.productos){
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+      openModal('Editar Promoción', `
+        <input id="editPromoNombre" value="${escapeHtml(data.nombre)}" placeholder="Nombre"><br><br>
+        <textarea id="editPromoDescripcion" placeholder="Descripción">${escapeHtml(data.descripcion || '')}</textarea><br><br>
+        <input type="number" id="editPromoPrecio" value="${data.precio}" placeholder="Precio"><br><br>
+        <input type="number" id="editPromoPrecioAnterior" value="${data.precio_anterior || ''}" placeholder="Precio anterior"><br><br>
+        <input type="number" id="editPromoStock" value="${data.stock}" placeholder="Stock"><br><br>
+        <input type="file" id="editPromoImagen" accept="image/*"><br><br>
+        <button onclick="updatePromo(${id}, '${data.imagen || ''}')">Guardar cambios</button>
+      `);
     }
-  }
-  await supabase.from('pedidos').delete().eq('id', id);
-  fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
-}
 
-/* ============================
-   DOCUMENTOS (storage)
-   - subir, listar, eliminar
-   ============================ */
-async function fetchDocuments(filter=''){
-  const { data, error } = await supabase.storage.from('private-documents').list('', { limit: 500 });
-  if(error) return console.error(error);
-  const container = document.getElementById('documentsList'); container.innerHTML = '';
-  for(const f of data){
-    if(filter && !f.name.includes(filter)) continue;
-    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(f.name, 60*60);
-    const div = document.createElement('div'); div.className = 'doc-item';
-    div.innerHTML = `<a href="${urlData.signedUrl}" target="_blank">${f.name}</a>
-      <div><button class="delete-btn" onclick="deleteDoc('${f.name}')">Eliminar</button></div>`;
-    container.appendChild(div);
-  }
-}
-document.getElementById('uploadDocsBtn').addEventListener('click', async ()=>{
-  const files = document.getElementById('docFiles').files;
-  if(!files.length) return alert('Seleccione archivos');
-  document.getElementById('docProgressContainer').style.display = 'block';
-  const progressEl = document.getElementById('docProgress');
-  for(let i=0;i<files.length;i++){
-    const file = files[i];
-    const name = `${Date.now()}_${file.name.replaceAll(' ','_')}`;
-    const { error } = await supabase.storage.from('private-documents').upload(name, file, { upsert:true });
-    if(error){ alert(error.message); break; }
-    progressEl.style.width = `${Math.round(((i+1)/files.length)*100)}%`;
-  }
-  setTimeout(()=>{ document.getElementById('docProgressContainer').style.display='none'; document.getElementById('docProgress').style.width='0%'; }, 600);
-  document.getElementById('docFiles').value='';
-  showToast('Documentos subidos');
-  fetchDocuments();
-});
-window.deleteDoc = async function(name){
-  if(!confirm('Eliminar archivo?')) return;
-  await supabase.storage.from('private-documents').remove([name]);
-  fetchDocuments();
-};
-document.getElementById('searchDoc').addEventListener('input', (e)=>fetchDocuments(e.target.value));
-fetchDocuments();
+    // Actualizar promoción
+    async function updatePromo(id, oldImage) {
+      const nombre = document.getElementById('editPromoNombre').value.trim();
+      const descripcion = document.getElementById('editPromoDescripcion').value.trim();
+      const precio = parseFloat(document.getElementById('editPromoPrecio').value);
+      const precioAnterior = parseFloat(document.getElementById('editPromoPrecioAnterior').value);
+      const stock = parseInt(document.getElementById('editPromoStock').value);
 
-/* ============================
-   EXPORTAR CATALOGO PDF (6 promos por página)
-   - convertimos imágenes a base64 para que aparezcan siempre
-   - usamos page-break para que no corte tarjetas
-   ============================ */
+      if (!nombre || isNaN(precio)) {
+        return alert('Debe ingresar nombre y precio válido');
+      }
 
-async function toBase64(url){
-  return new Promise((resolve)=>{
-    if(!url) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = ()=>{
-      try{
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img,0,0);
-        const data = canvas.toDataURL('image/jpeg', 0.95);
-        resolve(data);
-      }catch(e){ resolve(null); }
-    };
-    img.onerror = ()=> resolve(null);
-    img.src = url;
-  });
-}
+      let imagen = oldImage;
+      const file = document.getElementById('editPromoImagen')?.files?.[0];
+      if (file) {
+        if (oldImage) await supabase.storage.from('promo_images').remove([oldImage]);
+        const filePath = `${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage.from('promo_images').upload(filePath, file);
+        if (uploadError) return alert('Error al subir nueva imagen: ' + uploadError.message);
+        imagen = filePath;
+      }
 
-document.getElementById('exportPromoPdfBtn').addEventListener('click', async ()=>{
-  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return alert(error.message);
-  if(!promos || promos.length === 0) return alert('No hay promociones');
+      const { error } = await supabase.from('promociones').update({
+        nombre, descripcion, precio, precio_anterior: precioAnterior || null, stock: stock || 0, imagen
+      }).eq('id', id);
 
-  let html = `<div style="font-family: Arial, sans-serif; width:100%;"><h2 style="text-align:center;margin-bottom:12px">📖 Catálogo de Promociones</h2>`;
-  for(const [i,promo] of promos.entries()){
-    const signedUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || null);
-    const img64 = signedUrl ? await toBase64(signedUrl) : null;
-    html += `<div style="display:flex;align-items:center;margin-bottom:12px;border:1px solid #ddd;border-radius:10px;padding:10px;page-break-inside:avoid;">
-      ${img64 ? `<img src="${img64}" style="width:120px;height:120px;object-fit:cover;margin-right:12px;border-radius:8px;border:1px solid #ccc">` : ''}
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:700;margin-bottom:6px">${escapeHtml(promo.nombre||promo.descripcion||'')}</div>
-        <div style="font-size:14px">💲 <strong>$${Number(promo.precio).toFixed(2)}</strong></div>
-      </div>
-    </div>`;
-    // cada 6 promociones -> salto de página
-    if((i+1) % 6 === 0) html += `<div style="page-break-after:always"></div>`;
-  }
-  html += `</div>`;
+      if (error) return alert(error.message);
 
-  const opt = {
-    margin: 0.5,
-    filename: 'catalogo_promociones.pdf',
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-  };
+      closeModal();
+      showToast('Promoción actualizada');
+      fetchPromotions();
+    }
 
-  html2pdf().from(html).set(opt).save();
-});
+    // Eliminar promoción
+    async function deletePromo(id, imagePath) {
+      if (!confirm('¿Seguro que desea eliminar esta promoción?')) return;
 
-/* ============================
-   Inicialización final
-   ============================ */
-document.getElementById('addCategoriaBtn').addEventListener('click', ()=>window.addCategoria?.());
-document.getElementById('addLocalidadBtn').addEventListener('click', ()=>window.addLocalidad?.());
-document.getElementById('addPromoBtn').addEventListener('click', ()=>{}); // ya bound above
-// llamadas iniciales (solo una vez)
-fetchCategorias();
-fetchLocalidades();
-fetchPromotions();
-fetchOrders? fetchOrders() : null;
-fetchDocuments();
-    
-</script>
+      const { error } = await supabase.from('promociones').delete().eq('id', id);
+      if (error) return alert(error.message);
+
+      if (imagePath) {
+        await supabase.storage.from('promo_images').remove([imagePath]);
+      }
+
+      showToast('Promoción eliminada');
+      fetchPromotions();
+    }
+
+    // Cargar promos al inicio
+    fetchPromotions();
+  </script>
 </body>
 </html>
+```
