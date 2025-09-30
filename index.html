@@ -3,46 +3,137 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRUD Promociones</title>
+  <title>Panel de Administración</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h2 { margin-top: 30px; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+    }
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #2c3e50;
+      color: #fff;
+      min-height: 100vh;
+      padding-top: 20px;
+      position: fixed;
+    }
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      text-align: left;
+      border: none;
+      background: none;
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .tab-btn:hover, .tab-btn.active {
+      background: #34495e;
+    }
+    /* Main */
+    .main {
+      margin-left: 220px;
+      padding: 20px;
+      flex: 1;
+    }
     .item-card {
-      display: flex; align-items: center; padding: 10px; margin: 5px 0;
-      border: 1px solid #ddd; border-radius: 6px; background: #fafafa;
+      display: flex; align-items: center;
+      padding: 10px; margin: 6px 0;
+      border: 1px solid #ddd; border-radius: 6px;
+      background: #fafafa;
+    }
+    .item-card img {
+      width: 56px; height: 56px;
+      object-fit: cover; border-radius: 8px;
+      margin-right: 10px;
     }
     button { margin-left: 8px; cursor: pointer; }
     .delete-btn { color: red; }
     .small-muted { font-size: 0.9em; color: #555; }
   </style>
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <h1>Gestión de Promociones</h1>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>Panel</h2>
+    <button class="tab-btn active" data-tab="promos">Promociones</button>
+    <button class="tab-btn" data-tab="pedidos">Pedidos</button>
+    <button class="tab-btn" data-tab="categorias">Categorías</button>
+    <button class="tab-btn" data-tab="localidades">Localidades</button>
+    <button class="tab-btn" data-tab="documentos">Documentos</button>
+  </div>
 
-  <!-- FORMULARIO NUEVA PROMOCIÓN -->
-  <form id="promoForm" onsubmit="event.preventDefault(); addPromo();" style="margin:20px 0;">
-    <input type="text" id="promoNombre" placeholder="Nombre" required><br><br>
-    <textarea id="promoDescripcion" placeholder="Descripción"></textarea><br><br>
-    <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required><br><br>
-    <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01"><br><br>
-    <input type="number" id="promoStock" placeholder="Stock"><br><br>
-    <select id="promoCategoria">
-      <option value="">-- Selecciona categoría --</option>
-      <!-- Aquí podés cargar categorías dinámicamente -->
-    </select><br><br>
-    <input type="file" id="promoImagen" accept="image/*"><br><br>
-    <button type="submit">Agregar promoción</button>
-  </form>
+  <!-- MAIN -->
+  <div class="main">
+    <h1 id="mainTitle">Gestión de Promociones</h1>
 
-  <!-- LISTADO DE PROMOS -->
-  <h2>Listado de Promociones</h2>
-  <div id="promoList"></div>
+    <!-- SECCIONES -->
+    <div class="section" id="promos">
+      <form id="promoForm" onsubmit="event.preventDefault(); addPromo();">
+        <input type="text" id="promoNombre" placeholder="Nombre" required><br><br>
+        <textarea id="promoDescripcion" placeholder="Descripción"></textarea><br><br>
+        <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required><br><br>
+        <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01"><br><br>
+        <input type="number" id="promoStock" placeholder="Stock"><br><br>
+        <select id="promoCategoria">
+          <option value="">-- Selecciona categoría --</option>
+        </select><br><br>
+        <input type="file" id="promoImagen" accept="image/*"><br><br>
+        <button type="submit">Agregar promoción</button>
+      </form>
+      <h2>Listado de Promociones</h2>
+      <div id="promoList"></div>
+    </div>
+
+    <div class="section" id="pedidos" style="display:none">
+      <h2>Gestión de Pedidos</h2>
+      <p>Aquí iría el módulo de pedidos.</p>
+    </div>
+
+    <div class="section" id="categorias" style="display:none">
+      <h2>Gestión de Categorías</h2>
+      <p>Aquí iría el módulo de categorías.</p>
+    </div>
+
+    <div class="section" id="localidades" style="display:none">
+      <h2>Gestión de Localidades</h2>
+      <p>Aquí iría el módulo de localidades.</p>
+    </div>
+
+    <div class="section" id="documentos" style="display:none">
+      <h2>Gestión de Documentos</h2>
+      <p>Aquí iría el módulo de documentos.</p>
+    </div>
+  </div>
 
   <script>
-    // Inicializar Supabase
     const supabase = window.supabase.createClient("https://ejbqlejlgprvwzrptojo.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8");
+
+    // Sidebar navegación
+    const titleMap = {
+      promos: "Gestión de Promociones",
+      pedidos: "Gestión de Pedidos",
+      categorias: "Gestión de Categorías",
+      localidades: "Gestión de Localidades",
+      documentos: "Gestión de Documentos"
+    };
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.querySelectorAll(".section").forEach(sec => sec.style.display="none");
+        document.getElementById(btn.dataset.tab).style.display="block";
+        document.getElementById("mainTitle").textContent = titleMap[btn.dataset.tab];
+      });
+    });
 
     // Helpers
     function escapeHtml(text) {
@@ -50,186 +141,81 @@
       div.innerText = text;
       return div.innerHTML;
     }
-    function groupPromosByCategory(promos) {
-      const grouped = {};
-      promos.forEach(p => {
-        const cat = p.categorias?.nombre || "Sin categoría";
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(p);
-      });
-      return grouped;
-    }
     async function safeGetFileUrl(path) {
       if (!path) return "";
       const { data } = supabase.storage.from("promo_images").getPublicUrl(path);
       return data?.publicUrl || "";
     }
-    function showToast(msg) { alert(msg); }
-    function openModal(title, content) {
-      const modal = document.createElement("div");
-      modal.id = "modal";
-      modal.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:#0008;display:flex;align-items:center;justify-content:center;";
-      modal.innerHTML = `
-        <div style="background:#fff;padding:20px;border-radius:8px;max-width:400px;width:100%">
-          <h3>${title}</h3>
-          ${content}
-          <br><br>
-          <button onclick="closeModal()">Cerrar</button>
-        </div>`;
-      document.body.appendChild(modal);
-    }
-    function closeModal() { document.getElementById("modal")?.remove(); }
 
-    /* ============================
-       CRUD PROMOCIONES
-       ============================ */
-
-    // Obtener y mostrar promociones
+    // CRUD PROMOCIONES
     async function fetchPromotions() {
       const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
       if (error) return console.error(error);
-
-      const container = document.getElementById('promoList');
-      container.innerHTML = '';
-
-      const groupedPromos = groupPromosByCategory(data);
-      const categoryNames = Object.keys(groupedPromos).sort();
-
-      for (const categoryName of categoryNames) {
-        const promos = groupedPromos[categoryName];
-
-        const titleDiv = document.createElement('div');
-        titleDiv.innerHTML = `<h3 style="margin-top:20px; margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:4px;">
-          ${categoryName}</h3>`;
-        container.appendChild(titleDiv);
-
-        for (const promo of promos) {
-          const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
-          const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
-          const div = document.createElement('div');
-          div.className = 'item-card';
-
-          let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
-          if (promo.precio_anterior && !isNaN(promo.precio_anterior) && Number(promo.precio_anterior) > Number(promo.precio)) {
-            precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">
-                            $${Number(promo.precio_anterior).toFixed(2)}</span>
-                          <strong style="color: #ff4d4f; font-size: 1.1em;">
-                            $${Number(promo.precio).toFixed(2)}</strong>`;
-          }
-
-          div.innerHTML = `
-            ${imgHTML}
-            <div style="flex:1">
-              <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
-              <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
-            </div>
-            <div>
-              <button onclick="editPromo(${promo.id})">Editar</button>
-              <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
-            </div>
-          `;
-          container.appendChild(div);
+      const container = document.getElementById("promoList");
+      container.innerHTML = "";
+      for (const promo of data) {
+        const imgUrl = await safeGetFileUrl(promo.imagen);
+        const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="img">` : "";
+        let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
+        if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
+          precioHTML = `<span style="text-decoration:line-through;color:#999;margin-right:8px;">
+                          $${Number(promo.precio_anterior).toFixed(2)}</span>
+                        <strong style="color:#e74c3c;font-size:1.1em;">
+                          $${Number(promo.precio).toFixed(2)}</strong>`;
         }
+        const div = document.createElement("div");
+        div.className = "item-card";
+        div.innerHTML = `
+          ${imgHTML}
+          <div style="flex:1">
+            <strong>${escapeHtml(promo.nombre)}</strong>
+            <div class="small-muted">${precioHTML} · Stock: ${promo.stock ?? 0}</div>
+          </div>
+          <div>
+            <button onclick="editPromo(${promo.id})">Editar</button>
+            <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
+          </div>`;
+        container.appendChild(div);
       }
     }
 
-    // Crear nueva promoción
     async function addPromo() {
-      const nombre = document.getElementById('promoNombre').value.trim();
-      const descripcion = document.getElementById('promoDescripcion').value.trim();
-      const precio = parseFloat(document.getElementById('promoPrecio').value);
-      const precioAnterior = parseFloat(document.getElementById('promoPrecioAnterior').value);
-      const stock = parseInt(document.getElementById('promoStock').value);
-      const categoria_id = document.getElementById('promoCategoria').value || null;
-      const file = document.getElementById('promoImagen').files[0];
-
-      if (!nombre || isNaN(precio)) {
-        return alert('Debe ingresar al menos nombre y precio válido');
-      }
+      const nombre = document.getElementById("promoNombre").value.trim();
+      const descripcion = document.getElementById("promoDescripcion").value.trim();
+      const precio = parseFloat(document.getElementById("promoPrecio").value);
+      const precioAnterior = parseFloat(document.getElementById("promoPrecioAnterior").value);
+      const stock = parseInt(document.getElementById("promoStock").value);
+      const categoria_id = document.getElementById("promoCategoria").value || null;
+      const file = document.getElementById("promoImagen").files[0];
+      if (!nombre || isNaN(precio)) return alert("Complete nombre y precio válido");
 
       let imagen = null;
       if (file) {
         const filePath = `${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabase.storage.from('promo_images').upload(filePath, file);
-        if (uploadError) return alert('Error al subir imagen: ' + uploadError.message);
+        const { error: uploadError } = await supabase.storage.from("promo_images").upload(filePath, file);
+        if (uploadError) return alert("Error al subir imagen: " + uploadError.message);
         imagen = filePath;
       }
 
-      const { error } = await supabase.from('promociones').insert([{
-        nombre, descripcion, precio, precio_anterior: precioAnterior || null, stock: stock || 0, categoria_id, imagen
+      const { error } = await supabase.from("promociones").insert([{
+        nombre, descripcion, precio, precio_anterior: precioAnterior || null,
+        stock: stock || 0, categoria_id, imagen
       }]);
       if (error) return alert(error.message);
-
-      showToast('Promoción creada');
-      document.getElementById('promoForm').reset();
+      document.getElementById("promoForm").reset();
       fetchPromotions();
     }
 
-    // Editar promoción
-    async function editPromo(id) {
-      const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
-      if (error) return alert(error.message);
-
-      openModal('Editar Promoción', `
-        <input id="editPromoNombre" value="${escapeHtml(data.nombre)}" placeholder="Nombre"><br><br>
-        <textarea id="editPromoDescripcion" placeholder="Descripción">${escapeHtml(data.descripcion || '')}</textarea><br><br>
-        <input type="number" id="editPromoPrecio" value="${data.precio}" placeholder="Precio"><br><br>
-        <input type="number" id="editPromoPrecioAnterior" value="${data.precio_anterior || ''}" placeholder="Precio anterior"><br><br>
-        <input type="number" id="editPromoStock" value="${data.stock}" placeholder="Stock"><br><br>
-        <input type="file" id="editPromoImagen" accept="image/*"><br><br>
-        <button onclick="updatePromo(${id}, '${data.imagen || ''}')">Guardar cambios</button>
-      `);
-    }
-
-    // Actualizar promoción
-    async function updatePromo(id, oldImage) {
-      const nombre = document.getElementById('editPromoNombre').value.trim();
-      const descripcion = document.getElementById('editPromoDescripcion').value.trim();
-      const precio = parseFloat(document.getElementById('editPromoPrecio').value);
-      const precioAnterior = parseFloat(document.getElementById('editPromoPrecioAnterior').value);
-      const stock = parseInt(document.getElementById('editPromoStock').value);
-
-      if (!nombre || isNaN(precio)) {
-        return alert('Debe ingresar nombre y precio válido');
-      }
-
-      let imagen = oldImage;
-      const file = document.getElementById('editPromoImagen')?.files?.[0];
-      if (file) {
-        if (oldImage) await supabase.storage.from('promo_images').remove([oldImage]);
-        const filePath = `${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabase.storage.from('promo_images').upload(filePath, file);
-        if (uploadError) return alert('Error al subir nueva imagen: ' + uploadError.message);
-        imagen = filePath;
-      }
-
-      const { error } = await supabase.from('promociones').update({
-        nombre, descripcion, precio, precio_anterior: precioAnterior || null, stock: stock || 0, imagen
-      }).eq('id', id);
-
-      if (error) return alert(error.message);
-
-      closeModal();
-      showToast('Promoción actualizada');
-      fetchPromotions();
-    }
-
-    // Eliminar promoción
     async function deletePromo(id, imagePath) {
-      if (!confirm('¿Seguro que desea eliminar esta promoción?')) return;
-
-      const { error } = await supabase.from('promociones').delete().eq('id', id);
-      if (error) return alert(error.message);
-
-      if (imagePath) {
-        await supabase.storage.from('promo_images').remove([imagePath]);
-      }
-
-      showToast('Promoción eliminada');
+      if (!confirm("¿Eliminar esta promoción?")) return;
+      await supabase.from("promociones").delete().eq("id", id);
+      if (imagePath) await supabase.storage.from("promo_images").remove([imagePath]);
       fetchPromotions();
     }
 
-    // Cargar promos al inicio
+    function editPromo(id) { alert("Aquí va modal de edición para ID " + id); }
+
+    // Inicial
     fetchPromotions();
   </script>
 </body>
