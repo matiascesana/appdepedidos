@@ -782,9 +782,17 @@ async function getPromoById(id){
 }
 
 /* AGREGAR pedido -> actualiza stock, inserta pedido */
-document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
-  const cliente = document.getElementById('pedidoCliente').value.trim();
-  const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+// Cambiar el botón para que llame a updateOrder
+const addBtn = document.getElementById('addOrderBtn');
+addBtn.textContent = 'Actualizar Pedido';
+addBtn.onclick = async function(){ 
+    await updateOrder(editingOrderId); 
+    
+    // Al finalizar la actualización, limpiar la propiedad onclick.
+    // El listener original (addEventListener) seguirá activo.
+    addBtn.textContent = 'Agregar Pedido';
+    addBtn.onclick = null; // <-- Restauración limpia
+};
   if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
 
   // chequear stock localmente contra DB
@@ -1034,6 +1042,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
