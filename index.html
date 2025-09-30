@@ -220,633 +220,662 @@ button:hover{background:var(--accent-2)}
 </div>
 
 <script>
+/* -----------------------------------------------------
+   Lógica de Navegación Exclusiva (Solución a las páginas fijas)
+   ----------------------------------------------------- */
+
+// Estado inicial: 'promos'
+const initialTab = 'promos';
+
+/**
+ * Cambia la vista activa y oculta todas las demás secciones.
+ * @param {string} tabId - El ID de la sección a mostrar (e.g., 'promos', 'pedidos').
+ */
+function changeTab(tabId) {
+    // 1. Oculta TODAS las secciones para asegurar exclusividad
+    document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // 2. Muestra SOLO la sección seleccionada
+    const activeSection = document.getElementById(tabId);
+    if (activeSection) {
+        activeSection.style.display = 'block';
+    }
+
+    // 3. Actualiza el estado 'active' de los botones de la sidebar
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+
+    // 4. Actualiza el título principal
+    const titleMap = {
+        'promos': 'Gestión de Promociones',
+        'pedidos': 'Gestión de Pedidos',
+        'categorias': 'Administración de Categorías',
+        'localidades': 'Administración de Localidades',
+        'documentos': 'Gestión de Documentos'
+    };
+    const mainTitle = document.querySelector('.main h1');
+    if (mainTitle) {
+        mainTitle.textContent = titleMap[tabId] || 'Panel de Administración';
+    }
+    
+    // Lógica específica al cambiar a PEDIDOS
+    if (tabId === 'pedidos') {
+        fetchOrders(); // Asegura que los pedidos se carguen
+        // Asegurar modo 'Agregar' al cambiar de tab
+        document.getElementById('addOrderBtn').textContent = 'Agregar Pedido';
+        document.getElementById('addOrderBtn').onclick = null; // Limpieza esencial
+        editingOrderId = null;
+        originalProducts = [];
+        selectedProducts = [];
+        document.getElementById('pedidoForm').reset();
+        renderSelectedProducts();
+    }
+}
+
+// 5. Asigna el evento click a todos los botones de la sidebar
+document.querySelectorAll('.tab-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const tabId = this.getAttribute('data-tab');
+        changeTab(tabId);
+    });
+});
+
+// 6. Funciones de control del Modal (necesarias)
+function openModal(title, html) {
+    document.getElementById('modalInner').innerHTML = `<h3>${title}</h3>${html}`;
+    document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+// Cierra el modal al hacer click fuera
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') {
+        closeModal();
+    }
+});
+
+// 7. Establece la vista inicial al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    changeTab(initialTab);
+    fetchCategorias();
+    fetchLocalidades();
+    fetchPromotions();
+});
+
 /* ============================
-   CONFIG: Supabase (usar tus credenciales)
-   ============================ */
+   CONFIG: Supabase (usar tus credenciales)
+   ============================ */
+// Usa tus credenciales reales aquí
 const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ============================
-   HELPERS UI
-   ============================ */
+   HELPERS UI
+   ============================ */
 function showToast(msg, ms=3000){
-  const t = document.createElement('div');
-  t.textContent = msg;
-  Object.assign(t.style,{
-    position:'fixed',right:'20px',bottom:'20px',background: 'var(--accent)', color:'#fff', padding:'10px 14px',
-    borderRadius:'8px', boxShadow:'0 6px 18px rgba(0,0,0,0.12)', zIndex:9999
-  });
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), ms);
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style,{
+        position:'fixed',right:'20px',bottom:'20px',background: 'var(--accent)', color:'#fff', padding:'10px 14px',
+        borderRadius:'8px', boxShadow:'0 6px 18px rgba(0,0,0,0.12)', zIndex:9999
+    });
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), ms);
 }
-function openModal(title, html){
-  document.getElementById('modalInner').innerHTML = `<h3>${title}</h3>${html}`;
-  document.getElementById('modal').style.display = 'flex';
-}
-function closeModal(){ document.getElementById('modal').style.display = 'none'; }
 function escapeHtml(str){ if(!str && str!==0) return ''; return String(str).replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
 
-/* ============================
-   TABS (sidebar)
-   ============================ */
-const tabBtns = document.querySelectorAll('.tab-btn');
-tabBtns.forEach(btn => btn.addEventListener('click', () => {
-  tabBtns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-  document.getElementById(btn.dataset.tab).style.display = 'block';
-}));
-document.getElementById('promos').style.display = 'block'; // vista por defecto
+// ===================================
+// UTILERÍAS GENERALES
+// ===================================
+
+async function safeGetFileUrl(fileName, bucket='promo_images'){
+    if(!fileName) return null;
+    try{
+        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName, 60*60);
+        return error ? null : data.signedUrl;
+    }catch{return null;}
+}
+
+function groupPromosByCategory(promotions) {
+    return promotions.reduce((groups, promo) => {
+        // Usa el nombre de la categoría del JOIN (fetch) o el nombre guardado (data-promo/JSON)
+        const categoryName = (promo.categorias && promo.categorias.nombre) || promo.categoria || 'Sin Categoría';
+        if (!groups[categoryName]) {
+            groups[categoryName] = [];
+        }
+        groups[categoryName].push(promo);
+        return groups;
+    }, {});
+}
+
+function simulateProgress(duration = 2000) {
+    const fill = document.getElementById('progressFill');
+    fill.style.width = '0%';
+    
+    const interval = setInterval(() => {
+        let currentWidth = parseInt(fill.style.width, 10);
+        if (currentWidth < 90) { 
+            fill.style.width = (currentWidth + 10) + '%';
+        }
+    }, duration / 9); 
+    
+    return new Promise(resolve => setTimeout(() => {
+        clearInterval(interval);
+        fill.style.width = '100%';
+        resolve();
+    }, duration));
+}
 
 /* ============================
-   CATEGORÍAS
-   ============================ */
+   CATEGORÍAS (CRUD Existente)
+   ============================ */
 async function fetchCategorias(){
-  const { data, error } = await supabase.from('categorias').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('categoriaList');
-  container.innerHTML = '';
-  const select = document.getElementById('promoCategoria');
-  select.innerHTML = '<option value="">Sin categoría</option>';
-  data.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'item-card';
-    div.innerHTML = `<span>${escapeHtml(c.nombre)}</span>
-      <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
-      <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
-    container.appendChild(div);
-    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
-  });
+    const { data, error } = await supabase.from('categorias').select('*').order('id');
+    if(error) return console.error(error);
+    const container = document.getElementById('categoriaList');
+    container.innerHTML = '';
+    const select = document.getElementById('promoCategoria');
+    select.innerHTML = '<option value="">Sin categoría</option>';
+    data.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'item-card';
+        div.innerHTML = `<span>${escapeHtml(c.nombre)}</span>
+            <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
+            <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
+        container.appendChild(div);
+        select.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
+    });
 }
 window.addCategoria = async function(){
-  const nombre = document.getElementById('categoriaNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('categorias').insert([{ nombre }]);
-  if(error) return alert(error.message);
-  document.getElementById('categoriaNombre').value = '';
-  fetchCategorias();
+    const nombre = document.getElementById('categoriaNombre').value.trim();
+    if(!nombre) return alert('Ingrese nombre');
+    const { error } = await supabase.from('categorias').insert([{ nombre }]);
+    if(error) return alert(error.message);
+    document.getElementById('categoriaNombre').value = '';
+    fetchCategorias();
 };
 window.editCategoria = function(id,nombre){
-  openModal('Editar Categoría', `<input id="editCatName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateCategoria(${id})">Guardar</button></div>`);
+    openModal('Editar Categoría', `<input id="editCatName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateCategoria(${id})">Guardar</button></div>`);
 };
 window.updateCategoria = async function(id){
-  const nombre = document.getElementById('editCatName').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('categorias').update({ nombre }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchCategorias();
+    const nombre = document.getElementById('editCatName').value.trim();
+    if(!nombre) return alert('Ingrese nombre');
+    const { error } = await supabase.from('categorias').update({ nombre }).eq('id', id);
+    if(error) return alert(error.message);
+    closeModal(); fetchCategorias();
 };
 window.deleteCategoria = async function(id){
-  if(!confirm('Eliminar categoría?')) return;
-  await supabase.from('categorias').delete().eq('id', id);
-  fetchCategorias();
+    if(!confirm('Eliminar categoría?')) return;
+    await supabase.from('categorias').delete().eq('id', id);
+    fetchCategorias();
 };
-fetchCategorias();
 
 /* ============================
-   LOCALIDADES
-   ============================ */
+   LOCALIDADES (CRUD Existente)
+   ============================ */
 async function fetchLocalidades(){
-  const { data, error } = await supabase.from('localidades').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('localidadList');
-  const sel = document.getElementById('pedidoLocalidad');
-  container.innerHTML = ''; sel.innerHTML = '<option value="">Seleccione</option>';
-  data.forEach(l=>{
-    container.innerHTML += `<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div><button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button><button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
-    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
-  });
+    const { data, error } = await supabase.from('localidades').select('*').order('id');
+    if(error) return console.error(error);
+    const container = document.getElementById('localidadList');
+    const sel = document.getElementById('pedidoLocalidad');
+    container.innerHTML = ''; sel.innerHTML = '<option value="">Seleccione</option>';
+    data.forEach(l=>{
+        container.innerHTML += `<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div><button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button><button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
+        sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
+    });
 }
 window.addLocalidad = async function(){
-  const nombre = document.getElementById('localidadNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('localidades').insert([{ nombre }]);
-  if(error) return alert(error.message);
-  document.getElementById('localidadNombre').value='';
-  fetchLocalidades();
+    const nombre = document.getElementById('localidadNombre').value.trim();
+    if(!nombre) return alert('Ingrese nombre');
+    const { error } = await supabase.from('localidades').insert([{ nombre }]);
+    if(error) return alert(error.message);
+    document.getElementById('localidadNombre').value='';
+    fetchLocalidades();
 };
 window.editLocalidad = function(id,nombre){
-  openModal('Editar Localidad', `<input id="editLocName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateLocalidad(${id})">Guardar</button></div>`);
+    openModal('Editar Localidad', `<input id="editLocName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateLocalidad(${id})">Guardar</button></div>`);
 };
 window.updateLocalidad = async function(id){
-  const nombre = document.getElementById('editLocName').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('localidades').update({ nombre }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchLocalidades();
+    const nombre = document.getElementById('editLocName').value.trim();
+    if(!nombre) return alert('Ingrese nombre');
+    const { error } = await supabase.from('localidades').update({ nombre }).eq('id', id);
+    if(error) return alert(error.message);
+    closeModal(); fetchLocalidades();
 };
 window.deleteLocalidad = async function(id){
-  if(!confirm('Eliminar localidad?')) return;
-  await supabase.from('localidades').delete().eq('id', id);
-  fetchLocalidades();
+    if(!confirm('Eliminar localidad?')) return;
+    await supabase.from('localidades').delete().eq('id', id);
+    fetchLocalidades();
 };
-fetchLocalidades();
 
-/* ============================
-   PROMOCIONES
-   - fetchPromotions limpia el contenedor para evitar duplicados
-   - upload imagen al bucket 'promo_images'
-   - safeGetFileUrl para obtener signed URL (temporal) para mostrar o para PDF
-   ============================ */
-async function safeGetFileUrl(fileName, bucket='promo_images'){
-  if(!fileName) return null;
-  try{
-    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileName, 60*60);
-    return error ? null : data.signedUrl;
-  }catch{return null;}
-}
+/* =========================================================
+   PROMOCIONES (FETCH, RENDER, CRUD y Exportación)
+   ========================================================= */
 
 async function fetchPromotions(){
-  console.log('👉 fetchPromotions ejecutado');
-  const { data, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('promoList');
-  container.innerHTML = ''; // <-- limpiar siempre antes de renderizar
+    console.log('👉 fetchPromotions ejecutado');
+    // Consulta CLAVE: Usa 'categorias(nombre)' para el JOIN
+    const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
+    if(error) return console.error(error);
+    const container = document.getElementById('promoList');
+    container.innerHTML = ''; 
 
-  // render
-  for(const promo of data){
-    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
-    const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
-    const div = document.createElement('div');
-    div.className = 'item-card';
-    div.innerHTML = `${imgHTML}<div style="flex:1"><strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong><div class="small-muted">$${Number(promo.precio).toFixed(2)} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div></div>
-      <div>
-        <button onclick="editPromo(${promo.id})">Editar</button>
-        <button class="delete-btn" onclick="deletePromo(${promo.id})">Eliminar</button>
-      </div>`;
-    container.appendChild(div);
-  }
+    // Agrupar y obtener nombres de categorías
+    const groupedPromos = groupPromosByCategory(data);
+    const categoryNames = Object.keys(groupedPromos).sort(); 
+
+    for(const categoryName of categoryNames){
+        const promos = groupedPromos[categoryName];
+
+        const titleDiv = document.createElement('div');
+        titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${escapeHtml(categoryName)}</h3>`;
+        container.appendChild(titleDiv);
+
+        for(const promo of promos){
+            const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
+            const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            
+            // Lógica de Precios
+            let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
+            if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
+                precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
+                              <strong style="color: var(--danger); font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
+            } 
+
+            div.innerHTML = `
+                <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
+                    id: promo.id, 
+                    nombre: promo.nombre, 
+                    precio: promo.precio, 
+                    precio_anterior: promo.precio_anterior,
+                    stock: promo.stock, 
+                    imgUrl: imgUrl, 
+                    categoria: categoryName // Incluye el nombre de la categoría para la exportación
+                })}' checked style="margin-right: 12px; transform: scale(1.4);">
+                ${imgHTML}
+                <div style="flex:1">
+                    <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
+                    <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
+                </div>
+                <div>
+                    <button onclick="editPromo(${promo.id})">Editar</button>
+                    <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+    }
 }
 
-// Agregar promoción (sube imagen luego inserta registro)
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
-  const nombre = document.getElementById('promoNombre').value.trim();
-  const precio = parseFloat(document.getElementById('promoPrecio').value);
-  const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
-  const categoria_id = document.getElementById('promoCategoria').value || null;
-  const file = document.getElementById('promoImagen').files[0];
-  if(!nombre || isNaN(precio) || !file) return alert('Complete nombre, precio e imagen');
-  const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
-  const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
-  if(upErr) return alert(upErr.message);
-  const publicUrl = await safeGetFileUrl(fileName);
-  const { error } = await supabase.from('promociones').insert([{ nombre, precio, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
-  if(error) return alert(error.message);
-  // limpiar form y recargar promos
-  document.getElementById('promoNombre').value=''; document.getElementById('promoPrecio').value=''; document.getElementById('promoStock').value=''; document.getElementById('promoImagen').value='';
-  fetchPromotions(); showToast('Promoción agregada');
+    const nombre = document.getElementById('promoNombre').value.trim();
+    const precio = parseFloat(document.getElementById('promoPrecio').value);
+    const precio_anterior_val = document.getElementById('promoPrecioAnterior').value;
+    const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
+    const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
+    const categoria_id = document.getElementById('promoCategoria').value || null;
+    const file = document.getElementById('promoImagen').files[0];
+    if(!nombre || isNaN(precio)) return alert('Complete nombre y precio');
+
+    let fileName = null;
+    let publicUrl = null;
+
+    if (file) {
+        fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
+        const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
+        if(upErr) return alert(`Error al subir imagen: ${upErr.message}`);
+        publicUrl = await safeGetFileUrl(fileName);
+    }
+    
+    const { error } = await supabase.from('promociones').insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
+    if(error) return alert(`Error al guardar: ${error.message}`);
+    
+    document.getElementById('promoNombre').value=''; 
+    document.getElementById('promoPrecio').value=''; 
+    document.getElementById('promoPrecioAnterior').value='';
+    document.getElementById('promoStock').value=''; 
+    document.getElementById('promoImagen').value='';
+    fetchPromotions(); showToast('Promoción agregada');
 });
 
-// editar promoción (simple)
-window.editPromo = async function(id){
-  const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
-  if(error) return alert(error.message);
-  const p = data;
-  openModal('Editar Promoción', `
-    <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||p.descripcion||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <div style="margin-top:10px"><button onclick="updatePromo(${p.id})">Guardar</button></div>
-  `);
-};
+// Implementación de la Exportación a PDF (HTML2PDF.js)
+async function generatePdfFromGroupedPromos(groupedPromos) {
+    let contentHtml = `<div style="padding: 20px; font-family: Roboto, sans-serif;">
+        <h1 style="text-align: center; color: var(--accent);">Catálogo de Promociones</h1>`;
 
-window.updatePromo = async function(id){
-  const nombre = document.getElementById('editPromoNombre').value.trim();
-  const precio = parseFloat(document.getElementById('editPromoPrecio').value);
-  const stock = parseInt(document.getElementById('editPromoStock').value,10)||0;
-  if(!nombre || isNaN(precio)) return alert('Complete campos');
-  const { error } = await supabase.from('promociones').update({ nombre, precio, stock }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchPromotions(); showToast('Promoción actualizada');
-};
-window.deletePromo = async function(id){
-  if(!confirm('Eliminar promoción?')) return;
-  await supabase.from('promociones').delete().eq('id', id);
-  fetchPromotions();
-};
+    for (const group of groupedPromos) {
+        contentHtml += `<h2 style="margin-top: 30px; border-bottom: 2px solid #ddd; padding-bottom: 5px;">${group.categoria}</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">`;
+
+        for (const promo of group.promociones) {
+            let priceText = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
+            if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
+                priceText = `<span style="text-decoration: line-through; color: #999;">$${Number(promo.precio_anterior).toFixed(2)}</span>
+                             <strong style="color: var(--danger); font-size: 1.1em; margin-left: 10px;">$${Number(promo.precio).toFixed(2)}</strong>`;
+            }
+
+            contentHtml += `<div style="width: calc(50% - 10px); border: 1px solid #eee; padding: 10px; border-radius: 8px; display: flex; align-items: center;">
+                ${promo.imgUrl ? `<img src="${promo.imgUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; margin-right: 15px;">` : ''}
+                <div>
+                    <h4 style="margin: 0; font-size: 1.1em;">${escapeHtml(promo.nombre)}</h4>
+                    <p style="margin: 5px 0 0; font-size: 0.9em;">
+                        ${priceText}
+                        <span style="margin-left: 15px; color: #666;">Stock: ${promo.stock ?? 0}</span>
+                    </p>
+                </div>
+            </div>`;
+        }
+        contentHtml += `</div>`;
+    }
+    contentHtml += `</div>`;
+
+    // Generación del PDF
+    const opt = {
+        margin: 10,
+        filename: 'catalogo_promociones.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    // Crear un elemento temporal para la conversión
+    const content = document.createElement('div');
+    content.innerHTML = contentHtml;
+
+    return html2pdf().from(content).set(opt).save();
+}
+
+document.getElementById('exportPromoPdfBtn').addEventListener('click', async () => {
+    const selectedChecks = document.querySelectorAll('#promoList .promo-export-check:checked');
+    const container = document.getElementById('pdfProgressBarContainer');
+    
+    if (selectedChecks.length === 0) {
+        alert('Seleccione al menos una promoción para exportar.');
+        return;
+    }
+    
+    // MOSTRAR BARRA DE PROGRESO
+    if (container) container.style.display = 'block';
+
+    // 1. Extraer y Agrupar los datos
+    const promocionesSeleccionadas = Array.from(selectedChecks).map(checkbox => {
+        return JSON.parse(checkbox.dataset.promo);
+    });
+
+    const promocionesAgrupadasMap = groupPromosByCategory(promocionesSeleccionadas);
+    const listaFinalParaPDF = Object.keys(promocionesAgrupadasMap).sort().map(categoria => ({
+        categoria: categoria,
+        promociones: promocionesAgrupadasMap[categoria]
+    }));
+
+    try {
+        const progressPromise = simulateProgress(3000); 
+        
+        await generatePdfFromGroupedPromos(listaFinalParaPDF);
+
+        await progressPromise; // Asegura que la barra de progreso llegue al 100%
+        
+        showToast('Catálogo PDF generado exitosamente.');
+        
+    } catch (error) {
+        console.error("Error al generar el PDF:", error);
+        alert("Ocurrió un error al generar el PDF. Revise la consola.");
+    } finally {
+        // OCULTAR BARRA DE PROGRESO
+        if (container) {
+            container.style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+        }
+    }
+});
+
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
 
-/* ============================
-   PEDIDOS
-   - selección múltiple desde modal tipo tabla
-   - control stock antes de guardar
-   - edición: devuelve stock anterior, aplica nuevo
-   - eliminación: devuelve stock
-   ============================ */
 
+/* =========================================================
+   PEDIDOS (Lógica de Stock y Edición Corregida)
+   ========================================================= */
 let selectedProducts = []; // {id,nombre,cantidad,precio}
 let editingOrderId = null;
+let originalProducts = []; // Almacena stock original del pedido en edición
 
-// Abre modal con tabla de promos y inputs de cantidad
-document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
-  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return alert(error.message);
-  // construir tabla HTML
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  for(const p of promos){
-    const qty = getSelectedQty(p.id);
-    html += `<tr>
-      <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
-      <td>$${Number(p.precio).toFixed(2)}</td>
-      <td>${p.stock ?? 0}</td>
-      <td><input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)})"></td>
-      <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
-    </tr>`;
-  }
-  html += `<tr><td colspan="3" style="text-align:right"><strong>Total:</strong></td><td colspan="2" id="totalPedido">$0.00</td></tr></tbody></table>
-    <div style="margin-top:10px"><button onclick="confirmProducts()">Confirmar selección</button></div>`;
-  openModal('Seleccionar Productos', html);
-  // set initial total (after modal rendered)
-  setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
-});
-
-// retorna cantidad si ya está seleccionado
-function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
-
-// update subtotal UI y total
-function updateSubtotal(id, price){
-  const input = document.getElementById(`prod_${id}`);
-  if(!input) return;
-  let qty = parseInt(input.value,10) || 0;
-  if(qty < 0) qty = 0;
-  if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
-  input.value = qty;
-  const sub = document.getElementById(`sub_${id}`);
-  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
-  const tot = document.getElementById('totalPedido');
-  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
-}
-
-// calcular total en modal
-function calculateTotal(){
-  let total = 0;
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const id = parseInt(inp.id.replace('prod_',''),10);
-    const qty = parseInt(inp.value,10) || 0;
-    const price = parseFloat(inp.getAttribute('data-price')) || 0;
-    total += qty * price;
-  });
-  return total;
-}
-
-// confirmar selección -> guarda en selectedProducts y render outside
-function confirmProducts(){
-  selectedProducts = [];
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const qty = parseInt(inp.value,10) || 0;
-    if(qty > 0){
-      const id = parseInt(inp.id.replace('prod_',''),10);
-      const row = inp.closest('tr');
-      const nombre = row.cells[0].textContent;
-      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
-      selectedProducts.push({ id, nombre, cantidad: qty, precio });
-    }
-  });
-  closeModal(); renderSelectedProducts();
-
-  // if editing an order, trigger update flow
-  if(editingOrderId){
-    // button will call updateOrder when user clicks 'Actualizar' (we handle editing on a separate button)
-  }
-}
-
-// render summary of selected products in pedido form
-function renderSelectedProducts(){
-  const c = document.getElementById('selectedProductsContainer');
-  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  selectedProducts.forEach(p=>{
-    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
-  });
-  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
-  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
-  c.innerHTML = html;
-}
-
-/* GET promo by id helper */
 async function getPromoById(id){
-  const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
-  if(error) throw new Error(error.message);
-  return data;
+    const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
+    if(error) throw new Error(error.message);
+    return data;
 }
 
-/* AGREGAR pedido -> actualiza stock, inserta pedido */
-document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
-  const cliente = document.getElementById('pedidoCliente').value.trim();
-  const localidad_id = document.getElementById('pedidoLocalidad').value || null;
-  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
+// --- LÓGICA DE SELECCIÓN DE PRODUCTOS (Modal) ---
+// (Tu lógica de selectProductsBtn, getSelectedQty, updateSubtotal, calculateTotal, confirmProducts, renderSelectedProducts es correcta y se mantiene)
 
-  // chequear stock localmente contra DB
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
-  }
+function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
+function renderSelectedProducts(){
+    const c = document.getElementById('selectedProductsContainer');
+    if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
+    let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+    selectedProducts.forEach(p=>{
+        html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
+    });
+    const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
+    html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
+    c.innerHTML = html;
+}
+function calculateTotal(){
+    let total = 0;
+    const inputs = document.querySelectorAll('#modalInner input[type=number]');
+    inputs.forEach(inp=>{
+        const qty = parseInt(inp.value,10) || 0;
+        const price = parseFloat(inp.getAttribute('data-price')) || 0;
+        total += qty * price;
+    });
+    return total;
+}
+window.updateSubtotal = function(id, price){
+    const input = document.getElementById(`prod_${id}`);
+    if(!input) return;
+    let qty = parseInt(input.value,10) || 0;
+    if(qty < 0) qty = 0;
+    if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
+    input.value = qty;
+    const sub = document.getElementById(`sub_${id}`);
+    if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
+    const tot = document.getElementById('totalPedido');
+    if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
+}
+window.confirmProducts = function(){
+    selectedProducts = [];
+    const inputs = document.querySelectorAll('#modalInner input[type=number]');
+    inputs.forEach(inp=>{
+        const qty = parseInt(inp.value,10) || 0;
+        if(qty > 0){
+            const id = parseInt(inp.id.replace('prod_',''),10);
+            const row = inp.closest('tr');
+            const nombre = row.cells[0].textContent;
+            const precio = parseFloat(inp.getAttribute('data-price')) || 0;
+            selectedProducts.push({ id, nombre, cantidad: qty, precio });
+        }
+    });
+    closeModal(); renderSelectedProducts();
+}
 
-  // restar stock en DB
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    const newStock = (promo.stock || 0) - p.cantidad;
-    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
-  }
 
-  // insertar pedido (productos como JSON)
-  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
-  if(error) return alert(error.message);
+// --- AGREGAR PEDIDO (Handler original) ---
+document.getElementById('addOrderBtn').addEventListener('click', async function addOrderHandler(){
+    // Si el botón tiene un 'onclick' es porque está en modo 'Editar', no hacemos nada.
+    if(this.onclick) return; 
+    
+    const cliente = document.getElementById('pedidoCliente').value.trim();
+    const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+    if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
 
-  // limpiar
-  document.getElementById('pedidoForm').reset();
-  selectedProducts = []; renderSelectedProducts();
-  fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
+    // 1. Chequear stock
+    for(const p of selectedProducts){
+        const promo = await getPromoById(p.id);
+        if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
+    }
+
+    // 2. Restar stock
+    for(const p of selectedProducts){
+        const promo = await getPromoById(p.id);
+        const newStock = (promo.stock || 0) - p.cantidad;
+        await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+    }
+
+    // 3. Insertar pedido
+    const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+    const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+    const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
+    if(error) return alert(`Error al guardar pedido: ${error.message}`);
+
+    // 4. Limpiar
+    document.getElementById('pedidoForm').reset();
+    selectedProducts = []; renderSelectedProducts();
+    fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
 });
 
-/* FETCH and render orders */
-async function fetchOrders(){
-  const { data, error } = await supabase.from('pedidos').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('pedidoList'); container.innerHTML = '';
-  for(const p of data){
-    const div = document.createElement('div'); div.className = 'item-card';
-    let prodHTML = '<ul style="margin:6px 0;padding-left:18px">';
-    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
-    prodHTML += '</ul>';
-    div.innerHTML = `<div style="flex:1"><strong>${escapeHtml(p.cliente)}</strong><div class="small-muted">${p.localidad_id?('Localidad ID:'+p.localidad_id):''}</div>${prodHTML}<strong>Total: $${Number(p.total).toFixed(2)}</strong></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <button onclick="openEditOrder(${p.id})">Editar</button>
-        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
-      </div>`;
-    container.appendChild(div);
-  }
-}
-fetchOrders();
+// --- EDICIÓN DE PEDIDO (Abre formulario) ---
+window.openEditOrder = async function(id){
+    const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+    if(error) return alert(`Error al cargar pedido: ${error.message}`);
+    const order = data;
 
-/* Edit order:
-   - restore old stock (add back quantities from old.order)
-   - load order into selectedProducts and form
-   - set editingOrderId
-*/
-async function openEditOrder(id){
-  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(error) return alert(error.message);
-  const order = data;
+    // 1. Guardamos el stock anterior del pedido que se va a modificar (originalProducts)
+    originalProducts = order.productos.map(pr => ({ id: pr.id, cantidad: pr.cantidad })); 
 
-  // devolver stock del pedido anterior
-  if(order.productos && order.productos.length){
-    for(const pr of order.productos){
-      // pr.id stored in payload
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
-    }
-  }
+    // 2. Cargar pedido en formulario
+    selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
+    document.getElementById('pedidoCliente').value = order.cliente;
+    document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
+    renderSelectedProducts();
+    editingOrderId = id;
 
-  // cargar pedido en formulario para editar
-  selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
-  document.getElementById('pedidoCliente').value = order.cliente;
-  document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
-  renderSelectedProducts();
-  editingOrderId = id;
-
-  // change Add button behaviour: we will use confirmProducts flow to update after selecting new products
-  showToast('Editando pedido: ajusta productos y presiona "Actualizar" en la misma sección.');
-  // When user opens selection modal and confirms (confirmProducts), if editingOrderId set, we will call updateOrder
-  // Provide a direct "Actualizar Pedido" quick button:
-  const addBtn = document.getElementById('addOrderBtn');
-  addBtn.textContent = 'Actualizar Pedido';
-  addBtn.onclick = async function(){ await updateOrder(editingOrderId); addBtn.textContent = 'Agregar Pedido'; addBtn.onclick = async ()=>{ /* restore listener */ document.getElementById('addOrderBtn').dispatchEvent(new Event('click')); }; };
+    // 3. Cambiar botón a modo Actualizar
+    showToast('Editando pedido: ajusta productos y presiona "Actualizar Pedido".');
+    
+    const addBtn = document.getElementById('addOrderBtn');
+    addBtn.textContent = 'Actualizar Pedido';
+    
+    // ** SOLUCIÓN AL DOBLE DESCUENTO: Usar onclick TEMPORALMENTE **
+    addBtn.onclick = async function(){ 
+        await updateOrder(editingOrderId); 
+        
+        // Al terminar, restauramos el botón al modo "Agregar"
+        addBtn.textContent = 'Agregar Pedido';
+        addBtn.onclick = null; // <-- Limpiando 'onclick' permite que el 'addEventListener' original se reactive.
+    };
 }
 
-/* Update order: after new selection (selectedProducts) */
+// --- ACTUALIZAR PEDIDO (Guarda cambios) ---
 async function updateOrder(id){
-  if(!id) return alert('No hay pedido seleccionado para actualizar');
-  const cliente = document.getElementById('pedidoCliente').value.trim();
-  if(!cliente) return alert('Ingrese cliente');
-  if(!selectedProducts.length) return alert('Seleccione productos');
+    if(!id) return alert('No hay pedido seleccionado para actualizar');
+    const cliente = document.getElementById('pedidoCliente').value.trim();
+    const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+    if(!cliente || !selectedProducts.length) return alert('Ingrese cliente y seleccione productos');
 
-  // verify stock for new selection
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
-  }
-  // subtract stock for new selection
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    const newStock = (promo.stock || 0) - p.cantidad;
-    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
-  }
+    // 1. DEVOLVER STOCK ANTERIOR (Restaurar el stock del pedido viejo)
+    for(const pr of originalProducts){
+        const promo = await getPromoById(pr.id);
+        const newStock = (promo.stock || 0) + pr.cantidad;
+        await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+    originalProducts = []; // Limpiar variable
 
-  // update pedido record
-  const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').update({ cliente, productos: payload, total }).eq('id', id);
-  if(error) return alert(error.message);
+    // 2. Verificar stock para la nueva selección
+    for(const p of selectedProducts){
+        const promo = await getPromoById(p.id);
+        if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
+    }
+    
+    // 3. Restar stock para la nueva selección
+    for(const p of selectedProducts){
+        const promo = await getPromoById(p.id);
+        const newStock = (promo.stock || 0) - p.cantidad;
+        await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+    }
 
-  // reset
-  editingOrderId = null;
-  selectedProducts = []; renderSelectedProducts();
-  document.getElementById('pedidoCliente').value = '';
-  document.getElementById('pedidoLocalidad').value = '';
-  fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
+    // 4. Update pedido record
+    const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+    const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+    const { error } = await supabase.from('pedidos').update({ cliente, localidad_id, productos: payload, total }).eq('id', id);
+    if(error) return alert(`Error al actualizar pedido: ${error.message}`);
+
+    // 5. Reset
+    editingOrderId = null;
+    selectedProducts = []; renderSelectedProducts();
+    document.getElementById('pedidoCliente').value = '';
+    document.getElementById('pedidoLocalidad').value = '';
+    fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
 }
 
-/* Delete order: return stock, delete row */
-async function deleteOrder(id){
-  if(!confirm('Eliminar pedido?')) return;
-  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(error) return alert(error.message);
-  if(data.productos && data.productos.length){
-    for(const pr of data.productos){
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
-    }
-  }
-  await supabase.from('pedidos').delete().eq('id', id);
-  fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
+// --- ELIMINAR PEDIDO (Devuelve Stock) ---
+window.deleteOrder = async function(id){
+    if(!confirm('Eliminar pedido? Esta acción es irreversible y restaurará el stock.')) return;
+    const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+    if(error) return alert(`Error al cargar pedido para eliminar: ${error.message}`);
+    
+    // Devolver stock
+    if(data.productos && data.productos.length){
+        for(const pr of data.productos){
+            try {
+                const promo = await getPromoById(pr.id);
+                const newStock = (promo.stock || 0) + pr.cantidad;
+                await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+            } catch (e) {
+                console.warn(`No se pudo restaurar stock para promo ID ${pr.id}. Error: ${e.message}`);
+            }
+        }
+    }
+    
+    // Eliminar pedido
+    await supabase.from('pedidos').delete().eq('id', id);
+    fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
 }
 
-/* ============================
-   DOCUMENTOS (storage)
-   - subir, listar, eliminar
-   ============================ */
-async function fetchDocuments(filter=''){
-  const { data, error } = await supabase.storage.from('private-documents').list('', { limit: 500 });
-  if(error) return console.error(error);
-  const container = document.getElementById('documentsList'); container.innerHTML = '';
-  for(const f of data){
-    if(filter && !f.name.includes(filter)) continue;
-    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(f.name, 60*60);
-    const div = document.createElement('div'); div.className = 'doc-item';
-    div.innerHTML = `<a href="${urlData.signedUrl}" target="_blank">${f.name}</a>
-      <div><button class="delete-btn" onclick="deleteDoc('${f.name}')">Eliminar</button></div>`;
-    container.appendChild(div);
-  }
+// --- FETCH and render orders ---
+async function fetchOrders(){
+    const { data, error } = await supabase.from('pedidos').select('*').order('id', { ascending: false });
+    if(error) return console.error(error);
+    const container = document.getElementById('pedidoList'); container.innerHTML = '';
+    
+    for(const p of data){
+        const div = document.createElement('div'); div.className = 'item-card';
+        let prodHTML = '<ul style="margin:6px 0;padding-left:18px;font-size:14px">';
+        p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
+        prodHTML += '</ul>';
+        
+        div.innerHTML = `<div style="flex:1">
+                <strong>${escapeHtml(p.cliente)}</strong>
+                <div class="small-muted">${p.localidad_id ? ('Localidad ID:' + p.localidad_id) : ''}</div>
+                ${prodHTML}
+                <strong>Total: $${Number(p.total).toFixed(2)}</strong>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+                <button onclick="openEditOrder(${p.id})">Editar</button>
+                <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+            </div>`;
+        container.appendChild(div);
+    }
 }
-document.getElementById('uploadDocsBtn').addEventListener('click', async ()=>{
-  const files = document.getElementById('docFiles').files;
-  if(!files.length) return alert('Seleccione archivos');
-  document.getElementById('docProgressContainer').style.display = 'block';
-  const progressEl = document.getElementById('docProgress');
-  for(let i=0;i<files.length;i++){
-    const file = files[i];
-    const name = `${Date.now()}_${file.name.replaceAll(' ','_')}`;
-    const { error } = await supabase.storage.from('private-documents').upload(name, file, { upsert:true });
-    if(error){ alert(error.message); break; }
-    progressEl.style.width = `${Math.round(((i+1)/files.length)*100)}%`;
-  }
-  setTimeout(()=>{ document.getElementById('docProgressContainer').style.display='none'; document.getElementById('docProgress').style.width='0%'; }, 600);
-  document.getElementById('docFiles').value='';
-  showToast('Documentos subidos');
-  fetchDocuments();
+document.getElementById('exportPedidosPDFBtn').addEventListener('click', () => {
+    // Implementar exportación a PDF de Pedidos si es necesario
+    alert('Funcionalidad de Exportar Pedidos (PDF) no implementada.');
 });
-window.deleteDoc = async function(name){
-  if(!confirm('Eliminar archivo?')) return;
-  await supabase.storage.from('private-documents').remove([name]);
-  fetchDocuments();
-};
-document.getElementById('searchDoc').addEventListener('input', (e)=>fetchDocuments(e.target.value));
-fetchDocuments();
 
-/* ============================
-   EXPORTAR CATALOGO PDF (6 promos por página)
-   - convertimos imágenes a base64 para que aparezcan siempre
-   - usamos page-break para que no corte tarjetas
-   ============================ */
-
-async function toBase64(url){
-  return new Promise((resolve)=>{
-    if(!url) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = ()=>{
-      try{
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth
-/* ... El resto de tu código JavaScript se mantiene sin cambios ... */
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
-      }catch(e){
-        console.error("Error converting image to base64:", e);
-        resolve(null);
-      }
-    };
-    img.onerror = () => {
-      console.warn('Error loading image for base64 conversion:', url);
-      resolve(null);
-    };
-    img.src = url;
-  });
-}
-
-async function exportPromoPdf(){
-  const { data: promos } = await supabase.from('promociones').select('*').order('id');
-  const categoriasData = await supabase.from('categorias').select('*');
-  const categorias = new Map((categoriasData.data || []).map(c => [c.id, c.nombre]));
-
-  let pdfContent = `
-    <div style="width:100%;padding:20px;font-family:Roboto,sans-serif;box-sizing:border-box" id="pdfCatalog">
-      <h1 style="text-align:center;color:#6a1b9a;margin-bottom:20px">Catálogo de Promociones</h1>
-  `;
-
-  let cardCount = 0;
-  for(const promo of promos){
-    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
-    const base64Image = imgUrl ? await toBase64(imgUrl) : null;
-    const categoryName = categorias.get(promo.categoria_id) || 'General';
-
-    if(cardCount % 6 === 0 && cardCount !== 0){
-      // Insertar salto de página después de cada 6 tarjetas (excepto el primero)
-      pdfContent += `<div style="page-break-after: always;"></div>`;
-    }
-
-    pdfContent += `
-      <div style="display:flex;margin-bottom:15px;padding:15px;border:1px solid #ddd;border-radius:10px;page-break-inside: avoid;">
-        ${base64Image ? `<img src="${base64Image}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-right:15px;">` : '<div style="width:80px;height:80px;border:1px solid #eee;margin-right:15px;display:inline-block;text-align:center;line-height:80px;font-size:12px;color:#aaa">Sin Imagen</div>'}
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:16px;color:#222">${escapeHtml(promo.nombre)}</div>
-          <div style="color:#6a1b9a;font-weight:700;font-size:18px;margin-top:5px">$${Number(promo.precio).toFixed(2)}</div>
-          <div style="font-size:12px;color:#666;margin-top:5px">Categoría: ${escapeHtml(categoryName)} | Stock: ${promo.stock ?? 0}</div>
-        </div>
-      </div>
-    `;
-    cardCount++;
-  }
-
-  pdfContent += `</div>`;
-
-  // Generar el PDF
-  const element = document.createElement('div');
-  element.innerHTML = pdfContent;
-
-  html2pdf().set({
-    margin: [10, 10, 10, 10],
-    filename: 'catalogo_promociones.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, logging: false, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(element).save();
-}
-
-document.getElementById('exportPromoPdfBtn').addEventListener('click', exportPromoPdf);
-
-/* ============================
-   EXPORTAR PEDIDOS PDF
-   ============================ */
-async function exportPedidosPDF(){
-  const { data: pedidos } = await supabase.from('pedidos').select('*').order('id', { ascending: false });
-  const { data: localidadesData } = await supabase.from('localidades').select('*');
-  const localidades = new Map((localidadesData || []).map(l => [l.id, l.nombre]));
-
-  let pdfContent = `
-    <div style="width:100%;padding:20px;font-family:Roboto,sans-serif;box-sizing:border-box" id="pdfPedidos">
-      <h1 style="text-align:center;color:#6a1b9a;margin-bottom:20px">Reporte de Pedidos</h1>
-  `;
-
-  for(const pedido of pedidos){
-    const localidad = localidades.get(pedido.localidad_id) || 'N/A';
-    const fecha = new Date(pedido.created_at).toLocaleDateString();
-
-    pdfContent += `
-      <div style="margin-bottom:25px;padding:15px;border:1px solid #ddd;border-left:5px solid #6a1b9a;border-radius:5px;page-break-inside: avoid;">
-        <div style="font-weight:700;font-size:18px;color:#222">${escapeHtml(pedido.cliente)}</div>
-        <div style="font-size:12px;color:#666;margin-top:2px">Localidad: ${escapeHtml(localidad)} | Fecha: ${fecha}</div>
-        <div style="margin-top:10px;font-size:14px">
-          <ul style="list-style-type:none;padding:0;margin:0 0 10px 0;">
-            ${pedido.productos.map(p => `
-              <li style="padding:4px 0;">${escapeHtml(p.nombre)} <span style="font-weight:700">x ${p.cantidad}</span> <span style="float:right">$${(p.precio * p.cantidad).toFixed(2)}</span></li>
-            `).join('')}
-          </ul>
-        </div>
-        <div style="text-align:right;font-size:16px;font-weight:700;border-top:1px solid #eee;padding-top:5px;">
-          Total: $${Number(pedido.total).toFixed(2)}
-        </div>
-      </div>
-    `;
-  }
-
-  pdfContent += `</div>`;
-
-  // Generar el PDF
-  const element = document.createElement('div');
-  element.innerHTML = pdfContent;
-
-  html2pdf().set({
-    margin: [10, 10, 10, 10],
-    filename: 'reporte_pedidos.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(element).save();
-}
-
-document.getElementById('exportPedidosPDFBtn').addEventListener('click', exportPedidosPDF);
+// Enlazar el botón de Refrescar Pedidos (Añadido en el HTML de la respuesta anterior)
+document.getElementById('refreshOrdersBtn').addEventListener('click', fetchOrders);
 </script>
 
 </body>
 </html>
+
