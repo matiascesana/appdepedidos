@@ -160,8 +160,14 @@ button:hover{background:var(--accent-2)}
 
             <div style="display:flex;gap:8px">
                 <button type="button" id="addOrderBtn">Agregar Pedido</button>
-                <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-            </div>
+                <button id="exportPromoPdfBtn">Exportar PDF Seleccionado</button>
+
+<div id="pdfProgressBarContainer" style="display:none; margin-top: 15px; width: 300px;">
+    <p style="font-size: 0.9em; color: #555;">Generando PDF, por favor espere...</p>
+    <div id="progressBar" style="width: 100%; height: 8px; background-color: #f3f3f3; border-radius: 4px; overflow: hidden;">
+        <div id="progressFill" style="width: 0%; height: 100%; background-color: #007bff; transition: width 0.3s;"></div>
+    </div>
+</div>
         </form>
 
         <h3>Lista de Pedidos</h3>
@@ -407,14 +413,14 @@ window.deleteLocalidad = async function(id){
 fetchLocalidades();
 
 /* =========================================================
-   CÓDIGO COMPLETO DE GESTIÓN DE PROMOCIONES (CON MEJORAS)
-   - Agrupación por Categoría en el Listado.
-   - Checkbox para Selección de Exportación.
-   - Edición de Imagen en el modal de Editar.
-   - Campo de Precio Anterior (tachado) para descuentos.
+   CÓDIGO COMPLETO DE GESTIÓN DE PROMOCIONES
    ========================================================= */
 
-// Funciones auxiliares
+// ===================================
+// I. FUNCIONES AUXILIARES
+// ===================================
+
+/** Obtiene la URL pública firmada de un archivo en Supabase Storage. */
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
   try{
@@ -423,15 +429,11 @@ async function safeGetFileUrl(fileName, bucket='promo_images'){
   }catch{return null;}
 }
 
-/**
- * Función auxiliar para agrupar las promociones por el nombre de la categoría.
- * @param {Array<Object>} promotions - Lista de promociones.
- * @returns {Object} Promociones agrupadas por nombre de categoría.
- */
+/** Agrupa las promociones por el nombre de la categoría. */
 function groupPromosByCategory(promotions) {
     return promotions.reduce((groups, promo) => {
-        // Usa el nombre de la categoría (si existe) o 'Sin Categoría'
-        const categoryName = promo.categorias ? promo.categorias.nombre : 'Sin Categoría';
+        // Accede al nombre de la categoría anidado: promo.categorias.nombre
+        const categoryName = (promo.categorias && promo.categorias.nombre) ? promo.categorias.nombre : 'Sin Categoría';
         if (!groups[categoryName]) {
             groups[categoryName] = [];
         }
@@ -440,31 +442,50 @@ function groupPromosByCategory(promotions) {
     }, {});
 }
 
-// ---------------------------------------------------------
-// FETCH Y RENDERIZADO (Con Agrupación y Precio Anterior)
-// ---------------------------------------------------------
+/** Simula el llenado de la barra de progreso. */
+function simulateProgress(duration = 2000) {
+    const fill = document.getElementById('progressFill');
+    fill.style.width = '0%';
+    
+    const interval = setInterval(() => {
+        let currentWidth = parseInt(fill.style.width, 10);
+        if (currentWidth < 90) { 
+            fill.style.width = (currentWidth + 10) + '%';
+        }
+    }, duration / 9); 
+    
+    return new Promise(resolve => setTimeout(() => {
+        clearInterval(interval);
+        fill.style.width = '100%';
+        resolve();
+    }, duration));
+}
+
+// ===================================
+// II. FETCH Y RENDERIZADO
+// ===================================
+
 async function fetchPromotions(){
   console.log('👉 fetchPromotions ejecutado');
-  // 1. OBTENER DATOS: Se usa '*, categorias(nombre)' para obtener el nombre de la categoría.
+  // Consulta para obtener todos los datos y el nombre de la categoría
   const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
   container.innerHTML = ''; 
 
-  // 2. AGRUPAR: Agrupa las promociones por nombre de categoría
+  // Agrupar y obtener nombres de categorías
    const groupedPromos = groupPromosByCategory(data);
-   const categoryNames = Object.keys(groupedPromos).sort(); // Nombres de categoría ordenados (A-Z)
+   const categoryNames = Object.keys(groupedPromos).sort(); 
 
-  // 3. RENDERIZAR: Iterar sobre los grupos para mostrar títulos y listas.
+  // Renderizar
   for(const categoryName of categoryNames){
        const promos = groupedPromos[categoryName];
 
-       // 3a. Mostrar Título de la Categoría
+       // Mostrar Título de la Categoría
        const titleDiv = document.createElement('div');
        titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${categoryName}</h3>`;
        container.appendChild(titleDiv);
 
-       // 3b. Mostrar cada Promoción dentro del grupo
        for(const promo of promos){
            const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
            const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
@@ -472,15 +493,11 @@ async function fetchPromotions(){
            div.className = 'item-card';
            
            // Lógica de Precios (Precio Anterior Tachado)
-           let precioHTML = '';
+           let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
            if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
-               // Precio con descuento: Anterior tachado y actual resaltado
                precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
                              <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
-           } else {
-               // Solo precio actual
-               precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
-           }
+           } 
 
            div.innerHTML = `
                <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
@@ -507,11 +524,11 @@ async function fetchPromotions(){
   }
 }
 
-// ---------------------------------------------------------
-// CRUD (Creación, Edición y Eliminación)
-// ---------------------------------------------------------
+// ===================================
+// III. CRUD (Creación, Edición, Eliminación)
+// ===================================
 
-// Agregar promoción (con Precio Anterior)
+// Agregar promoción 
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const nombre = document.getElementById('promoNombre').value.trim();
   const precio = parseFloat(document.getElementById('promoPrecio').value);
@@ -529,7 +546,7 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const { error } = await supabase.from('promociones').insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
   if(error) return alert(error.message);
   
-  // limpiar form y recargar promos
+  // limpiar form y recargar
   document.getElementById('promoNombre').value=''; 
   document.getElementById('promoPrecio').value=''; 
   document.getElementById('promoPrecioAnterior').value='';
@@ -538,7 +555,7 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   fetchPromotions(); showToast('Promoción agregada');
 });
 
-// Edición de Promoción (con Precio Anterior e Imagen)
+// Edición de Promoción 
 window.editPromo = async function(id){
   const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
   if(error) return alert(error.message);
@@ -558,7 +575,7 @@ window.editPromo = async function(id){
   `);
 };
 
-// Actualización de Promoción (con gestión de Imagen y Precio Anterior)
+// Actualización de Promoción
 window.updatePromo = async function(id, oldFileName){
   const nombre = document.getElementById('editPromoNombre').value.trim();
   const precio = parseFloat(document.getElementById('editPromoPrecio').value);
@@ -571,7 +588,7 @@ window.updatePromo = async function(id, oldFileName){
 
   let updateData = { nombre, precio, precio_anterior, stock };
 
-  // Lógica para actualizar la imagen (se mantiene)
+  // Lógica para actualizar la imagen
   if (file) {
       const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
       const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
@@ -607,36 +624,54 @@ window.deletePromo = async function(id, fileNameToDelete){
 
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
 
-// ---------------------------------------------------------
-// EXPORTACIÓN A PDF (Selectiva y Agrupada por Categoría)
-// ---------------------------------------------------------
-document.getElementById('exportPromoPdfBtn').addEventListener('click', () => {
+// ===================================
+// IV. EXPORTACIÓN A PDF (Agrupada con Progreso)
+// ===================================
+
+document.getElementById('exportPromoPdfBtn').addEventListener('click', async () => {
   const selectedChecks = document.querySelectorAll('#promoList .promo-export-check:checked');
+  const container = document.getElementById('pdfProgressBarContainer');
   
   if (selectedChecks.length === 0) {
     alert('Seleccione al menos una promoción para exportar.');
     return;
   }
   
-  // 1. Extraer los datos de las promociones seleccionadas
+  // Mostrar barra de progreso
+   container.style.display = 'block';
+
+  // 1. Extraer y Agrupar los datos
   const promocionesSeleccionadas = Array.from(selectedChecks).map(checkbox => {
     return JSON.parse(checkbox.dataset.promo);
   });
 
-  // 2. Agrupar las promociones seleccionadas por categoría
   const promocionesAgrupadasMap = groupPromosByCategory(promocionesSeleccionadas);
-    
-  // 3. Convertir el mapa de grupos a una lista ordenada para el PDF
   const listaFinalParaPDF = Object.keys(promocionesAgrupadasMap).sort().map(categoria => ({
     categoria: categoria,
     promociones: promocionesAgrupadasMap[categoria]
   }));
 
-  console.log('Estructura de datos agrupada y ordenada para PDF:', listaFinalParaPDF);
-  
-  // NOTA: Tu función de generación de PDF DEBE procesar 'listaFinalParaPDF'
-  // imprimiendo 'categoria' como título y luego iterando sobre 'promociones'.
-  alert(`Se exportarán ${promocionesSeleccionadas.length} promociones, agrupadas por ${listaFinalParaPDF.length} categorías. (Ver estructura en consola)`);
+  try {
+        // Simular progreso y generar PDF (reemplaza el setTimeout con tu función PDF)
+        const progressPromise = simulateProgress(2000); 
+        
+        // ⚠️ REEMPLAZA ESTA LÍNEA con tu función de generación de PDF.
+        // Ejemplo: await generatePdfFromGroupedPromos(listaFinalParaPDF); 
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulación de tiempo de generación
+
+        await progressPromise; // Esperar que la simulación termine
+
+        console.log('Estructura de datos agrupada y ordenada para PDF:', listaFinalParaPDF);
+        alert(`PDF generado exitosamente con ${promocionesSeleccionadas.length} promociones.`);
+        
+  } catch (error) {
+        console.error("Error al generar el PDF:", error);
+        alert("Ocurrió un error al generar el PDF.");
+  } finally {
+        // Ocultar y resetear barra de progreso
+        container.style.display = 'none';
+        document.getElementById('progressFill').style.width = '0%';
+  }
 });
 
 /* ============================
@@ -998,6 +1033,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
