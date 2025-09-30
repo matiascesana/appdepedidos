@@ -94,11 +94,38 @@ button[type=submit]:hover{background:#e8434f;}
   </div>
 
   <!-- PEDIDOS -->
-  <div id="pedidos" class="section">
-    <h1>Gestión de Pedidos</h1>
-    <button onclick="fetchPedidos()">Actualizar Pedidos</button>
+  <div class="section" id="pedidos">
+    <h2>Pedidos</h2>
+    <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <div style="flex:1;min-width:220px">
+        <label>Cliente
+          <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
+        </label>
+      </div>
+      <div style="width:220px">
+        <label>Localidad
+          <select id="pedidoLocalidad"></select>
+        </label>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
+      </div>
+
+      <div style="width:100%;margin-top:6px">
+        <div id="selectedProductsContainer" class="small-muted"></div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button type="button" id="addOrderBtn">Agregar Pedido</button>
+        <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
+      </div>
+    </form>
+
+    <h3>Lista de Pedidos</h3>
     <div id="pedidoList"></div>
   </div>
+
 
   <!-- DOCUMENTOS -->
   <div id="documentos" class="section">
@@ -410,10 +437,22 @@ async function deleteCategoria(id){ if(!confirm("Eliminar categoría?")) return;
 
 // ================= LOCALIDADES =================
 async function fetchLocalidades(){
-  const { data,error }=await supabase.from("localidades").select("*").order("id");
+  const { data, error } = await supabase.from("localidades").select("*").order("id");
   if(error) return console.error(error);
-  const container=document.getElementById("localidadList"); container.innerHTML="";
-  data.forEach(l=>{ container.innerHTML+=`${escapeHtml(l.nombre)} <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button> <button onclick="deleteLocalidad(${l.id})">Eliminar</button><br>`; });
+
+  // Lista para gestión
+  const container = document.getElementById("localidadList");
+  container.innerHTML = "";
+  data.forEach(l=>{
+    container.innerHTML += `${escapeHtml(l.nombre)} <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button> <button onclick="deleteLocalidad(${l.id})">Eliminar</button><br>`;
+  });
+
+  // Select en formulario de pedidos
+  const sel = document.getElementById("pedidoLocalidad");
+  sel.innerHTML = '<option value="">Seleccione localidad</option>';
+  data.forEach(l=>{
+    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
+  });
 }
 
 async function addLocalidad(){
@@ -426,27 +465,248 @@ async function updateLocalidad(id){ const nombre=document.getElementById("editLo
 async function deleteLocalidad(id){ if(!confirm("Eliminar localidad?")) return; await supabase.from("localidades").delete().eq("id",id); fetchLocalidades(); }
 
 // ================= PEDIDOS =================
-async function fetchPedidos(){
-  const { data, error } = await supabase.from("pedidos")
-    .select("id,cliente,total,productos,localidad_id,localidades(nombre)")
-    .order("id",{ascending:false});
-  if(error){ console.error(error); return; }
-  const container=document.getElementById("pedidoList"); container.innerHTML="";
-  data.forEach(p=>{
-    const div=document.createElement("div"); div.className="card";
-    let productosHTML="";
-    try{
-      const prods = typeof p.productos==="string"?JSON.parse(p.productos):p.productos;
-      if(Array.isArray(prods)) productosHTML="<ul>"+prods.map(pr=>`<li>${pr.nombre||pr.producto} x${pr.cantidad||1}</li>`).join("")+"</ul>";
-      else productosHTML=p.productos||"";
-    }catch(e){ productosHTML=p.productos||""; }
-    div.innerHTML=`<b>Cliente:</b> ${escapeHtml(p.cliente||'')} <br>
-                   <b>Total:</b> $${p.total||0} <br>
-                   <b>Localidad:</b> ${escapeHtml(p.localidades?.nombre||'')} <br>
-                   <b>Productos:</b> ${productosHTML}`;
-    container.appendChild(div);
-  });
+/* ============================
+   PEDIDOS
+   - selección múltiple desde modal tipo tabla
+   - control stock antes de guardar
+   - edición: devuelve stock anterior, aplica nuevo
+   - eliminación: devuelve stock
+   ============================ */
+
+let selectedProducts = []; // {id,nombre,cantidad,precio}
+let editingOrderId = null;
+
+// Abre modal con tabla de promos y inputs de cantidad
+document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
+  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
+  if(error) return alert(error.message);
+  // construir tabla HTML
+  let html = `<table class="table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+  for(const p of promos){
+    const qty = getSelectedQty(p.id);
+    html += `<tr>
+      <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
+      <td>$${Number(p.precio).toFixed(2)}</td>
+      <td>${p.stock ?? 0}</td>
+      <td><input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)})"></td>
+      <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
+    </tr>`;
+  }
+  html += `<tr><td colspan="3" style="text-align:right"><strong>Total:</strong></td><td colspan="2" id="totalPedido">$0.00</td></tr></tbody></table>
+    <div style="margin-top:10px"><button onclick="confirmProducts()">Confirmar selección</button></div>`;
+  openModal('Seleccionar Productos', html);
+  // set initial total (after modal rendered)
+  setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
+});
+
+// retorna cantidad si ya está seleccionado
+function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
+
+// update subtotal UI y total
+function updateSubtotal(id, price){
+  const input = document.getElementById(`prod_${id}`);
+  if(!input) return;
+  let qty = parseInt(input.value,10) || 0;
+  if(qty < 0) qty = 0;
+  if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
+  input.value = qty;
+  const sub = document.getElementById(`sub_${id}`);
+  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
+  const tot = document.getElementById('totalPedido');
+  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
 }
+
+// calcular total en modal
+function calculateTotal(){
+  let total = 0;
+  const inputs = document.querySelectorAll('#modalInner input[type=number]');
+  inputs.forEach(inp=>{
+    const id = parseInt(inp.id.replace('prod_',''),10);
+    const qty = parseInt(inp.value,10) || 0;
+    const price = parseFloat(inp.getAttribute('data-price')) || 0;
+    total += qty * price;
+  });
+  return total;
+}
+
+// confirmar selección -> guarda en selectedProducts y render outside
+function confirmProducts(){
+  selectedProducts = [];
+  const inputs = document.querySelectorAll('#modalInner input[type=number]');
+  inputs.forEach(inp=>{
+    const qty = parseInt(inp.value,10) || 0;
+    if(qty > 0){
+      const id = parseInt(inp.id.replace('prod_',''),10);
+      const row = inp.closest('tr');
+      const nombre = row.cells[0].textContent;
+      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
+      selectedProducts.push({ id, nombre, cantidad: qty, precio });
+    }
+  });
+  closeModal(); renderSelectedProducts();
+
+  // if editing an order, trigger update flow
+  if(editingOrderId){
+    // button will call updateOrder when user clicks 'Actualizar' (we handle editing on a separate button)
+  }
+}
+
+// render summary of selected products in pedido form
+function renderSelectedProducts(){
+  const c = document.getElementById('selectedProductsContainer');
+  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
+  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+  selectedProducts.forEach(p=>{
+    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
+  });
+  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
+  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
+  c.innerHTML = html;
+}
+
+/* GET promo by id helper */
+async function getPromoById(id){
+  const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
+  if(error) throw new Error(error.message);
+  return data;
+}
+
+/* AGREGAR pedido -> actualiza stock, inserta pedido */
+document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
+  const cliente = document.getElementById('pedidoCliente').value.trim();
+  const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
+
+  // chequear stock localmente contra DB
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
+  }
+
+  // restar stock en DB
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    const newStock = (promo.stock || 0) - p.cantidad;
+    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+  }
+
+  // insertar pedido (productos como JSON)
+  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
+  if(error) return alert(error.message);
+
+  // limpiar
+  document.getElementById('pedidoForm').reset();
+  selectedProducts = []; renderSelectedProducts();
+  fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
+});
+
+/* FETCH and render orders */
+async function fetchOrders(){
+  const { data, error } = await supabase.from('pedidos').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('pedidoList'); container.innerHTML = '';
+  for(const p of data){
+    const div = document.createElement('div'); div.className = 'item-card';
+    let prodHTML = '<ul style="margin:6px 0;padding-left:18px">';
+    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
+    prodHTML += '</ul>';
+    div.innerHTML = `<div style="flex:1"><strong>${escapeHtml(p.cliente)}</strong><div class="small-muted">${p.localidad_id?('Localidad ID:'+p.localidad_id):''}</div>${prodHTML}<strong>Total: $${Number(p.total).toFixed(2)}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button onclick="openEditOrder(${p.id})">Editar</button>
+        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+      </div>`;
+    container.appendChild(div);
+  }
+}
+fetchOrders();
+
+/* Edit order:
+   - restore old stock (add back quantities from old.order)
+   - load order into selectedProducts and form
+   - set editingOrderId
+*/
+async function openEditOrder(id){
+  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+  if(error) return alert(error.message);
+  const order = data;
+
+  // devolver stock del pedido anterior
+  if(order.productos && order.productos.length){
+    for(const pr of order.productos){
+      // pr.id stored in payload
+      const promo = await getPromoById(pr.id);
+      const newStock = (promo.stock || 0) + pr.cantidad;
+      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+  }
+
+  // cargar pedido en formulario para editar
+  selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
+  document.getElementById('pedidoCliente').value = order.cliente;
+  document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
+  renderSelectedProducts();
+  editingOrderId = id;
+
+  // change Add button behaviour: we will use confirmProducts flow to update after selecting new products
+  showToast('Editando pedido: ajusta productos y presiona "Actualizar" en la misma sección.');
+  // When user opens selection modal and confirms (confirmProducts), if editingOrderId set, we will call updateOrder
+  // Provide a direct "Actualizar Pedido" quick button:
+  const addBtn = document.getElementById('addOrderBtn');
+  addBtn.textContent = 'Actualizar Pedido';
+  addBtn.onclick = async function(){ await updateOrder(editingOrderId); addBtn.textContent = 'Agregar Pedido'; addBtn.onclick = async ()=>{ /* restore listener */ document.getElementById('addOrderBtn').dispatchEvent(new Event('click')); }; };
+}
+
+/* Update order: after new selection (selectedProducts) */
+async function updateOrder(id){
+  if(!id) return alert('No hay pedido seleccionado para actualizar');
+  const cliente = document.getElementById('pedidoCliente').value.trim();
+  if(!cliente) return alert('Ingrese cliente');
+  if(!selectedProducts.length) return alert('Seleccione productos');
+
+  // verify stock for new selection
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
+  }
+  // subtract stock for new selection
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    const newStock = (promo.stock || 0) - p.cantidad;
+    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+  }
+
+  // update pedido record
+  const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+  const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+  const { error } = await supabase.from('pedidos').update({ cliente, productos: payload, total }).eq('id', id);
+  if(error) return alert(error.message);
+
+  // reset
+  editingOrderId = null;
+  selectedProducts = []; renderSelectedProducts();
+  document.getElementById('pedidoCliente').value = '';
+  document.getElementById('pedidoLocalidad').value = '';
+  fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
+}
+
+/* Delete order: return stock, delete row */
+async function deleteOrder(id){
+  if(!confirm('Eliminar pedido?')) return;
+  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+  if(error) return alert(error.message);
+  if(data.productos && data.productos.length){
+    for(const pr of data.productos){
+      const promo = await getPromoById(pr.id);
+      const newStock = (promo.stock || 0) + pr.cantidad;
+      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+  }
+  await supabase.from('pedidos').delete().eq('id', id);
+  fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
+}
+
 
 // ================= DOCUMENTOS =================
 async function fetchDocumentos(){
@@ -461,7 +721,7 @@ async function fetchDocumentos(){
   });
 }
 
-async function addDocumento(){
+async function addDocumento(){	
   const nombre=document.getElementById("docNombre").value.trim();
   const file=document.getElementById("docArchivo").files[0];
   if(!nombre || !file) return alert("Nombre y archivo");
@@ -474,7 +734,7 @@ async function addDocumento(){
 }
 
 // --- INICIALIZACIÓN ---
-fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchPedidos(); fetchDocumentos();
+fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos();
 </script>
 
 </body>
