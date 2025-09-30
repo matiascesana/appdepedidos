@@ -419,14 +419,13 @@ window.deleteLocalidad = async function(id){
 fetchLocalidades();
 
 /* =========================================================
-   CÓDIGO COMPLETO DE GESTIÓN DE PROMOCIONES
+   CÓDIGO COMPLETO (FINAL REVISIÓN)
    ========================================================= */
 
 // ===================================
-// I. FUNCIONES AUXILIARES
+// I. FUNCIONES AUXILIARES Y LÓGICA DE AGRUPACIÓN
 // ===================================
 
-/** Obtiene la URL pública firmada de un archivo en Supabase Storage. */
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
   try{
@@ -435,11 +434,12 @@ async function safeGetFileUrl(fileName, bucket='promo_images'){
   }catch{return null;}
 }
 
-/** Agrupa las promociones por el nombre de la categoría. */
+/** * Asegura la obtención del nombre de la categoría, clave para la agrupación.
+ */
 function groupPromosByCategory(promotions) {
     return promotions.reduce((groups, promo) => {
-        // Accede al nombre de la categoría anidado: promo.categorias.nombre
-        const categoryName = (promo.categorias && promo.categorias.nombre) ? promo.categorias.nombre : 'Sin Categoría';
+        // Accede al nombre de la categoría anidado (en fetch) o guardado (en data-promo)
+        const categoryName = (promo.categorias && promo.categorias.nombre) || promo.categoria || 'Sin Categoría';
         if (!groups[categoryName]) {
             groups[categoryName] = [];
         }
@@ -468,12 +468,12 @@ function simulateProgress(duration = 2000) {
 }
 
 // ===================================
-// II. FETCH Y RENDERIZADO
+// II. FETCH Y RENDERIZADO (Agrupado)
 // ===================================
 
 async function fetchPromotions(){
   console.log('👉 fetchPromotions ejecutado');
-  // Consulta para obtener todos los datos y el nombre de la categoría
+  // Consulta CLAVE: Usa 'categorias(nombre)' para el JOIN
   const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
@@ -483,11 +483,9 @@ async function fetchPromotions(){
    const groupedPromos = groupPromosByCategory(data);
    const categoryNames = Object.keys(groupedPromos).sort(); 
 
-  // Renderizar
   for(const categoryName of categoryNames){
        const promos = groupedPromos[categoryName];
 
-       // Mostrar Título de la Categoría
        const titleDiv = document.createElement('div');
        titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${categoryName}</h3>`;
        container.appendChild(titleDiv);
@@ -498,7 +496,7 @@ async function fetchPromotions(){
            const div = document.createElement('div');
            div.className = 'item-card';
            
-           // Lógica de Precios (Precio Anterior Tachado)
+           // Lógica de Precios
            let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
            if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
                precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
@@ -513,7 +511,7 @@ async function fetchPromotions(){
                     precio_anterior: promo.precio_anterior,
                     stock: promo.stock, 
                     imgUrl: imgUrl, 
-                    categoria: categoryName 
+                    categoria: categoryName // Incluye el nombre de la categoría para la exportación
                })}' checked style="margin-right: 12px; transform: scale(1.4);">
                ${imgHTML}
                <div style="flex:1">
@@ -531,10 +529,9 @@ async function fetchPromotions(){
 }
 
 // ===================================
-// III. CRUD (Creación, Edición, Eliminación)
+// III. CRUD (Creación, Edición, Eliminación) - [Manteniendo el código anterior]
 // ===================================
 
-// Agregar promoción 
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const nombre = document.getElementById('promoNombre').value.trim();
   const precio = parseFloat(document.getElementById('promoPrecio').value);
@@ -552,7 +549,6 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const { error } = await supabase.from('promociones').insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
   if(error) return alert(error.message);
   
-  // limpiar form y recargar
   document.getElementById('promoNombre').value=''; 
   document.getElementById('promoPrecio').value=''; 
   document.getElementById('promoPrecioAnterior').value='';
@@ -561,7 +557,6 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   fetchPromotions(); showToast('Promoción agregada');
 });
 
-// Edición de Promoción 
 window.editPromo = async function(id){
   const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
   if(error) return alert(error.message);
@@ -581,7 +576,6 @@ window.editPromo = async function(id){
   `);
 };
 
-// Actualización de Promoción
 window.updatePromo = async function(id, oldFileName){
   const nombre = document.getElementById('editPromoNombre').value.trim();
   const precio = parseFloat(document.getElementById('editPromoPrecio').value);
@@ -594,7 +588,6 @@ window.updatePromo = async function(id, oldFileName){
 
   let updateData = { nombre, precio, precio_anterior, stock };
 
-  // Lógica para actualizar la imagen
   if (file) {
       const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
       const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
@@ -616,7 +609,6 @@ window.updatePromo = async function(id, oldFileName){
   closeModal(); fetchPromotions(); showToast('Promoción actualizada');
 };
 
-// Eliminación de Promoción (incluye eliminación de imagen)
 window.deletePromo = async function(id, fileNameToDelete){
   if(!confirm('Eliminar promoción?')) return;
   
@@ -631,7 +623,7 @@ window.deletePromo = async function(id, fileNameToDelete){
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
 
 // ===================================
-// IV. EXPORTACIÓN A PDF (Agrupada con Progreso)
+// IV. EXPORTACIÓN A PDF (Agrupada y con Progreso)
 // ===================================
 
 document.getElementById('exportPromoPdfBtn').addEventListener('click', async () => {
@@ -643,10 +635,10 @@ document.getElementById('exportPromoPdfBtn').addEventListener('click', async () 
     return;
   }
   
-  // Mostrar barra de progreso
-   container.style.display = 'block';
+  // MOSTRAR BARRA DE PROGRESO
+   if (container) container.style.display = 'block';
 
-  // 1. Extraer y Agrupar los datos
+  // 1. Extraer y Agrupar los datos (usa la categoría guardada en data-promo)
   const promocionesSeleccionadas = Array.from(selectedChecks).map(checkbox => {
     return JSON.parse(checkbox.dataset.promo);
   });
@@ -658,25 +650,28 @@ document.getElementById('exportPromoPdfBtn').addEventListener('click', async () 
   }));
 
   try {
-        // Simular progreso y generar PDF (reemplaza el setTimeout con tu función PDF)
+        // Iniciar simulación de progreso
         const progressPromise = simulateProgress(2000); 
         
-        // ⚠️ REEMPLAZA ESTA LÍNEA con tu función de generación de PDF.
+        // ⚠️ COLOCA TU FUNCIÓN DE GENERACIÓN DE PDF AQUÍ. 
+        // Debe ser ASÍNCRONA y usar 'listaFinalParaPDF'
         // Ejemplo: await generatePdfFromGroupedPromos(listaFinalParaPDF); 
         await new Promise(resolve => setTimeout(resolve, 2000)); // Simulación de tiempo de generación
 
         await progressPromise; // Esperar que la simulación termine
 
-        console.log('Estructura de datos agrupada y ordenada para PDF:', listaFinalParaPDF);
-        alert(`PDF generado exitosamente con ${promocionesSeleccionadas.length} promociones.`);
+        console.log('Estructura de datos AGRUPADA lista para el PDF:', listaFinalParaPDF);
+        alert(`PDF generado exitosamente con ${promocionesSeleccionadas.length} promociones. Revise la consola y el PDF.`);
         
   } catch (error) {
         console.error("Error al generar el PDF:", error);
         alert("Ocurrió un error al generar el PDF.");
   } finally {
-        // Ocultar y resetear barra de progreso
-        container.style.display = 'none';
-        document.getElementById('progressFill').style.width = '0%';
+        // OCULTAR BARRA DE PROGRESO
+        if (container) {
+            container.style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+        }
   }
 });
 
@@ -1039,6 +1034,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
