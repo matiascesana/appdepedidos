@@ -1,30 +1,77 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Pedidos - Panel de Administración</title>
-    
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>App Completa — Pedidos, Promos, Docs</title>
 
-<!-- Librerías -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto&display=swap" rel="stylesheet">
+
 <style>
 /* -----------------------
-    Estilos (Diseño de 2 Columnas y Reseteo)
-    ----------------------- */
-:root{--accent:#6a1b9a;--accent-2:#7b1fa2;--danger:#e53935}
+   Estilos (con mejoras de visualización)
+   ----------------------- */
+:root{
+    --accent:#6a1b9a;
+    --accent-2:#7b1fa2;
+    --danger:#e53935;
+    --sidebar-width: 220px; /* Variable para ancho de barra lateral */
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:#ffffff;color:#222;min-height:100vh}
-.sidebar{width:220px;background:var(--accent);color:#fff;padding:18px;display:flex;flex-direction:column}
+
+/* CAMBIO CLAVE 1: Eliminamos display:flex del body */
+body{
+    margin:0;
+    font-family:Roboto,Arial,Helvetica,sans-serif;
+    background:#f9f9f9;
+    color:#222;
+    min-height:100vh; /* Mantenemos la altura mínima */
+}
+
+/* CAMBIO CLAVE 2: Sidebar fija de altura completa */
+.sidebar{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    background:var(--accent);
+    color:#fff;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    height: 100vh; /* Altura completa de la ventana */
+    z-index: 100; /* Asegura que esté por encima del contenido */
+}
 .sidebar .logo{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:12px}
 .sidebar button{background:transparent;border:0;color:#fff;padding:10px;border-radius:8px;text-align:left;cursor:pointer;margin-bottom:8px;font-weight:700}
 .sidebar button.active{background:#fff;color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,0.08)}
-.main{flex:1;padding:20px;overflow:auto}
+
+/* CAMBIO CLAVE 3: El contenedor principal solo desplaza el contenido */
+.main{
+    /* Ya no es flex. Solo necesitamos un padding-left para evitar que el contenido
+       quede debajo de la sidebar cuando no tiene position:absolute */
+    padding-left: var(--sidebar-width);
+}
 h1,h2{font-family:'Playfair Display',serif;margin:0 0 12px 0}
-.section{display:none;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.06);margin-bottom:18px}
+
+/* CAMBIO CLAVE 4: Cada sección es ahora una 'página' a pantalla completa */
+.section{
+    display:none;
+    position: absolute; /* Posicionamiento absoluto para superponer secciones */
+    top: 0;
+    left: var(--sidebar-width); /* Empieza después de la sidebar */
+    width: calc(100% - var(--sidebar-width)); /* Ancho restante de la pantalla */
+    height: 100vh; /* Altura completa de la ventana */
+    overflow-y: auto; /* Permite el scroll dentro de la sección si el contenido es largo */
+    background:#fff;
+    padding:20px;
+    border-radius:0; /* Quitamos border-radius ya que ocupa toda la pantalla */
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+    margin-bottom:0;
+}
 .item-card,.doc-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:#f4f4f4;margin-bottom:10px}
 .item-card img{width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px}
 label{display:block;margin:8px 0;font-size:14px}
@@ -45,348 +92,263 @@ button:hover{background:var(--accent-2)}
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="logo">App Pedidos</div>
-  <button class="tab-btn active" data-tab="promos">Promociones</button>
-  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-  <button class="tab-btn" data-tab="categorias">Categorías</button>
-  <button class="tab-btn" data-tab="localidades">Localidades</button>
-  <button class="tab-btn" data-tab="documentos">Documentos</button>
-  <div style="margin-top:auto;font-size:12px;opacity:.9">Integrado · PDF catálogo · Stock</div>
+  <div class="logo">App Pedidos</div>
+  <button class="tab-btn active" data-tab="promos">Promociones</button>
+  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
+  <button class="tab-btn" data-tab="categorias">Categorías</button>
+  <button class="tab-btn" data-tab="localidades">Localidades</button>
+  <button class="tab-btn" data-tab="documentos">Documentos</button>
+  <div style="margin-top:auto;font-size:12px;opacity:.9">Integrado · PDF catálogo · Stock</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
-  <h1>Promociones y Pedidos</h1>
+      <div class="section" id="promos">
+    <h1>Promociones</h1>     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:220px">
+        <label>Nombre / Descripción
+          <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
+        </label>
+      </div>
+      <div style="width:140px">
+        <label>Precio
+          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
+        </label>
+      </div>
+      <div style="width:140px">
+        <label>Stock
+          <input id="promoStock" type="number" placeholder="0">
+        </label>
+      </div>
+      <div style="width:220px">
+        <label>Categoría
+          <select id="promoCategoria"></select>
+        </label>
+      </div>
+     </div>
 
-  <!-- PROMOCIONES -->
-  <div class="section" id="promos">
-    <h2>Promociones</h2>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:220px">
-        <label>Nombre / Descripción
-          <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Precio
-          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Stock
-          <input id="promoStock" type="number" placeholder="0">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Categoría
-          <select id="promoCategoria"></select>
-        </label>
-      </div>
-     </div>
+      <div style="width:220px">
+        <label>Imagen (jpg/png)
+          <input id="promoImagen" type="file" accept="image/*">
+        </label>
+      </div>
+    </div>
 
-      <div style="width:220px">
-        <label>Imagen (jpg/png)
-          <input id="promoImagen" type="file" accept="image/*">
-        </label>
-      </div> 
-      <button id="addPromoBtn">Agregar Promoción</button>
-    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <button id="addPromoBtn">Agregar Promoción</button>
+      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
+      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
+    </div>
 
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
-      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
-    </div>
+    <h3>Lista de Promociones</h3>
+    <div id="promoList"></div>
+  </div>
 
-    <h3>Lista de Promociones</h3>
-    <div id="promoList"></div>
-  </div>
+    <div class="section" id="pedidos">
+    <h1>Pedidos</h1>     <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <div style="flex:1;min-width:220px">
+        <label>Cliente
+          <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
+        </label>
+      </div>
+      <div style="width:220px">
+        <label>Localidad
+          <select id="pedidoLocalidad"></select>
+        </label>
+      </div>
 
-  <!-- PEDIDOS -->
-  <div class="section" id="pedidos">
-    <h2>Pedidos</h2>
-    <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <div style="flex:1;min-width:220px">
-        <label>Cliente
-          <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Localidad
-          <select id="pedidoLocalidad"></select>
-        </label>
-      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
+      </div>
 
-      <div style="display:flex;gap:8px;align-items:center">
-        <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
-      </div>
+      <div style="width:100%;margin-top:6px">
+        <div id="selectedProductsContainer" class="small-muted"></div>
+      </div>
 
-      <div style="width:100%;margin-top:6px">
-        <div id="selectedProductsContainer" class="small-muted"></div>
-      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" id="addOrderBtn">Agregar Pedido</button>
+        <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
+      </div>
+    </form>
 
-      <div style="display:flex;gap:8px">
-        <button type="button" id="addOrderBtn">Agregar Pedido</button>
-        <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-      </div>
-    </form>
+    <h3>Lista de Pedidos</h3>
+    <div id="pedidoList"></div>
+  </div>
 
-    <h3>Lista de Pedidos</h3>
-    <div id="pedidoList"></div>
-  </div>
+    <div class="section" id="categorias">
+    <h2>Categorías</h2>
+    <form id="categoriaForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="categoriaNombre" placeholder="Nombre categoría" />
+      <button id="addCategoriaBtn">Agregar Categoría</button>
+    </form>
+    <div id="categoriaList"></div>
+  </div>
 
-  <!-- CATEGORÍAS -->
-  <div class="section" id="categorias">
-    <h2>Categorías</h2>
-    <form id="categoriaForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
-      <input id="categoriaNombre" placeholder="Nombre categoría" />
-      <button id="addCategoriaBtn">Agregar Categoría</button>
-    </form>
-    <div id="categoriaList"></div>
-  </div>
+    <div class="section" id="localidades">
+    <h2>Localidades</h2>
+    <form id="localidadForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="localidadNombre" placeholder="Nombre localidad" />
+      <button id="addLocalidadBtn">Agregar Localidad</button>
+    </form>
+    <div id="localidadList"></div>
+  </div>
 
-  <!-- LOCALIDADES -->
-  <div class="section" id="localidades">
-    <h2>Localidades</h2>
-    <form id="localidadForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
-      <input id="localidadNombre" placeholder="Nombre localidad" />
-      <button id="addLocalidadBtn">Agregar Localidad</button>
-    </form>
-    <div id="localidadList"></div>
-  </div>
+    <div class="section" id="documentos">
+    <h2>Documentos</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <input id="searchDoc" placeholder="Buscar por DNI">
+      <input id="docFiles" type="file" multiple>
+      <button id="uploadDocsBtn">Subir Documentos</button>
+      <button id="deleteAllDocsBtn" class="delete-btn">Eliminar Todos</button>
+    </div>
 
-  <!-- DOCUMENTOS -->
-  <div class="section" id="documentos">
-    <h2>Documentos</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <input id="searchDoc" placeholder="Buscar por DNI">
-      <input id="docFiles" type="file" multiple>
-      <button id="uploadDocsBtn">Subir Documentos</button>
-      <button id="deleteAllDocsBtn" class="delete-btn">Eliminar Todos</button>
-    </div>
+    <div id="docProgressContainer" style="width:100%;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:8px;display:none">
+      <div id="docProgress" style="width:0;height:8px;background:green"></div>
+    </div>
 
-    <div id="docProgressContainer" style="width:100%;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:8px;display:none">
-      <div id="docProgress" style="width:0;height:8px;background:green"></div>
-    </div>
-
-    <h3>Documentos subidos</h3>
-    <div id="documentsList"></div>
-  </div>
+    <h3>Documentos subidos</h3>
+    <div id="documentsList"></div>
+  </div>
 
 </div>
 
-<!-- MODAL -->
 <div id="modal" class="modal">
-  <div class="modal-content">
-    <span class="modal-close" onclick="closeModal()">×</span>
-    <div id="modalInner"></div>
-  </div>
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal()">×</span>
+    <div id="modalInner"></div>
+  </div>
 </div>
 
 <script>
-
-/* -----------------------------------------------------
-    Lógica de Navegación Exclusiva (Solución a las páginas fijas)
-    ----------------------------------------------------- */
-
-// Estado inicial: 'promos'
-const initialTab = 'promos';
-
-/**
- * Cambia la vista activa y oculta todas las demás secciones.
- * @param {string} tabId - El ID de la sección a mostrar (e.g., 'promos', 'pedidos').
- */
-function changeTab(tabId) {
-    // 1. Oculta TODAS las secciones para asegurar exclusividad
-    document.querySelectorAll('.section').forEach(section => {
-        section.style.display = 'none';
-    });
-
-    // 2. Muestra SOLO la sección seleccionada
-    const activeSection = document.getElementById(tabId);
-    if (activeSection) {
-        activeSection.style.display = 'block';
-    }
-
-    // 3. Actualiza el estado 'active' de los botones de la sidebar
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    const activeButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
-    }
-
-    // 4. Actualiza el título principal
-    const titleMap = {
-        'promos': 'Gestión de Promociones',
-        'pedidos': 'Gestión de Pedidos',
-        'categorias': 'Administración de Categorías',
-        'localidades': 'Administración de Localidades',
-        'documentos': 'Gestión de Documentos'
-    };
-    const mainTitle = document.querySelector('.main h1');
-    if (mainTitle) {
-        mainTitle.textContent = titleMap[tabId] || 'Panel de Administración';
-    }
-}
-
-// 5. Asigna el evento click a todos los botones de la sidebar
-document.querySelectorAll('.tab-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        const tabId = this.getAttribute('data-tab');
-        changeTab(tabId);
-    });
-});
-
-// 6. Funciones de control del Modal (necesarias)
-function openModal() {
-    document.getElementById('modal').style.display = 'flex';
-}
-function closeModal() {
-    document.getElementById('modal').style.display = 'none';
-}
-// Cierra el modal al hacer click fuera
-document.getElementById('modal').addEventListener('click', (e) => {
-    if (e.target.id === 'modal') {
-        closeModal();
-    }
-});
-
-// 7. Establece la vista inicial al cargar la página
-changeTab(initialTab);
 /* ============================
-   CONFIG: Supabase (usar tus credenciales)
-   ============================ */
+   CONFIG: Supabase (usar tus credenciales)
+   ============================ */
 const SUPABASE_URL = 'https://ejbqlejlgprvwzrptojo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ============================
-   HELPERS UI
-   ============================ */
+   HELPERS UI
+   ============================ */
 function showToast(msg, ms=3000){
-  const t = document.createElement('div');
-  t.textContent = msg;
-  Object.assign(t.style,{
-    position:'fixed',right:'20px',bottom:'20px',background: 'var(--accent)', color:'#fff', padding:'10px 14px',
-    borderRadius:'8px', boxShadow:'0 6px 18px rgba(0,0,0,0.12)', zIndex:9999
-  });
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), ms);
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style,{
+    position:'fixed',right:'20px',bottom:'20px',background: 'var(--accent)', color:'#fff', padding:'10px 14px',
+    borderRadius:'8px', boxShadow:'0 6px 18px rgba(0,0,0,0.12)', zIndex:9999
+  });
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
 }
 function openModal(title, html){
-  document.getElementById('modalInner').innerHTML = `<h3>${title}</h3>${html}`;
-  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('modalInner').innerHTML = `<h3>${title}</h3>${html}`;
+  document.getElementById('modal').style.display = 'flex';
 }
 function closeModal(){ document.getElementById('modal').style.display = 'none'; }
 function escapeHtml(str){ if(!str && str!==0) return ''; return String(str).replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
 
 /* ============================
-   TABS (sidebar)
-   ============================ */
+   TABS (sidebar)
+   ============================ */
 const tabBtns = document.querySelectorAll('.tab-btn');
 tabBtns.forEach(btn => btn.addEventListener('click', () => {
-  tabBtns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-  document.getElementById(btn.dataset.tab).style.display = 'block';
+  tabBtns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+  document.getElementById(btn.dataset.tab).style.display = 'block';
 }));
 document.getElementById('promos').style.display = 'block'; // vista por defecto
 
 /* ============================
-   CATEGORÍAS
-   ============================ */
+   CATEGORÍAS
+   ============================ */
 async function fetchCategorias(){
-  const { data, error } = await supabase.from('categorias').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('categoriaList');
-  container.innerHTML = '';
-  const select = document.getElementById('promoCategoria');
-  select.innerHTML = '<option value="">Sin categoría</option>';
-  data.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'item-card';
-    div.innerHTML = `<span>${escapeHtml(c.nombre)}</span>
-      <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
-      <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
-    container.appendChild(div);
-    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
-  });
+  const { data, error } = await supabase.from('categorias').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('categoriaList');
+  container.innerHTML = '';
+  const select = document.getElementById('promoCategoria');
+  select.innerHTML = '<option value="">Sin categoría</option>';
+  data.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `<span>${escapeHtml(c.nombre)}</span>
+      <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
+      <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
+    container.appendChild(div);
+    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
+  });
 }
 window.addCategoria = async function(){
-  const nombre = document.getElementById('categoriaNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('categorias').insert([{ nombre }]);
-  if(error) return alert(error.message);
-  document.getElementById('categoriaNombre').value = '';
-  fetchCategorias();
+  const nombre = document.getElementById('categoriaNombre').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('categorias').insert([{ nombre }]);
+  if(error) return alert(error.message);
+  document.getElementById('categoriaNombre').value = '';
+  fetchCategorias();
 };
 window.editCategoria = function(id,nombre){
-  openModal('Editar Categoría', `<input id="editCatName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateCategoria(${id})">Guardar</button></div>`);
+  openModal('Editar Categoría', `<input id="editCatName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateCategoria(${id})">Guardar</button></div>`);
 };
 window.updateCategoria = async function(id){
-  const nombre = document.getElementById('editCatName').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('categorias').update({ nombre }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchCategorias();
+  const nombre = document.getElementById('editCatName').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('categorias').update({ nombre }).eq('id', id);
+  if(error) return alert(error.message);
+  closeModal(); fetchCategorias();
 };
 window.deleteCategoria = async function(id){
-  if(!confirm('Eliminar categoría?')) return;
-  await supabase.from('categorias').delete().eq('id', id);
-  fetchCategorias();
+  if(!confirm('Eliminar categoría?')) return;
+  await supabase.from('categorias').delete().eq('id', id);
+  fetchCategorias();
 };
 fetchCategorias();
 
 /* ============================
-   LOCALIDADES
-   ============================ */
+   LOCALIDADES
+   ============================ */
 async function fetchLocalidades(){
-  const { data, error } = await supabase.from('localidades').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('localidadList');
-  const sel = document.getElementById('pedidoLocalidad');
-  container.innerHTML = ''; sel.innerHTML = '<option value="">Seleccione</option>';
-  data.forEach(l=>{
-    container.innerHTML += `<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div><button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button><button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
-    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
-  });
+  const { data, error } = await supabase.from('localidades').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('localidadList');
+  const sel = document.getElementById('pedidoLocalidad');
+  container.innerHTML = ''; sel.innerHTML = '<option value="">Seleccione</option>';
+  data.forEach(l=>{
+    container.innerHTML += `<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div><button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button><button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
+    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
+  });
 }
 window.addLocalidad = async function(){
-  const nombre = document.getElementById('localidadNombre').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('localidades').insert([{ nombre }]);
-  if(error) return alert(error.message);
-  document.getElementById('localidadNombre').value='';
-  fetchLocalidades();
+  const nombre = document.getElementById('localidadNombre').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('localidades').insert([{ nombre }]);
+  if(error) return alert(error.message);
+  document.getElementById('localidadNombre').value='';
+  fetchLocalidades();
 };
 window.editLocalidad = function(id,nombre){
-  openModal('Editar Localidad', `<input id="editLocName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateLocalidad(${id})">Guardar</button></div>`);
+  openModal('Editar Localidad', `<input id="editLocName" value="${escapeHtml(nombre)}"><div style="margin-top:10px"><button onclick="updateLocalidad(${id})">Guardar</button></div>`);
 };
 window.updateLocalidad = async function(id){
-  const nombre = document.getElementById('editLocName').value.trim();
-  if(!nombre) return alert('Ingrese nombre');
-  const { error } = await supabase.from('localidades').update({ nombre }).eq('id', id);
-  if(error) return alert(error.message);
-  closeModal(); fetchLocalidades();
+  const nombre = document.getElementById('editLocName').value.trim();
+  if(!nombre) return alert('Ingrese nombre');
+  const { error } = await supabase.from('localidades').update({ nombre }).eq('id', id);
+  if(error) return alert(error.message);
+  closeModal(); fetchLocalidades();
 };
 window.deleteLocalidad = async function(id){
-  if(!confirm('Eliminar localidad?')) return;
-  await supabase.from('localidades').delete().eq('id', id);
-  fetchLocalidades();
+  if(!confirm('Eliminar localidad?')) return;
+  await supabase.from('localidades').delete().eq('id', id);
+  fetchLocalidades();
 };
 fetchLocalidades();
 
-/* =========================================================
-   CÓDIGO COMPLETO (FINAL REVISIÓN)
-   ========================================================= */
-
-// ===================================
-// I. FUNCIONES AUXILIARES Y LÓGICA DE AGRUPACIÓN
-// ===================================
-
+/* ============================
+   PROMOCIONES
+   - fetchPromotions limpia el contenedor para evitar duplicados
+   - upload imagen al bucket 'promo_images'
+   - safeGetFileUrl para obtener signed URL (temporal) para mostrar o para PDF
+   ============================ */
 async function safeGetFileUrl(fileName, bucket='promo_images'){
   if(!fileName) return null;
   try{
@@ -395,109 +357,32 @@ async function safeGetFileUrl(fileName, bucket='promo_images'){
   }catch{return null;}
 }
 
-/** * Asegura la obtención del nombre de la categoría, clave para la agrupación.
- */
-function groupPromosByCategory(promotions) {
-    return promotions.reduce((groups, promo) => {
-        // Accede al nombre de la categoría anidado (en fetch) o guardado (en data-promo)
-        const categoryName = (promo.categorias && promo.categorias.nombre) || promo.categoria || 'Sin Categoría';
-        if (!groups[categoryName]) {
-            groups[categoryName] = [];
-        }
-        groups[categoryName].push(promo);
-        return groups;
-    }, {});
-}
-
-/** Simula el llenado de la barra de progreso. */
-function simulateProgress(duration = 2000) {
-    const fill = document.getElementById('progressFill');
-    fill.style.width = '0%';
-    
-    const interval = setInterval(() => {
-        let currentWidth = parseInt(fill.style.width, 10);
-        if (currentWidth < 90) { 
-            fill.style.width = (currentWidth + 10) + '%';
-        }
-    }, duration / 9); 
-    
-    return new Promise(resolve => setTimeout(() => {
-        clearInterval(interval);
-        fill.style.width = '100%';
-        resolve();
-    }, duration));
-}
-
-// ===================================
-// II. FETCH Y RENDERIZADO (Agrupado)
-// ===================================
-
 async function fetchPromotions(){
   console.log('👉 fetchPromotions ejecutado');
-  // Consulta CLAVE: Usa 'categorias(nombre)' para el JOIN
-  const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
+  const { data, error } = await supabase.from('promociones').select('*').order('id');
   if(error) return console.error(error);
   const container = document.getElementById('promoList');
-  container.innerHTML = ''; 
+  container.innerHTML = ''; // <-- limpiar siempre antes de renderizar
 
-  // Agrupar y obtener nombres de categorías
-   const groupedPromos = groupPromosByCategory(data);
-   const categoryNames = Object.keys(groupedPromos).sort(); 
-
-  for(const categoryName of categoryNames){
-       const promos = groupedPromos[categoryName];
-
-       const titleDiv = document.createElement('div');
-       titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${categoryName}</h3>`;
-       container.appendChild(titleDiv);
-
-       for(const promo of promos){
-           const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
-           const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
-           const div = document.createElement('div');
-           div.className = 'item-card';
-           
-           // Lógica de Precios
-           let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
-           if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
-               precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
-                             <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
-           } 
-
-           div.innerHTML = `
-               <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
-                    id: promo.id, 
-                    nombre: promo.nombre, 
-                    precio: promo.precio, 
-                    precio_anterior: promo.precio_anterior,
-                    stock: promo.stock, 
-                    imgUrl: imgUrl, 
-                    categoria: categoryName // Incluye el nombre de la categoría para la exportación
-               })}' checked style="margin-right: 12px; transform: scale(1.4);">
-               ${imgHTML}
-               <div style="flex:1">
-                   <strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong>
-                   <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
-               </div>
-               <div>
-                   <button onclick="editPromo(${promo.id})">Editar</button>
-                   <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
-               </div>
-           `;
-           container.appendChild(div);
-       }
+  // render
+  for(const promo of data){
+    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
+    const imgHTML = imgUrl ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">` : '';
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `${imgHTML}<div style="flex:1"><strong>${escapeHtml(promo.nombre || promo.descripcion || '')}</strong><div class="small-muted">$${Number(promo.precio).toFixed(2)} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div></div>
+      <div>
+        <button onclick="editPromo(${promo.id})">Editar</button>
+        <button class="delete-btn" onclick="deletePromo(${promo.id})">Eliminar</button>
+      </div>`;
+    container.appendChild(div);
   }
 }
 
-// ===================================
-// III. CRUD (Creación, Edición, Eliminación) - [Manteniendo el código anterior]
-// ===================================
-
+// Agregar promoción (sube imagen luego inserta registro)
 document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const nombre = document.getElementById('promoNombre').value.trim();
   const precio = parseFloat(document.getElementById('promoPrecio').value);
-  const precio_anterior_val = document.getElementById('promoPrecioAnterior').value;
-  const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
   const stock = parseInt(document.getElementById('promoStock').value,10) || 0;
   const categoria_id = document.getElementById('promoCategoria').value || null;
   const file = document.getElementById('promoImagen').files[0];
@@ -506,168 +391,74 @@ document.getElementById('addPromoBtn').addEventListener('click', async ()=>{
   const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
   if(upErr) return alert(upErr.message);
   const publicUrl = await safeGetFileUrl(fileName);
-  
-  const { error } = await supabase.from('promociones').insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
+  const { error } = await supabase.from('promociones').insert([{ nombre, precio, stock, categoria_id, imagen: fileName, imagen_url: publicUrl }]);
   if(error) return alert(error.message);
-  
-  document.getElementById('promoNombre').value=''; 
-  document.getElementById('promoPrecio').value=''; 
-  document.getElementById('promoPrecioAnterior').value='';
-  document.getElementById('promoStock').value=''; 
-  document.getElementById('promoImagen').value='';
+  // limpiar form y recargar promos
+  document.getElementById('promoNombre').value=''; document.getElementById('promoPrecio').value=''; document.getElementById('promoStock').value=''; document.getElementById('promoImagen').value='';
   fetchPromotions(); showToast('Promoción agregada');
 });
 
+// editar promoción (simple)
 window.editPromo = async function(id){
   const { data, error } = await supabase.from('promociones').select('*').eq('id',id).single();
   if(error) return alert(error.message);
   const p = data;
-  const currentImgHtml = p.imagen_url ? `<img src="${p.imagen_url}" style="max-width:150px;max-height:150px;object-fit:contain;margin-bottom:10px;display:block;border-radius:6px;">` : 'No hay imagen actual.';
-
   openModal('Editar Promoción', `
     <label>Nombre<input id="editPromoNombre" value="${escapeHtml(p.nombre||p.descripcion||'')}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio Actual<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Precio Anterior (Tachado)<input id="editPromoPrecioAnterior" type="number" step="0.01" value="${p.precio_anterior||''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
+    <label>Precio<input id="editPromoPrecio" type="number" step="0.01" value="${p.precio}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
     <label>Stock<input id="editPromoStock" type="number" value="${p.stock||0}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd"></label>
-    <label>Imagen Actual: ${currentImgHtml}
-        Subir nueva imagen (jpg/png)
-        <input id="editPromoImagen" type="file" accept="image/*" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd">
-    </label>
-    <div style="margin-top:10px"><button onclick="updatePromo(${p.id}, '${p.imagen || ''}')">Guardar</button></div>
+    <div style="margin-top:10px"><button onclick="updatePromo(${p.id})">Guardar</button></div>
   `);
 };
 
-window.updatePromo = async function(id, oldFileName){
+window.updatePromo = async function(id){
   const nombre = document.getElementById('editPromoNombre').value.trim();
   const precio = parseFloat(document.getElementById('editPromoPrecio').value);
-  const precio_anterior_val = document.getElementById('editPromoPrecioAnterior').value;
-  const precio_anterior = precio_anterior_val ? parseFloat(precio_anterior_val) : null; 
   const stock = parseInt(document.getElementById('editPromoStock').value,10)||0;
-  const file = document.getElementById('editPromoImagen').files[0]; 
-
   if(!nombre || isNaN(precio)) return alert('Complete campos');
-
-  let updateData = { nombre, precio, precio_anterior, stock };
-
-  if (file) {
-      const fileName = `promo_${Date.now()}_${file.name.replaceAll(' ','_')}`;
-      const { error: upErr } = await supabase.storage.from('promo_images').upload(fileName, file, { upsert:true });
-      if(upErr) return alert(upErr.message);
-
-      const publicUrl = await safeGetFileUrl(fileName);
-
-      updateData.imagen = fileName;
-      updateData.imagen_url = publicUrl;
-
-      if (oldFileName) {
-          await supabase.storage.from('promo_images').remove([oldFileName]);
-      }
-  }
-
-  const { error } = await supabase.from('promociones').update(updateData).eq('id', id);
-
+  const { error } = await supabase.from('promociones').update({ nombre, precio, stock }).eq('id', id);
   if(error) return alert(error.message);
   closeModal(); fetchPromotions(); showToast('Promoción actualizada');
 };
-
-window.deletePromo = async function(id, fileNameToDelete){
+window.deletePromo = async function(id){
   if(!confirm('Eliminar promoción?')) return;
-  
-  if (fileNameToDelete) {
-    await supabase.storage.from('promo_images').remove([fileNameToDelete]);
-  }
-  
   await supabase.from('promociones').delete().eq('id', id);
   fetchPromotions();
 };
-
 document.getElementById('refreshPromosBtn').addEventListener('click', fetchPromotions);
 
-// ===================================
-// IV. EXPORTACIÓN A PDF (Agrupada y con Progreso)
-// ===================================
-
-document.getElementById('exportPromoPdfBtn').addEventListener('click', async () => {
-  const selectedChecks = document.querySelectorAll('#promoList .promo-export-check:checked');
-  const container = document.getElementById('pdfProgressBarContainer');
-  
-  if (selectedChecks.length === 0) {
-    alert('Seleccione al menos una promoción para exportar.');
-    return;
-  }
-  
-  // MOSTRAR BARRA DE PROGRESO
-   if (container) container.style.display = 'block';
-
-  // 1. Extraer y Agrupar los datos (usa la categoría guardada en data-promo)
-  const promocionesSeleccionadas = Array.from(selectedChecks).map(checkbox => {
-    return JSON.parse(checkbox.dataset.promo);
-  });
-
-  const promocionesAgrupadasMap = groupPromosByCategory(promocionesSeleccionadas);
-  const listaFinalParaPDF = Object.keys(promocionesAgrupadasMap).sort().map(categoria => ({
-    categoria: categoria,
-    promociones: promocionesAgrupadasMap[categoria]
-  }));
-
-  try {
-        // Iniciar simulación de progreso
-        const progressPromise = simulateProgress(2000); 
-        
-        // ⚠️ COLOCA TU FUNCIÓN DE GENERACIÓN DE PDF AQUÍ. 
-        // Debe ser ASÍNCRONA y usar 'listaFinalParaPDF'
-        // Ejemplo: await generatePdfFromGroupedPromos(listaFinalParaPDF); 
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulación de tiempo de generación
-
-        await progressPromise; // Esperar que la simulación termine
-
-        console.log('Estructura de datos AGRUPADA lista para el PDF:', listaFinalParaPDF);
-        alert(`PDF generado exitosamente con ${promocionesSeleccionadas.length} promociones. Revise la consola y el PDF.`);
-        
-  } catch (error) {
-        console.error("Error al generar el PDF:", error);
-        alert("Ocurrió un error al generar el PDF.");
-  } finally {
-        // OCULTAR BARRA DE PROGRESO
-        if (container) {
-            container.style.display = 'none';
-            document.getElementById('progressFill').style.width = '0%';
-        }
-  }
-});
-
 /* ============================
-   PEDIDOS
-   - selección múltiple desde modal tipo tabla
-   - control stock antes de guardar
-   - edición: devuelve stock anterior, aplica nuevo
-   - eliminación: devuelve stock
-   ============================ */
+   PEDIDOS
+   - selección múltiple desde modal tipo tabla
+   - control stock antes de guardar
+   - edición: devuelve stock anterior, aplica nuevo
+   - eliminación: devuelve stock
+   ============================ */
 
 let selectedProducts = []; // {id,nombre,cantidad,precio}
 let editingOrderId = null;
 
 // Abre modal con tabla de promos y inputs de cantidad
 document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
-  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return alert(error.message);
-  // construir tabla HTML
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  for(const p of promos){
-    const qty = getSelectedQty(p.id);
-    html += `<tr>
-      <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
-      <td>$${Number(p.precio).toFixed(2)}</td>
-      <td>${p.stock ?? 0}</td>
-      <td><input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)})"></td>
-      <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
-    </tr>`;
-  }
-  html += `<tr><td colspan="3" style="text-align:right"><strong>Total:</strong></td><td colspan="2" id="totalPedido">$0.00</td></tr></tbody></table>
-    <div style="margin-top:10px"><button onclick="confirmProducts()">Confirmar selección</button></div>`;
-  openModal('Seleccionar Productos', html);
-  // set initial total (after modal rendered)
-  setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
+  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
+  if(error) return alert(error.message);
+  // construir tabla HTML
+  let html = `<table class="table"><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+  for(const p of promos){
+    const qty = getSelectedQty(p.id);
+    html += `<tr>
+      <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
+      <td>$${Number(p.precio).toFixed(2)}</td>
+      <td>${p.stock ?? 0}</td>
+      <td><input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)})"></td>
+      <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
+    </tr>`;
+  }
+  html += `<tr><td colspan="3" style="text-align:right"><strong>Total:</strong></td><td colspan="2" id="totalPedido">$0.00</td></tr></tbody></table>
+    <div style="margin-top:10px"><button onclick="confirmProducts()">Confirmar selección</button></div>`;
+  openModal('Seleccionar Productos', html);
+  // set initial total (after modal rendered)
+  setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
 });
 
 // retorna cantidad si ya está seleccionado
@@ -675,352 +466,387 @@ function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id);
 
 // update subtotal UI y total
 function updateSubtotal(id, price){
-  const input = document.getElementById(`prod_${id}`);
-  if(!input) return;
-  let qty = parseInt(input.value,10) || 0;
-  if(qty < 0) qty = 0;
-  if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
-  input.value = qty;
-  const sub = document.getElementById(`sub_${id}`);
-  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
-  const tot = document.getElementById('totalPedido');
-  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
+  const input = document.getElementById(`prod_${id}`);
+  if(!input) return;
+  let qty = parseInt(input.value,10) || 0;
+  if(qty < 0) qty = 0;
+  if(input.max){ const mx = parseInt(input.max,10); if(qty > mx) qty = mx; }
+  input.value = qty;
+  const sub = document.getElementById(`sub_${id}`);
+  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
+  const tot = document.getElementById('totalPedido');
+  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
 }
 
 // calcular total en modal
 function calculateTotal(){
-  let total = 0;
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const id = parseInt(inp.id.replace('prod_',''),10);
-    const qty = parseInt(inp.value,10) || 0;
-    const price = parseFloat(inp.getAttribute('data-price')) || 0;
-    total += qty * price;
-  });
-  return total;
+  let total = 0;
+  const inputs = document.querySelectorAll('#modalInner input[type=number]');
+  inputs.forEach(inp=>{
+    const id = parseInt(inp.id.replace('prod_',''),10);
+    const qty = parseInt(inp.value,10) || 0;
+    const price = parseFloat(inp.getAttribute('data-price')) || 0;
+    total += qty * price;
+  });
+  return total;
 }
 
 // confirmar selección -> guarda en selectedProducts y render outside
 function confirmProducts(){
-  selectedProducts = [];
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const qty = parseInt(inp.value,10) || 0;
-    if(qty > 0){
-      const id = parseInt(inp.id.replace('prod_',''),10);
-      const row = inp.closest('tr');
-      const nombre = row.cells[0].textContent;
-      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
-      selectedProducts.push({ id, nombre, cantidad: qty, precio });
-    }
-  });
-  closeModal(); renderSelectedProducts();
+  selectedProducts = [];
+  const inputs = document.querySelectorAll('#modalInner input[type=number]');
+  inputs.forEach(inp=>{
+    const qty = parseInt(inp.value,10) || 0;
+    if(qty > 0){
+      const id = parseInt(inp.id.replace('prod_',''),10);
+      const row = inp.closest('tr');
+      const nombre = row.cells[0].textContent;
+      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
+      selectedProducts.push({ id, nombre, cantidad: qty, precio });
+    }
+  });
+  closeModal(); renderSelectedProducts();
 
-  // if editing an order, trigger update flow
-  if(editingOrderId){
-    // button will call updateOrder when user clicks 'Actualizar' (we handle editing on a separate button)
-  }
+  // if editing an order, trigger update flow
+  if(editingOrderId){
+    // button will call updateOrder when user clicks 'Actualizar' (we handle editing on a separate button)
+  }
 }
 
 // render summary of selected products in pedido form
 function renderSelectedProducts(){
-  const c = document.getElementById('selectedProductsContainer');
-  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  selectedProducts.forEach(p=>{
-    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
-  });
-  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
-  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
-  c.innerHTML = html;
+  const c = document.getElementById('selectedProductsContainer');
+  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
+  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+  selectedProducts.forEach(p=>{
+    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
+  });
+  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
+  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
+  c.innerHTML = html;
 }
 
 /* GET promo by id helper */
 async function getPromoById(id){
-  const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
-  if(error) throw new Error(error.message);
-  return data;
+  const { data, error } = await supabase.from('promociones').select('*').eq('id', id).single();
+  if(error) throw new Error(error.message);
+  return data;
 }
 
 /* AGREGAR pedido -> actualiza stock, inserta pedido */
-// Cambiar el botón para que llame a updateOrder
-const addBtn = document.getElementById('addOrderBtn');
-addBtn.textContent = 'Actualizar Pedido';
-addBtn.onclick = async function(){ 
-    await updateOrder(editingOrderId); 
-    
-    // Al finalizar la actualización, limpiar la propiedad onclick.
-    // El listener original (addEventListener) seguirá activo.
-    addBtn.textContent = 'Agregar Pedido';
-    addBtn.onclick = null; // <-- Restauración limpia
-};
-  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
+document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
+  const cliente = document.getElementById('pedidoCliente').value.trim();
+  const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
 
-  // chequear stock localmente contra DB
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
-  }
+  // chequear stock localmente contra DB
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre} (disponible: ${promo.stock})`);
+  }
 
-  // restar stock en DB
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    const newStock = (promo.stock || 0) - p.cantidad;
-    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
-  }
+  // restar stock en DB
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    const newStock = (promo.stock || 0) - p.cantidad;
+    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+  }
 
-  // insertar pedido (productos como JSON)
-  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
-  if(error) return alert(error.message);
+  // insertar pedido (productos como JSON)
+  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
+  if(error) return alert(error.message);
 
-  // limpiar
-  document.getElementById('pedidoForm').reset();
-  selectedProducts = []; renderSelectedProducts();
-  fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
+  // limpiar
+  document.getElementById('pedidoForm').reset();
+  selectedProducts = []; renderSelectedProducts();
+  fetchOrders(); fetchPromotions(); showToast('Pedido agregado');
 });
 
 /* FETCH and render orders */
 async function fetchOrders(){
-  const { data, error } = await supabase.from('pedidos').select('*').order('id');
-  if(error) return console.error(error);
-  const container = document.getElementById('pedidoList'); container.innerHTML = '';
-  for(const p of data){
-    const div = document.createElement('div'); div.className = 'item-card';
-    let prodHTML = '<ul style="margin:6px 0;padding-left:18px">';
-    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
-    prodHTML += '</ul>';
-    div.innerHTML = `<div style="flex:1"><strong>${escapeHtml(p.cliente)}</strong><div class="small-muted">${p.localidad_id?('Localidad ID:'+p.localidad_id):''}</div>${prodHTML}<strong>Total: $${Number(p.total).toFixed(2)}</strong></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <button onclick="openEditOrder(${p.id})">Editar</button>
-        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
-      </div>`;
-    container.appendChild(div);
-  }
+  const { data, error } = await supabase.from('pedidos').select('*').order('id');
+  if(error) return console.error(error);
+  const container = document.getElementById('pedidoList'); container.innerHTML = '';
+  for(const p of data){
+    const div = document.createElement('div'); div.className = 'item-card';
+    let prodHTML = '<ul style="margin:6px 0;padding-left:18px">';
+    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} x ${pr.cantidad} = $${(pr.precio*pr.cantidad).toFixed(2)}</li>`);
+    prodHTML += '</ul>';
+    div.innerHTML = `<div style="flex:1"><strong>${escapeHtml(p.cliente)}</strong><div class="small-muted">${p.localidad_id?('Localidad ID:'+p.localidad_id):''}</div>${prodHTML}<strong>Total: $${Number(p.total).toFixed(2)}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button onclick="openEditOrder(${p.id})">Editar</button>
+        <button class="delete-btn" onclick="deleteOrder(${p.id})">Eliminar</button>
+      </div>`;
+    container.appendChild(div);
+  }
 }
 fetchOrders();
 
 /* Edit order:
-   - restore old stock (add back quantities from old.order)
-   - load order into selectedProducts and form
-   - set editingOrderId
+   - restore old stock (add back quantities from old.order)
+   - load order into selectedProducts and form
+   - set editingOrderId
 */
 async function openEditOrder(id){
-  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(error) return alert(error.message);
-  const order = data;
+  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+  if(error) return alert(error.message);
+  const order = data;
 
-  // devolver stock del pedido anterior
-  if(order.productos && order.productos.length){
-    for(const pr of order.productos){
-      // pr.id stored in payload
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
-    }
-  }
+  // devolver stock del pedido anterior
+  if(order.productos && order.productos.length){
+    for(const pr of order.productos){
+      // pr.id stored in payload
+      const promo = await getPromoById(pr.id);
+      const newStock = (promo.stock || 0) + pr.cantidad;
+      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+  }
 
-  // cargar pedido en formulario para editar
-  selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
-  document.getElementById('pedidoCliente').value = order.cliente;
-  document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
-  renderSelectedProducts();
-  editingOrderId = id;
+  // cargar pedido en formulario para editar
+  selectedProducts = order.productos.map(pr => ({ id: pr.id, nombre: pr.nombre, cantidad: pr.cantidad, precio: pr.precio }));
+  document.getElementById('pedidoCliente').value = order.cliente;
+  document.getElementById('pedidoLocalidad').value = order.localidad_id || '';
+  renderSelectedProducts();
+  editingOrderId = id;
 
-  // change Add button behaviour: we will use confirmProducts flow to update after selecting new products
-  showToast('Editando pedido: ajusta productos y presiona "Actualizar" en la misma sección.');
-  // When user opens selection modal and confirms (confirmProducts), if editingOrderId set, we will call updateOrder
-  // Provide a direct "Actualizar Pedido" quick button:
-  const addBtn = document.getElementById('addOrderBtn');
-  addBtn.textContent = 'Actualizar Pedido';
-  addBtn.onclick = async function(){ await updateOrder(editingOrderId); addBtn.textContent = 'Agregar Pedido'; addBtn.onclick = async ()=>{ /* restore listener */ document.getElementById('addOrderBtn').dispatchEvent(new Event('click')); }; };
+  // change Add button behaviour: we will use confirmProducts flow to update after selecting new products
+  showToast('Editando pedido: ajusta productos y presiona "Actualizar" en la misma sección.');
+  // When user opens selection modal and confirms (confirmProducts), if editingOrderId set, we will call updateOrder
+  // Provide a direct "Actualizar Pedido" quick button:
+  const addBtn = document.getElementById('addOrderBtn');
+  addBtn.textContent = 'Actualizar Pedido';
+  addBtn.onclick = async function(){ await updateOrder(editingOrderId); addBtn.textContent = 'Agregar Pedido'; addBtn.onclick = async ()=>{ /* restore listener */ document.getElementById('addOrderBtn').dispatchEvent(new Event('click')); }; };
 }
 
 /* Update order: after new selection (selectedProducts) */
 async function updateOrder(id){
-  if(!id) return alert('No hay pedido seleccionado para actualizar');
-  const cliente = document.getElementById('pedidoCliente').value.trim();
-  if(!cliente) return alert('Ingrese cliente');
-  if(!selectedProducts.length) return alert('Seleccione productos');
+  if(!id) return alert('No hay pedido seleccionado para actualizar');
+  const cliente = document.getElementById('pedidoCliente').value.trim();
+  if(!cliente) return alert('Ingrese cliente');
+  if(!selectedProducts.length) return alert('Seleccione productos');
 
-  // verify stock for new selection
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
-  }
-  // subtract stock for new selection
-  for(const p of selectedProducts){
-    const promo = await getPromoById(p.id);
-    const newStock = (promo.stock || 0) - p.cantidad;
-    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
-  }
+  // verify stock for new selection
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    if(p.cantidad > (promo.stock || 0)) return alert(`Stock insuficiente para ${p.nombre}`);
+  }
+  // subtract stock for new selection
+  for(const p of selectedProducts){
+    const promo = await getPromoById(p.id);
+    const newStock = (promo.stock || 0) - p.cantidad;
+    await supabase.from('promociones').update({ stock: newStock }).eq('id', p.id);
+  }
 
-  // update pedido record
-  const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').update({ cliente, productos: payload, total }).eq('id', id);
-  if(error) return alert(error.message);
+  // update pedido record
+  const payload = selectedProducts.map(p=>({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+  const total = payload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+  const { error } = await supabase.from('pedidos').update({ cliente, productos: payload, total }).eq('id', id);
+  if(error) return alert(error.message);
 
-  // reset
-  editingOrderId = null;
-  selectedProducts = []; renderSelectedProducts();
-  document.getElementById('pedidoCliente').value = '';
-  document.getElementById('pedidoLocalidad').value = '';
-  fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
+  // reset
+  editingOrderId = null;
+  selectedProducts = []; renderSelectedProducts();
+  document.getElementById('pedidoCliente').value = '';
+  document.getElementById('pedidoLocalidad').value = '';
+  fetchOrders(); fetchPromotions(); showToast('Pedido actualizado');
 }
 
 /* Delete order: return stock, delete row */
 async function deleteOrder(id){
-  if(!confirm('Eliminar pedido?')) return;
-  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(error) return alert(error.message);
-  if(data.productos && data.productos.length){
-    for(const pr of data.productos){
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
-    }
-  }
-  await supabase.from('pedidos').delete().eq('id', id);
-  fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
+  if(!confirm('Eliminar pedido?')) return;
+  const { data, error } = await supabase.from('pedidos').select('*').eq('id', id).single();
+  if(error) return alert(error.message);
+  if(data.productos && data.productos.length){
+    for(const pr of data.productos){
+      const promo = await getPromoById(pr.id);
+      const newStock = (promo.stock || 0) + pr.cantidad;
+      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+    }
+  }
+  await supabase.from('pedidos').delete().eq('id', id);
+  fetchOrders(); fetchPromotions(); showToast('Pedido eliminado y stock restaurado');
 }
 
 /* ============================
-   DOCUMENTOS (storage)
-   - subir, listar, eliminar
-   ============================ */
+   DOCUMENTOS (storage)
+   - subir, listar, eliminar
+   ============================ */
 async function fetchDocuments(filter=''){
-  const { data, error } = await supabase.storage.from('private-documents').list('', { limit: 500 });
-  if(error) return console.error(error);
-  const container = document.getElementById('documentsList'); container.innerHTML = '';
-  for(const f of data){
-    if(filter && !f.name.includes(filter)) continue;
-    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(f.name, 60*60);
-    const div = document.createElement('div'); div.className = 'doc-item';
-    div.innerHTML = `<a href="${urlData.signedUrl}" target="_blank">${f.name}</a>
-      <div><button class="delete-btn" onclick="deleteDoc('${f.name}')">Eliminar</button></div>`;
-    container.appendChild(div);
-  }
+  const { data, error } = await supabase.storage.from('private-documents').list('', { limit: 500 });
+  if(error) return console.error(error);
+  const container = document.getElementById('documentsList'); container.innerHTML = '';
+  for(const f of data){
+    if(filter && !f.name.includes(filter)) continue;
+    const { data: urlData } = await supabase.storage.from('private-documents').createSignedUrl(f.name, 60*60);
+    const div = document.createElement('div'); div.className = 'doc-item';
+    div.innerHTML = `<a href="${urlData.signedUrl}" target="_blank">${f.name}</a>
+      <div><button class="delete-btn" onclick="deleteDoc('${f.name}')">Eliminar</button></div>`;
+    container.appendChild(div);
+  }
 }
 document.getElementById('uploadDocsBtn').addEventListener('click', async ()=>{
-  const files = document.getElementById('docFiles').files;
-  if(!files.length) return alert('Seleccione archivos');
-  document.getElementById('docProgressContainer').style.display = 'block';
-  const progressEl = document.getElementById('docProgress');
-  for(let i=0;i<files.length;i++){
-    const file = files[i];
-    const name = `${Date.now()}_${file.name.replaceAll(' ','_')}`;
-    const { error } = await supabase.storage.from('private-documents').upload(name, file, { upsert:true });
-    if(error){ alert(error.message); break; }
-    progressEl.style.width = `${Math.round(((i+1)/files.length)*100)}%`;
-  }
-  setTimeout(()=>{ document.getElementById('docProgressContainer').style.display='none'; document.getElementById('docProgress').style.width='0%'; }, 600);
-  document.getElementById('docFiles').value='';
-  showToast('Documentos subidos');
-  fetchDocuments();
+  const files = document.getElementById('docFiles').files;
+  if(!files.length) return alert('Seleccione archivos');
+  document.getElementById('docProgressContainer').style.display = 'block';
+  const progressEl = document.getElementById('docProgress');
+  for(let i=0;i<files.length;i++){
+    const file = files[i];
+    const name = `${Date.now()}_${file.name.replaceAll(' ','_')}`;
+    const { error } = await supabase.storage.from('private-documents').upload(name, file, { upsert:true });
+    if(error){ alert(error.message); break; }
+    progressEl.style.width = `${Math.round(((i+1)/files.length)*100)}%`;
+  }
+  setTimeout(()=>{ document.getElementById('docProgressContainer').style.display='none'; document.getElementById('docProgress').style.width='0%'; }, 600);
+  document.getElementById('docFiles').value='';
+  showToast('Documentos subidos');
+  fetchDocuments();
 });
 window.deleteDoc = async function(name){
-  if(!confirm('Eliminar archivo?')) return;
-  await supabase.storage.from('private-documents').remove([name]);
-  fetchDocuments();
+  if(!confirm('Eliminar archivo?')) return;
+  await supabase.storage.from('private-documents').remove([name]);
+  fetchDocuments();
 };
 document.getElementById('searchDoc').addEventListener('input', (e)=>fetchDocuments(e.target.value));
 fetchDocuments();
 
 /* ============================
-   EXPORTAR CATALOGO PDF (6 promos por página)
-   - convertimos imágenes a base64 para que aparezcan siempre
-   - usamos page-break para que no corte tarjetas
-   ============================ */
+   EXPORTAR CATALOGO PDF (6 promos por página)
+   - convertimos imágenes a base64 para que aparezcan siempre
+   - usamos page-break para que no corte tarjetas
+   ============================ */
 
 async function toBase64(url){
-  return new Promise((resolve)=>{
-    if(!url) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = ()=>{
-      try{
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img,0,0);
-        const data = canvas.toDataURL('image/jpeg', 0.95);
-        resolve(data);
-      }catch(e){ resolve(null); }
-    };
-    img.onerror = ()=> resolve(null);
-    img.src = url;
-  });
+  return new Promise((resolve)=>{
+    if(!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      try{
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth
+/* ... El resto de tu código JavaScript se mantiene sin cambios ... */
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      }catch(e){
+        console.error("Error converting image to base64:", e);
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      console.warn('Error loading image for base64 conversion:', url);
+      resolve(null);
+    };
+    img.src = url;
+  });
 }
 
-document.getElementById('exportPromoPdfBtn').addEventListener('click', async ()=>{
-  const { data:promos, error } = await supabase.from('promociones').select('*').order('id');
-  if(error) return alert(error.message);
-  if(!promos || promos.length === 0) return alert('No hay promociones');
+async function exportPromoPdf(){
+  const { data: promos } = await supabase.from('promociones').select('*').order('id');
+  const categoriasData = await supabase.from('categorias').select('*');
+  const categorias = new Map((categoriasData.data || []).map(c => [c.id, c.nombre]));
 
-  let html = `<div style="font-family: Arial, sans-serif; width:100%;"><h2 style="text-align:center;margin-bottom:12px">📖 Catálogo de Promociones</h2>`;
-  for(const [i,promo] of promos.entries()){
-    const signedUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || null);
-    const img64 = signedUrl ? await toBase64(signedUrl) : null;
-    html += `<div style="display:flex;align-items:center;margin-bottom:12px;border:1px solid #ddd;border-radius:10px;padding:10px;page-break-inside:avoid;">
-      ${img64 ? `<img src="${img64}" style="width:120px;height:120px;object-fit:cover;margin-right:12px;border-radius:8px;border:1px solid #ccc">` : ''}
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:700;margin-bottom:6px">${escapeHtml(promo.nombre||promo.descripcion||'')}</div>
-        <div style="font-size:14px">💲 <strong>$${Number(promo.precio).toFixed(2)}</strong></div>
-      </div>
-    </div>`;
-    // cada 6 promociones -> salto de página
-    if((i+1) % 6 === 0) html += `<div style="page-break-after:always"></div>`;
-  }
-  html += `</div>`;
+  let pdfContent = `
+    <div style="width:100%;padding:20px;font-family:Roboto,sans-serif;box-sizing:border-box" id="pdfCatalog">
+      <h1 style="text-align:center;color:#6a1b9a;margin-bottom:20px">Catálogo de Promociones</h1>
+  `;
 
-  const opt = {
-    margin: 0.5,
-    filename: 'catalogo_promociones.pdf',
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-  };
+  let cardCount = 0;
+  for(const promo of promos){
+    const imgUrl = promo.imagen ? await safeGetFileUrl(promo.imagen) : (promo.imagen_url || '');
+    const base64Image = imgUrl ? await toBase64(imgUrl) : null;
+    const categoryName = categorias.get(promo.categoria_id) || 'General';
 
-  html2pdf().from(html).set(opt).save();
-});
+    if(cardCount % 6 === 0 && cardCount !== 0){
+      // Insertar salto de página después de cada 6 tarjetas (excepto el primero)
+      pdfContent += `<div style="page-break-after: always;"></div>`;
+    }
+
+    pdfContent += `
+      <div style="display:flex;margin-bottom:15px;padding:15px;border:1px solid #ddd;border-radius:10px;page-break-inside: avoid;">
+        ${base64Image ? `<img src="${base64Image}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-right:15px;">` : '<div style="width:80px;height:80px;border:1px solid #eee;margin-right:15px;display:inline-block;text-align:center;line-height:80px;font-size:12px;color:#aaa">Sin Imagen</div>'}
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:16px;color:#222">${escapeHtml(promo.nombre)}</div>
+          <div style="color:#6a1b9a;font-weight:700;font-size:18px;margin-top:5px">$${Number(promo.precio).toFixed(2)}</div>
+          <div style="font-size:12px;color:#666;margin-top:5px">Categoría: ${escapeHtml(categoryName)} | Stock: ${promo.stock ?? 0}</div>
+        </div>
+      </div>
+    `;
+    cardCount++;
+  }
+
+  pdfContent += `</div>`;
+
+  // Generar el PDF
+  const element = document.createElement('div');
+  element.innerHTML = pdfContent;
+
+  html2pdf().set({
+    margin: [10, 10, 10, 10],
+    filename: 'catalogo_promociones.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, logging: false, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(element).save();
+}
+
+document.getElementById('exportPromoPdfBtn').addEventListener('click', exportPromoPdf);
 
 /* ============================
-   Inicialización final
-   ============================ */
-document.getElementById('addCategoriaBtn').addEventListener('click', ()=>window.addCategoria?.());
-document.getElementById('addLocalidadBtn').addEventListener('click', ()=>window.addLocalidad?.());
-document.getElementById('addPromoBtn').addEventListener('click', ()=>{}); // ya bound above
-// llamadas iniciales (solo una vez)
-fetchCategorias();
-fetchLocalidades();
-fetchPromotions();
-fetchOrders? fetchOrders() : null;
-fetchDocuments();
+   EXPORTAR PEDIDOS PDF
+   ============================ */
+async function exportPedidosPDF(){
+  const { data: pedidos } = await supabase.from('pedidos').select('*').order('id', { ascending: false });
+  const { data: localidadesData } = await supabase.from('localidades').select('*');
+  const localidades = new Map((localidadesData || []).map(l => [l.id, l.nombre]));
 
+  let pdfContent = `
+    <div style="width:100%;padding:20px;font-family:Roboto,sans-serif;box-sizing:border-box" id="pdfPedidos">
+      <h1 style="text-align:center;color:#6a1b9a;margin-bottom:20px">Reporte de Pedidos</h1>
+  `;
+
+  for(const pedido of pedidos){
+    const localidad = localidades.get(pedido.localidad_id) || 'N/A';
+    const fecha = new Date(pedido.created_at).toLocaleDateString();
+
+    pdfContent += `
+      <div style="margin-bottom:25px;padding:15px;border:1px solid #ddd;border-left:5px solid #6a1b9a;border-radius:5px;page-break-inside: avoid;">
+        <div style="font-weight:700;font-size:18px;color:#222">${escapeHtml(pedido.cliente)}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">Localidad: ${escapeHtml(localidad)} | Fecha: ${fecha}</div>
+        <div style="margin-top:10px;font-size:14px">
+          <ul style="list-style-type:none;padding:0;margin:0 0 10px 0;">
+            ${pedido.productos.map(p => `
+              <li style="padding:4px 0;">${escapeHtml(p.nombre)} <span style="font-weight:700">x ${p.cantidad}</span> <span style="float:right">$${(p.precio * p.cantidad).toFixed(2)}</span></li>
+            `).join('')}
+          </ul>
+        </div>
+        <div style="text-align:right;font-size:16px;font-weight:700;border-top:1px solid #eee;padding-top:5px;">
+          Total: $${Number(pedido.total).toFixed(2)}
+        </div>
+      </div>
+    `;
+  }
+
+  pdfContent += `</div>`;
+
+  // Generar el PDF
+  const element = document.createElement('div');
+  element.innerHTML = pdfContent;
+
+  html2pdf().set({
+    margin: [10, 10, 10, 10],
+    filename: 'reporte_pedidos.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(element).save();
+}
+
+document.getElementById('exportPedidosPDFBtn').addEventListener('click', exportPedidosPDF);
 </script>
+
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
