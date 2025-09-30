@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel Administrativo</title>
+<title>Panel Administrativo Completo</title>
 <style>
 :root {
   --sidebar-bg: #2c3e50;
@@ -114,7 +114,7 @@ body {
   color: var(--text-muted);
 }
 
-form input, form select, form textarea, form button {
+form input, form select, form button {
   padding: 8px;
   margin-bottom: 10px;
   font-size: 14px;
@@ -152,12 +152,11 @@ h1 { margin-top:0; margin-bottom:15px; }
 </div>
 
 <div class="content">
-  <!-- Secciones -->
+  <!-- PROMOCIONES -->
   <div id="promos" class="section active">
     <h1>Gestión de Promociones</h1>
     <form id="promoForm" onsubmit="event.preventDefault(); addPromo();">
       <input type="text" id="promoNombre" placeholder="Nombre" required>
-      <textarea id="promoDescripcion" placeholder="Descripción"></textarea>
       <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required>
       <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01">
       <input type="number" id="promoStock" placeholder="Stock">
@@ -168,6 +167,7 @@ h1 { margin-top:0; margin-bottom:15px; }
     <div id="promoList"></div>
   </div>
 
+  <!-- CATEGORÍAS -->
   <div id="categorias" class="section">
     <h1>Gestión de Categorías</h1>
     <form id="categoriaForm" onsubmit="event.preventDefault(); addCategoria();">
@@ -177,6 +177,7 @@ h1 { margin-top:0; margin-bottom:15px; }
     <div id="categoriaList"></div>
   </div>
 
+  <!-- LOCALIDADES -->
   <div id="localidades" class="section">
     <h1>Gestión de Localidades</h1>
     <form id="localidadForm" onsubmit="event.preventDefault(); addLocalidad();">
@@ -186,6 +187,7 @@ h1 { margin-top:0; margin-bottom:15px; }
     <div id="localidadList"></div>
   </div>
 
+  <!-- PEDIDOS -->
   <div id="pedidos" class="section">
     <h1>Gestión de Pedidos</h1>
     <form id="pedidoForm" onsubmit="event.preventDefault(); addPedido();">
@@ -198,6 +200,7 @@ h1 { margin-top:0; margin-bottom:15px; }
     <div id="pedidoList"></div>
   </div>
 
+  <!-- DOCUMENTOS -->
   <div id="documentos" class="section">
     <h1>Gestión de Documentos</h1>
     <form id="docForm" onsubmit="event.preventDefault(); addDocumento();">
@@ -209,7 +212,9 @@ h1 { margin-top:0; margin-bottom:15px; }
 </div>
 
 <script>
-const supabase = window.supabase.createClient("https://ejbqlejlgprvwzrptojo.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8");
+const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Sidebar tabs
 document.querySelectorAll(".tab-btn").forEach(btn=>{
@@ -224,49 +229,48 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
 // Escape HTML
 function escapeHtml(text){ var div=document.createElement("div"); div.innerText=text; return div.innerHTML; }
 
-// ----------------- PROMOCIONES -----------------
+// ---------------- PROMOCIONES ----------------
 async function fetchPromotions() {
   const { data: promos, error } = await supabase
     .from("promociones")
-    .select("id,nombre,descripcion,precio,precio_anterior,stock,imagen_url,categoria_id,categorias(id,nombre)")
+    .select("id,nombre,precio,precio_anterior,stock,imagen_url,categoria_id,categorias(nombre)")
     .order("id",{ascending:false});
   if(error){ console.error(error); return; }
+
   const promoList = document.getElementById("promoList");
   promoList.innerHTML = "";
+
   for(const promo of promos){
-    const card=document.createElement("div");
-    card.className="item-card";
+    const card=document.createElement("div"); card.className="item-card";
+
     const img=document.createElement("img");
     if(promo.imagen_url){
       const url = supabase.storage.from("promo_images").getPublicUrl(promo.imagen_url).data.publicUrl;
       img.src=url;
     }
     card.appendChild(img);
-    const info=document.createElement("div");
-    info.className="info";
+
+    const info=document.createElement("div"); info.className="info";
     let precioHTML=`<b>$${Number(promo.precio).toFixed(2)}</b>`;
     if(promo.precio_anterior && Number(promo.precio_anterior)>Number(promo.precio)){
       precioHTML=`<span style="text-decoration:line-through;color:#999;margin-right:6px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
                   <b style="color:var(--accent);">$${Number(promo.precio).toFixed(2)}</b>`;
     }
     const catNombre=promo.categorias?.nombre||"Sin categoría";
-    info.innerHTML=`<b>${escapeHtml(promo.nombre)}</b> (${escapeHtml(catNombre)})<br>
-                    ${escapeHtml(promo.descripcion||"")}<br>
-                    ${precioHTML}<br>
+    info.innerHTML=`<b>${escapeHtml(promo.nombre)}</b> (${escapeHtml(catNombre)})<br>${precioHTML}<br>
                     <span class="small-muted">Stock: ${promo.stock??0}</span>`;
     card.appendChild(info);
-    const delBtn=document.createElement("button");
-    delBtn.className="delete-btn";
-    delBtn.textContent="Eliminar";
+
+    const delBtn=document.createElement("button"); delBtn.className="delete-btn"; delBtn.textContent="Eliminar";
     delBtn.onclick=()=>deletePromo(promo.id);
     card.appendChild(delBtn);
+
     promoList.appendChild(card);
   }
 }
 
 async function addPromo(){
   const nombre=document.getElementById("promoNombre").value;
-  const descripcion=document.getElementById("promoDescripcion").value;
   const precio=document.getElementById("promoPrecio").value;
   const precio_anterior=document.getElementById("promoPrecioAnterior").value;
   const stock=document.getElementById("promoStock").value;
@@ -279,7 +283,9 @@ async function addPromo(){
     if(upError){ alert(upError.message); return; }
     imagenPath=fileName;
   }
-  const {error}=await supabase.from("promociones").insert({nombre,descripcion,precio,precio_anterior,stock,categoria_id:categoria||null,imagen_url:imagenPath});
+  const {error}=await supabase.from("promociones").insert({
+    nombre, precio, precio_anterior, stock, categoria_id:categoria||null, imagen_url:imagenPath
+  });
   if(error){ alert(error.message); return; }
   document.getElementById("promoForm").reset();
   fetchPromotions();
@@ -292,79 +298,138 @@ async function deletePromo(id){
   fetchPromotions();
 }
 
-// ----------------- CATEGORÍAS -----------------
+// ---------------- CATEGORÍAS ----------------
 async function fetchCategorias(){
-  const {data:cats,error}=await supabase.from("categorias").select("*").order("id");
-  if(error){ console.error(error); return; }
-  const list=document.getElementById("categoriaList");
+  const { data, error } = await supabase.from("categorias").select("*").order("id");
+  if(error) return console.error(error);
+  const container=document.getElementById("categoriaList");
   const select=document.getElementById("promoCategoria");
-  list.innerHTML=""; select.innerHTML=`<option value="">-- Selecciona categoría --</option>`;
-  cats.forEach(cat=>{
-    const card=document.createElement("div"); card.className="item-card"; card.innerHTML=`<b>${escapeHtml(cat.nombre)}</b>`;
-    const delBtn=document.createElement("button"); delBtn.className="delete-btn"; delBtn.textContent="Eliminar"; delBtn.onclick=()=>deleteCategoria(cat.id); card.appendChild(delBtn);
-    list.appendChild(card);
-    const opt=document.createElement("option"); opt.value=cat.id; opt.textContent=cat.nombre; select.appendChild(opt);
+  const pedidoSelect=document.getElementById("pedidoLocalidad");
+  container.innerHTML=""; select.innerHTML='<option value="">Sin categoría</option>';
+  data.forEach(c=>{
+    const div=document.createElement("div"); div.className="item-card";
+    div.innerHTML=`<span>${escapeHtml(c.nombre)}</span>
+      <div><button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button>
+      <button class="delete-btn" onclick="deleteCategoria(${c.id})">Eliminar</button></div>`;
+    container.appendChild(div);
+    select.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
   });
 }
-async function addCategoria(){ const nombre=document.getElementById("categoriaNombre").value;
-  const {error}=await supabase.from("categorias").insert({nombre}); if(error){ alert(error.message); return; }
-  document.getElementById("categoriaForm").reset(); fetchCategorias(); }
-async function deleteCategoria(id){ if(!confirm("¿Eliminar categoría?")) return;
-  const {error}=await supabase.from("categorias").delete().eq("id",id); if(error){ alert(error.message); return; } fetchCategorias(); }
+async function addCategoria(){
+  const nombre=document.getElementById("categoriaNombre").value.trim();
+  if(!nombre) return alert("Ingrese nombre");
+  const {error}=await supabase.from("categorias").insert([{nombre}]);
+  if(error){ alert(error.message); return; }
+  document.getElementById("categoriaForm").reset();
+  fetchCategorias(); fetchPromotions();
+}
+async function deleteCategoria(id){
+  if(!confirm("Eliminar categoría?")) return;
+  await supabase.from("categorias").delete().eq("id",id);
+  fetchCategorias(); fetchPromotions();
+}
+function editCategoria(id,nombre){
+  const newName=prompt("Editar categoría",nombre);
+  if(!newName) return;
+  supabase.from("categorias").update({nombre:newName}).eq("id",id).then(()=>fetchCategorias());
+}
 
-// ----------------- LOCALIDADES -----------------
+// ---------------- LOCALIDADES ----------------
 async function fetchLocalidades(){
-  const {data, error}=await supabase.from("localidades").select("*").order("id"); if(error){ console.error(error); return; }
-  const list=document.getElementById("localidadList"); const select=document.getElementById("pedidoLocalidad");
-  list.innerHTML=""; select.innerHTML=`<option value="">-- Selecciona localidad --</option>`;
-  data.forEach(loc=>{
-    const card=document.createElement("div"); card.className="item-card"; card.innerHTML=`<b>${escapeHtml(loc.nombre)}</b>`;
-    const delBtn=document.createElement("button"); delBtn.className="delete-btn"; delBtn.textContent="Eliminar"; delBtn.onclick=()=>deleteLocalidad(loc.id); card.appendChild(delBtn); list.appendChild(card);
-    const opt=document.createElement("option"); opt.value=loc.id; opt.textContent=loc.nombre; select.appendChild(opt);
+  const { data, error } = await supabase.from("localidades").select("*").order("id");
+  if(error) return console.error(error);
+  const container=document.getElementById("localidadList");
+  const sel=document.getElementById("pedidoLocalidad");
+  container.innerHTML=""; sel.innerHTML='<option value="">Seleccione</option>';
+  data.forEach(l=>{
+    container.innerHTML+=`<div class="item-card"><span>${escapeHtml(l.nombre)}</span><div>
+      <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button>
+      <button class="delete-btn" onclick="deleteLocalidad(${l.id})">Eliminar</button></div></div>`;
+    sel.innerHTML+=`<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
   });
 }
-async function addLocalidad(){ const nombre=document.getElementById("localidadNombre").value;
-  const {error}=await supabase.from("localidades").insert({nombre}); if(error){ alert(error.message); return; } document.getElementById("localidadForm").reset(); fetchLocalidades(); }
-async function deleteLocalidad(id){ if(!confirm("¿Eliminar localidad?")) return;
-  const {error}=await supabase.from("localidades").delete().eq("id",id); if(error){ alert(error.message); return; } fetchLocalidades(); }
+async function addLocalidad(){
+  const nombre=document.getElementById("localidadNombre").value.trim();
+  if(!nombre) return alert("Ingrese nombre");
+  const {error}=await supabase.from("localidades").insert([{nombre}]);
+  if(error){ alert(error.message); return; }
+  document.getElementById("localidadForm").reset();
+  fetchLocalidades();
+}
+async function deleteLocalidad(id){
+  if(!confirm("Eliminar localidad?")) return;
+  await supabase.from("localidades").delete().eq("id",id);
+  fetchLocalidades();
+}
+function editLocalidad(id,nombre){
+  const newName=prompt("Editar localidad",nombre);
+  if(!newName) return;
+  supabase.from("localidades").update({nombre:newName}).eq("id",id).then(()=>fetchLocalidades());
+}
 
-// ----------------- PEDIDOS -----------------
+// ---------------- PEDIDOS ----------------
 async function fetchPedidos(){
-  const {data, error}=await supabase.from("pedidos").select("id,cliente,producto,cantidad,localidades(nombre)").order("id",{ascending:false});
-  if(error){ console.error(error); return; } const list=document.getElementById("pedidoList"); list.innerHTML="";
-  data.forEach(ped=>{
-    const card=document.createElement("div"); card.className="item-card"; card.innerHTML=`<b>${escapeHtml(ped.cliente)}</b><br>${escapeHtml(ped.producto)} - Cant: ${ped.cantidad}<br>Localidad: ${ped.localidades?.nombre||""}`;
-    const delBtn=document.createElement("button"); delBtn.className="delete-btn"; delBtn.textContent="Eliminar"; delBtn.onclick=()=>deletePedido(ped.id); card.appendChild(delBtn); list.appendChild(card);
+  const { data, error } = await supabase.from("pedidos").select("*").order("id",{ascending:false});
+  if(error) return console.error(error);
+  const container=document.getElementById("pedidoList"); container.innerHTML="";
+  data.forEach(p=>{
+    const div=document.createElement("div"); div.className="item-card";
+    div.innerHTML=`<div class="info"><b>${escapeHtml(p.cliente)}</b> - ${escapeHtml(p.producto)}<br>
+                   Cantidad: ${p.cantidad}<br>
+                   <span class="small-muted">Localidad: ${escapeHtml(p.localidad_id)}</span></div>
+                   <button class="delete-btn" onclick="deletePedido(${p.id})">Eliminar</button>`;
+    container.appendChild(div);
   });
 }
-async function addPedido(){ const cliente=document.getElementById("pedidoCliente").value;
-  const producto=document.getElementById("pedidoProducto").value; const cantidad=document.getElementById("pedidoCantidad").value;
+async function addPedido(){
+  const cliente=document.getElementById("pedidoCliente").value.trim();
+  const producto=document.getElementById("pedidoProducto").value.trim();
+  const cantidad=document.getElementById("pedidoCantidad").value;
   const localidad=document.getElementById("pedidoLocalidad").value;
-  const {error}=await supabase.from("pedidos").insert({cliente,producto,cantidad,localidad_id:localidad||null});
-  if(error){ alert(error.message); return; } document.getElementById("pedidoForm").reset(); fetchPedidos(); }
-async function deletePedido(id){ if(!confirm("¿Eliminar pedido?")) return;
-  const {error}=await supabase.from("pedidos").delete().eq("id",id); if(error){ alert(error.message); return; } fetchPedidos(); }
+  if(!cliente||!producto||!cantidad||!localidad) return alert("Complete todos los campos");
+  const {error}=await supabase.from("pedidos").insert([{cliente,producto,cantidad,localidad_id:localidad}]);
+  if(error){ alert(error.message); return; }
+  document.getElementById("pedidoForm").reset();
+  fetchPedidos();
+}
+async function deletePedido(id){
+  if(!confirm("Eliminar pedido?")) return;
+  const {error}=await supabase.from("pedidos").delete().eq("id",id);
+  if(error){ alert(error.message); return; }
+  fetchPedidos();
+}
 
-// ----------------- DOCUMENTOS -----------------
+// ---------------- DOCUMENTOS ----------------
 async function fetchDocumentos(){
-  const {data, error}=await supabase.storage.from("documentos").list("",{limit:100});
+  const { data, error } = await supabase.storage.from("documentos").list();
   if(error){ console.error(error); return; }
-  const list=document.getElementById("docList"); list.innerHTML="";
-  data.forEach(file=>{
-    const url=supabase.storage.from("documentos").getPublicUrl(file.name).data.publicUrl;
-    const card=document.createElement("div"); card.className="item-card";
-    card.innerHTML=`<a href="${url}" target="_blank">${file.name}</a>`;
-    const delBtn=document.createElement("button"); delBtn.className="delete-btn"; delBtn.textContent="Eliminar"; delBtn.onclick=()=>deleteDocumento(file.name); card.appendChild(delBtn); list.appendChild(card);
+  const container=document.getElementById("docList"); container.innerHTML="";
+  data.forEach(d=>{
+    const url = supabase.storage.from("documentos").getPublicUrl(d.name).data.publicUrl;
+    const div=document.createElement("div"); div.className="item-card";
+    div.innerHTML=`<div class="info"><a href="${url}" target="_blank">${escapeHtml(d.name)}</a></div>
+                   <button class="delete-btn" onclick="deleteDocumento('${d.name}')">Eliminar</button>`;
+    container.appendChild(div);
   });
 }
-async function addDocumento(){ const file=document.getElementById("docFile").files[0]; if(!file){ alert("Selecciona archivo"); return; }
-  const {error}=await supabase.storage.from("documentos").upload(file.name,file); if(error){ alert(error.message); return; } document.getElementById("docForm").reset(); fetchDocumentos(); }
-async function deleteDocumento(name){ if(!confirm("¿Eliminar documento?")) return;
-  const {error}=await supabase.storage.from("documentos").remove([name]); if(error){ alert(error.message); return; } fetchDocumentos(); }
+async function addDocumento(){
+  const file=document.getElementById("docFile").files[0];
+  if(!file) return alert("Seleccione un archivo");
+  const fileName=`${Date.now()}_${file.name}`;
+  const {error}=await supabase.storage.from("documentos").upload(fileName,file);
+  if(error){ alert(error.message); return; }
+  document.getElementById("docForm").reset();
+  fetchDocumentos();
+}
+async function deleteDocumento(name){
+  if(!confirm("Eliminar documento?")) return;
+  const {error}=await supabase.storage.from("documentos").remove([name]);
+  if(error){ alert(error.message); return; }
+  fetchDocumentos();
+}
 
-// ----------------- INICIALIZACIÓN -----------------
+// ---------------- INICIALIZACIÓN -----------------
 fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchPedidos(); fetchDocumentos();
 </script>
-
 </body>
 </html>
