@@ -115,12 +115,12 @@ button[type=submit]:hover{background:#e8434f;}
 <div id="modal"><div id="modalInner"></div></div>
 
 <script>
-// Supabase
+// --- CONFIGURACIÓN SUPABASE ---
 const SUPABASE_URL="https://ejbqlejlgprvwzrptojo.supabase.co";
 const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
 const supabase = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-// Sidebar
+// --- SIDEBAR ---
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
@@ -130,149 +130,350 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
   });
 });
 
-// Modal
+// --- MODAL ---
 function openModal(title, html){ document.getElementById("modalInner").innerHTML=`<h3>${title}</h3>${html}`; document.getElementById("modal").style.display="flex"; }
 function closeModal(){ document.getElementById("modal").style.display="none"; }
 document.getElementById("modal").addEventListener("click",(e)=>{ if(e.target.id==="modal") closeModal(); });
 
-// Escape HTML
+// --- ESCAPE HTML ---
 function escapeHtml(text){ var div=document.createElement("div"); div.innerText=text; return div.innerHTML; }
 
-// ===================== PROMOCIONES =====================
-async function fetchPromotions(){
-  const { data: promos, error } = await supabase.from("promociones").select("id,nombre,precio,precio_anterior,stock,imagen_url,categoria_id,categorias(nombre)").order("id",{ascending:false});
-  if(error){ console.error(error); return; }
-  const promoList=document.getElementById("promoList"); promoList.innerHTML="";
-  const grouped={};
-  promos.forEach(p=>{ const cat=p.categorias?.nombre||"Sin categoría"; if(!grouped[cat]) grouped[cat]=[]; grouped[cat].push(p); });
-  Object.keys(grouped).forEach(cat=>{
-    const catTitle=document.createElement("div"); catTitle.innerHTML=`<h3>${cat}</h3>`; promoList.appendChild(catTitle);
-    grouped[cat].forEach(p=>{
-      const card=document.createElement("div"); card.className="card";
-      const checkbox=document.createElement("input"); checkbox.type="checkbox"; checkbox.checked=true; checkbox.dataset.promo=JSON.stringify(p); card.appendChild(checkbox);
-      const img=document.createElement("img"); if(p.imagen_url) img.src=supabase.storage.from("promo_images").getPublicUrl(p.imagen_url).data.publicUrl; card.appendChild(img);
-      const info=document.createElement("div"); info.className="card-info";
-      let precioHTML=`<span class="card-price">$${Number(p.precio).toFixed(2)}</span>`;
-      if(p.precio_anterior && Number(p.precio_anterior)>Number(p.precio)) precioHTML=`<del>$${p.precio_anterior}</del> <span class="card-price">$${Number(p.precio).toFixed(2)}</span>`;
-      info.innerHTML=`<b>${escapeHtml(p.nombre)}</b><div>${precioHTML}</div><div class="card-stock">Stock: ${p.stock??0}</div>`; card.appendChild(info);
-      const actions=document.createElement("div"); actions.className="card-actions";
-      const editBtn=document.createElement("button"); editBtn.textContent="Editar"; editBtn.className="edit-btn"; editBtn.onclick=()=>editPromo(p); actions.appendChild(editBtn);
-      const delBtn=document.createElement("button"); delBtn.textContent="Eliminar"; delBtn.className="delete-btn"; delBtn.onclick=()=>deletePromo(p.id); actions.appendChild(delBtn);
-      card.appendChild(actions); promoList.appendChild(card);
-    });
-  });
+// ================= PROMOCIONES =================
+async function fetchPromotions() {
+    console.log('👉 fetchPromotions ejecutado');
+
+    // Consulta con JOIN para obtener el nombre de la categoría
+    const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
+    if (error) return console.error(error);
+
+    const container = document.getElementById('promoList');
+    container.innerHTML = '';
+
+    // Agrupar promociones por categoría
+    const groupedPromos = data.reduce((groups, promo) => {
+        const categoryName = promo.categorias?.nombre || promo.categoria || 'Sin Categoría';
+        if (!groups[categoryName]) groups[categoryName] = [];
+        groups[categoryName].push(promo);
+        return groups;
+    }, {});
+
+    const categoryNames = Object.keys(groupedPromos).sort();
+
+    for (const categoryName of categoryNames) {
+        const promos = groupedPromos[categoryName];
+
+        // Título de categoría
+        const titleDiv = document.createElement('div');
+        titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${categoryName}</h3>`;
+        container.appendChild(titleDiv);
+
+        for (const promo of promos) {
+            // Obtener URL de imagen
+            let imgUrl = '';
+            if (promo.imagen) {
+                const { data: signedData, error: imgError } = await supabase.storage.from('promo_images').createSignedUrl(promo.imagen, 60 * 60);
+                imgUrl = signedData?.signedUrl || '';
+            } else if (promo.imagen_url) {
+                imgUrl = promo.imagen_url;
+            }
+
+            const imgHTML = imgUrl
+                ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">`
+                : '';
+
+            // Precio con tachado si aplica
+            let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
+            if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
+                precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
+                              <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
+            }
+
+            // JSON seguro para checkbox
+            const promoData = JSON.stringify({
+                id: promo.id,
+                nombre: promo.nombre,
+                precio: promo.precio,
+                precio_anterior: promo.precio_anterior,
+                stock: promo.stock,
+                imagen_url: imgUrl,
+                categoria: categoryName
+            }).replace(/'/g, "&apos;"); // Escapa comillas simples
+
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.marginBottom = '8px';
+
+            div.innerHTML = `
+                <input type="checkbox" class="promo-export-check" data-promo='${promoData}' checked style="margin-right: 12px; transform: scale(1.4);">
+                ${imgHTML}
+                <div style="flex:1">
+                    <strong>${escapeHtml(promo.nombre || '')}</strong>
+                    <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
+                </div>
+                <div>
+                    <button onclick="editPromo(${promo.id})">Editar</button>
+                    <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+    }
 }
 
 async function addPromo(){
   const nombre=document.getElementById("promoNombre").value.trim();
   const precio=document.getElementById("promoPrecio").value;
-  const precioAnterior=document.getElementById("promoPrecioAnterior").value;
+  const precio_anterior=document.getElementById("promoPrecioAnterior").value;
   const stock=document.getElementById("promoStock").value;
-  const categoriaId=document.getElementById("promoCategoria").value;
+  const categoria=document.getElementById("promoCategoria").value;
   const file=document.getElementById("promoImagen").files[0];
-  if(!nombre || !precio){ alert("Nombre y precio obligatorios"); return; }
-  let imgName=null;
-  if(file){ imgName=`${Date.now()}_${file.name}`; const { error } = await supabase.storage.from("promo_images").upload(imgName,file); if(error) return alert(error.message); }
-  const { error } = await supabase.from("promociones").insert([{nombre,precio:parseFloat(precio),precio_anterior:precioAnterior?parseFloat(precioAnterior):null,stock:stock?parseInt(stock):0,categoria_id:categoriaId,imagen_url:imgName}]);
+  if(!nombre || !precio) return alert("Nombre y precio requeridos");
+  let fileName=null;
+  if(file){ fileName=`${Date.now()}_${file.name}`; await supabase.storage.from("promo_images").upload(fileName,file); }
+  const { error }=await supabase.from("promociones").insert([{nombre,precio,precio_anterior:precio_anterior||null,stock:stock||0,categoria_id:categoria,imagen_url:fileName}]);
   if(error) return alert(error.message);
-  document.getElementById("promoForm").reset();
-  fetchPromotions();
+  document.getElementById("promoForm").reset(); fetchPromotions();
 }
 
-function editPromo(p){
-  openModal("Editar Promo", `
-    <input type="text" id="editNombre" value="${escapeHtml(p.nombre)}" placeholder="Nombre">
-    <input type="number" id="editPrecio" value="${p.precio}" placeholder="Precio">
-    <input type="number" id="editPrecioAnterior" value="${p.precio_anterior||''}" placeholder="Precio anterior">
-    <input type="number" id="editStock" value="${p.stock}" placeholder="Stock">
+function editPromo(promo){
+  openModal("Editar promoción",`
+    <input type="text" id="editNombre" value="${escapeHtml(promo.nombre)}" placeholder="Nombre">
+    <input type="number" id="editPrecio" value="${promo.precio}" step="0.01" placeholder="Precio">
+    <input type="number" id="editPrecioAnterior" value="${promo.precio_anterior||''}" step="0.01" placeholder="Precio anterior">
+    <input type="number" id="editStock" value="${promo.stock||0}" placeholder="Stock">
     <select id="editCategoria"></select>
     <input type="file" id="editImagen">
-    <button onclick="updatePromo(${p.id})">Guardar</button>
+    <button onclick="updatePromo(${promo.id})">Guardar</button>
   `);
-  fetchCategoriasForSelect("editCategoria", p.categoria_id);
+  // Llenar categorías
+  supabase.from("categorias").select("id,nombre").then(({data})=>{
+    const sel=document.getElementById("editCategoria"); sel.innerHTML=""; data.forEach(c=>{ sel.innerHTML+=`<option value='${c.id}' ${c.id===promo.categoria_id?'selected':''}>${escapeHtml(c.nombre)}</option>`; });
+  });
 }
 
 async function updatePromo(id){
   const nombre=document.getElementById("editNombre").value.trim();
-  const precio=parseFloat(document.getElementById("editPrecio").value);
-  const precioAnterior=document.getElementById("editPrecioAnterior").value?parseFloat(document.getElementById("editPrecioAnterior").value):null;
-  const stock=parseInt(document.getElementById("editStock").value);
-  const categoriaId=document.getElementById("editCategoria").value;
+  const precio=document.getElementById("editPrecio").value;
+  const precio_anterior=document.getElementById("editPrecioAnterior").value;
+  const stock=document.getElementById("editStock").value;
+  const categoria=document.getElementById("editCategoria").value;
   const file=document.getElementById("editImagen").files[0];
-  let imgName=null;
-  if(file){ imgName=`${Date.now()}_${file.name}`; const { error } = await supabase.storage.from("promo_images").upload(imgName,file); if(error) return alert(error.message); }
-  const updateData={nombre,precio,precio_anterior:precioAnterior,stock,categoria_id:categoriaId};
-  if(imgName) updateData.imagen_url=imgName;
-  const { error } = await supabase.from("promociones").update(updateData).eq("id",id);
-  if(error) return alert(error.message);
-  closeModal(); fetchPromotions();
+  let fileName=null;
+  if(file){ fileName=`${Date.now()}_${file.name}`; await supabase.storage.from("promo_images").upload(fileName,file); }
+  const updateObj={nombre,precio,precio_anterior:precio_anterior||null,stock:stock||0,categoria_id:categoria};
+  if(fileName) updateObj.imagen_url=fileName;
+  const {error}=await supabase.from("promociones").update(updateObj).eq("id",id);
+  if(error) return alert(error.message); closeModal(); fetchPromotions();
 }
 
-async function deletePromo(id){ if(!confirm("Eliminar promo?")) return; await supabase.from("promociones").delete().eq("id",id); fetchPromotions(); }
+async function deletePromo(id){ if(!confirm("Eliminar promoción?")) return; await supabase.from("promociones").delete().eq("id",id); fetchPromotions(); }
 
-function exportPDF(){
-  const selected=[]; document.querySelectorAll("#promoList input[type=checkbox]").forEach(cb=>{ if(cb.checked) selected.push(JSON.parse(cb.dataset.promo)); });
-  if(selected.length===0){ alert("Seleccione al menos una promo"); return; }
-  let html="<h1>Promociones</h1>"; selected.forEach(p=>{ html+=`<p><b>${p.nombre}</b> - $${p.precio}</p>`; });
-  html2pdf().from(html).save("promociones.pdf");
+// Función auxiliar para convertir imagen remota a Base64
+async function getBase64ImageFromUrl(imageUrl) {
+    if(!imageUrl) return '';
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // importante para Supabase
+        img.src = imageUrl;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = err => resolve(''); // si falla, devuelve vacío
+    });
 }
 
-// -------------------- CATEGORÍAS --------------------
+async function exportPDF() {
+    const selectedPromos = Array.from(document.querySelectorAll(".promo-export-check"))
+        .filter(chk => chk.checked)
+        .map(chk => JSON.parse(chk.dataset.promo));
+
+    if (selectedPromos.length === 0) return alert("Seleccione al menos una promoción");
+
+    // Agrupar promociones por categoría
+    const grouped = selectedPromos.reduce((acc, promo) => {
+        const cat = promo.categoria || 'Sin categoría';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(promo);
+        return acc;
+    }, {});
+
+    const container = document.createElement("div");
+    container.style.width = "800px";
+    container.style.fontFamily = "Arial, sans-serif";
+
+    for (const category of Object.keys(grouped)) {
+        const promos = grouped[category];
+        let pageCount = 0;
+
+        while (pageCount * 6 < promos.length) {
+            const page = document.createElement("div");
+            page.style.pageBreakAfter = "always";
+            page.style.marginBottom = "20px";
+
+            // Título de categoría
+            const catTitle = document.createElement("h2");
+            catTitle.textContent = category;
+            catTitle.style.borderBottom = "2px solid #333";
+            catTitle.style.paddingBottom = "6px";
+            page.appendChild(catTitle);
+
+            const slice = promos.slice(pageCount * 6, pageCount * 6 + 6);
+
+            // Convertir imágenes a Base64 para cada promoción
+            for (const p of slice) {
+                const promoDiv = document.createElement("div");
+                promoDiv.style.display = "flex";
+                promoDiv.style.alignItems = "center";
+                promoDiv.style.margin = "12px 0";
+                promoDiv.style.padding = "10px";
+                promoDiv.style.border = "1px solid #ddd";
+                promoDiv.style.borderRadius = "8px";
+                promoDiv.style.boxShadow = "0 3px 8px rgba(0,0,0,0.1)";
+
+                let imgSrc = '';
+                if (p.imagen_url) {
+                    // Convertir URL de Supabase a Base64
+                    imgSrc = await getBase64ImageFromUrl(p.imagen_url);
+                }
+
+                const img = document.createElement("img");
+                img.style.width = "100px";
+                img.style.height = "100px";
+                img.style.objectFit = "cover";
+                img.style.borderRadius = "8px";
+                img.style.marginRight = "12px";
+                img.src = imgSrc;
+                promoDiv.appendChild(img);
+
+                const info = document.createElement("div");
+                info.innerHTML = `
+                    <b>${escapeHtml(p.nombre)}</b><br>
+                    ${p.precio_anterior && Number(p.precio_anterior) > Number(p.precio)
+                        ? `<del>$${Number(p.precio_anterior).toFixed(2)}</del> <span style="color: red; font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
+                        : `<span style="font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`}<br>
+                    Stock: ${p.stock || 0}<br>
+                    Categoría: ${escapeHtml(category)}
+                `;
+                promoDiv.appendChild(info);
+                page.appendChild(promoDiv);
+            }
+
+            container.appendChild(page);
+            pageCount++;
+        }
+    }
+
+    html2pdf().from(container).set({
+        margin: [20, 20, 20, 20],
+        filename: "promociones_catalogo.pdf",
+        html2canvas: { scale: 2, logging: false, dpi: 300, letterRendering: true },
+        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" }
+    }).save();
+}
+
+
+// ================= CATEGORÍAS =================
 async function fetchCategorias(){
-  const { data, error } = await supabase.from("categorias").select("*").order("id");
+  const { data,error }=await supabase.from("categorias").select("*").order("id");
   if(error) return console.error(error);
   const container=document.getElementById("categoriaList"); container.innerHTML="";
-  const select=document.getElementById("promoCategoria"); select.innerHTML='<option value="">Sin categoría</option>';
+  const sel=document.getElementById("promoCategoria"); sel.innerHTML='<option value="">Sin categoría</option>';
   data.forEach(c=>{
-    const div=document.createElement("div"); div.className="card"; div.innerHTML=`<span>${escapeHtml(c.nombre)}</span> <button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button> <button onclick="deleteCategoria(${c.id})">Eliminar</button>`; container.appendChild(div);
-    select.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
+    const div=document.createElement("div"); div.innerHTML=`${escapeHtml(c.nombre)} <button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')">Editar</button> <button onclick="deleteCategoria(${c.id})">Eliminar</button>`; container.appendChild(div);
+    sel.innerHTML+=`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
   });
 }
-async function fetchCategoriasForSelect(selId, selectedId=null){
-  const { data } = await supabase.from("categorias").select("*").order("id");
-  const sel=document.getElementById(selId); sel.innerHTML='<option value="">Sin categoría</option>';
-  data.forEach(c=>{ sel.innerHTML+=`<option value="${c.id}" ${selectedId==c.id?'selected':''}>${escapeHtml(c.nombre)}</option>`; });
+
+async function addCategoria(){
+  const nombre=document.getElementById("categoriaNombre").value.trim(); if(!nombre) return alert("Ingrese nombre");
+  const {error}=await supabase.from("categorias").insert([{nombre}]); if(error) return alert(error.message);
+  document.getElementById("categoriaNombre").value=""; fetchCategorias();
 }
-async function addCategoria(){ const nombre=document.getElementById("categoriaNombre").value.trim(); if(!nombre) return alert("Ingrese nombre"); await supabase.from("categorias").insert([{nombre}]); document.getElementById("categoriaNombre").value=""; fetchCategorias(); }
-function editCategoria(id,nombre){ openModal("Editar categoría", `<input id="editCatName" value="${escapeHtml(nombre)}"><button onclick="updateCategoria(${id})">Guardar</button>`); }
-async function updateCategoria(id){ const nombre=document.getElementById("editCatName").value.trim(); if(!nombre) return alert("Ingrese nombre"); await supabase.from("categorias").update({nombre}).eq("id",id); closeModal(); fetchCategorias(); }
+
+function editCategoria(id,nombre){
+  openModal("Editar categoría", `<input id="editCat" value="${escapeHtml(nombre)}"><button onclick="updateCategoria(${id})">Guardar</button>`);
+}
+
+async function updateCategoria(id){
+  const nombre=document.getElementById("editCat").value.trim(); if(!nombre) return alert("Ingrese nombre");
+  const {error}=await supabase.from("categorias").update({nombre}).eq("id",id); if(error) return alert(error.message); closeModal(); fetchCategorias();
+}
+
 async function deleteCategoria(id){ if(!confirm("Eliminar categoría?")) return; await supabase.from("categorias").delete().eq("id",id); fetchCategorias(); }
 
-// -------------------- LOCALIDADES --------------------
+// ================= LOCALIDADES =================
 async function fetchLocalidades(){
-  const { data, error } = await supabase.from("localidades").select("*").order("id");
+  const { data,error }=await supabase.from("localidades").select("*").order("id");
   if(error) return console.error(error);
   const container=document.getElementById("localidadList"); container.innerHTML="";
-  data.forEach(l=>{ const div=document.createElement("div"); div.className="card"; div.innerHTML=`<span>${escapeHtml(l.nombre)}</span> <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button> <button onclick="deleteLocalidad(${l.id})">Eliminar</button>`; container.appendChild(div); });
+  data.forEach(l=>{ container.innerHTML+=`${escapeHtml(l.nombre)} <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')">Editar</button> <button onclick="deleteLocalidad(${l.id})">Eliminar</button><br>`; });
 }
-async function addLocalidad(){ const nombre=document.getElementById("localidadNombre").value.trim(); if(!nombre) return alert("Ingrese nombre"); await supabase.from("localidades").insert([{nombre}]); document.getElementById("localidadNombre").value=""; fetchLocalidades(); }
-function editLocalidad(id,nombre){ openModal("Editar localidad", `<input id="editLocName" value="${escapeHtml(nombre)}"><button onclick="updateLocalidad(${id})">Guardar</button>`); }
-async function updateLocalidad(id){ const nombre=document.getElementById("editLocName").value.trim(); if(!nombre) return alert("Ingrese nombre"); await supabase.from("localidades").update({nombre}).eq("id",id); closeModal(); fetchLocalidades(); }
+
+async function addLocalidad(){
+  const nombre=document.getElementById("localidadNombre").value.trim(); if(!nombre) return alert("Ingrese nombre");
+  const {error}=await supabase.from("localidades").insert([{nombre}]); if(error) return alert(error.message); document.getElementById("localidadNombre").value=""; fetchLocalidades();
+}
+
+function editLocalidad(id,nombre){ openModal("Editar localidad", `<input id="editLoc" value="${escapeHtml(nombre)}"><button onclick="updateLocalidad(${id})">Guardar</button>`); }
+async function updateLocalidad(id){ const nombre=document.getElementById("editLoc").value.trim(); if(!nombre) return alert("Ingrese nombre"); const {error}=await supabase.from("localidades").update({nombre}).eq("id",id); if(error) return alert(error.message); closeModal(); fetchLocalidades(); }
 async function deleteLocalidad(id){ if(!confirm("Eliminar localidad?")) return; await supabase.from("localidades").delete().eq("id",id); fetchLocalidades(); }
 
-// -------------------- PEDIDOS --------------------
+// ================= PEDIDOS =================
 async function fetchPedidos(){
-  const { data, error } = await supabase.from("pedidos").select("*,localidades(nombre)").order("id",{ascending:false});
-  if(error) return console.error(error);
+  const { data, error } = await supabase.from("pedidos")
+    .select("id,cliente,total,productos,localidad_id,localidades(nombre)")
+    .order("id",{ascending:false});
+  if(error){ console.error(error); return; }
   const container=document.getElementById("pedidoList"); container.innerHTML="";
-  data.forEach(p=>{ const div=document.createElement("div"); div.className="card"; div.innerHTML=`<b>${escapeHtml(p.cliente)}</b> - ${p.localidades?.nombre||''} - Total: $${p.total} <div>Productos: ${p.productos}</div>`; container.appendChild(div); });
+  data.forEach(p=>{
+    const div=document.createElement("div"); div.className="card";
+    let productosHTML="";
+    try{
+      const prods = typeof p.productos==="string"?JSON.parse(p.productos):p.productos;
+      if(Array.isArray(prods)) productosHTML="<ul>"+prods.map(pr=>`<li>${pr.nombre||pr.producto} x${pr.cantidad||1}</li>`).join("")+"</ul>";
+      else productosHTML=p.productos||"";
+    }catch(e){ productosHTML=p.productos||""; }
+    div.innerHTML=`<b>Cliente:</b> ${escapeHtml(p.cliente||'')} <br>
+                   <b>Total:</b> $${p.total||0} <br>
+                   <b>Localidad:</b> ${escapeHtml(p.localidades?.nombre||'')} <br>
+                   <b>Productos:</b> ${productosHTML}`;
+    container.appendChild(div);
+  });
 }
 
-// -------------------- DOCUMENTOS --------------------
+// ================= DOCUMENTOS =================
 async function fetchDocumentos(){
   const { data, error } = await supabase.from("documentos").select("*").order("id",{ascending:false});
-  if(error) return console.error(error);
+  if(error){ console.error(error); return; }
   const container=document.getElementById("docList"); container.innerHTML="";
-  data.forEach(d=>{ const a=document.createElement("a"); a.href=supabase.storage.from("docs").getPublicUrl(d.archivo).data.publicUrl; a.target="_blank"; a.textContent=d.nombre; container.appendChild(a); container.appendChild(document.createElement("br")); });
-}
-async function addDocumento(){
-  const nombre=document.getElementById("docNombre").value.trim(); const file=document.getElementById("docArchivo").files[0]; if(!nombre || !file) return alert("Nombre y archivo"); 
-  const fileName=`${Date.now()}_${file.name}`; const { error } = await supabase.storage.from("docs").upload(fileName,file); if(error) return alert(error.message); 
-  await supabase.from("documentos").insert([{nombre,archivo:fileName}]); 
-  document.getElementById("docNombre").value=""; document.getElementById("docArchivo").value=""; fetchDocumentos();
+  data.forEach(d=>{
+    const a=document.createElement("a");
+    a.href=supabase.storage.from("docs").getPublicUrl(d.archivo).data.publicUrl;
+    a.target="_blank"; a.textContent=d.nombre;
+    container.appendChild(a); container.appendChild(document.createElement("br"));
+  });
 }
 
-// Inicialización
+async function addDocumento(){
+  const nombre=document.getElementById("docNombre").value.trim();
+  const file=document.getElementById("docArchivo").files[0];
+  if(!nombre || !file) return alert("Nombre y archivo");
+  const fileName=`${Date.now()}_${file.name}`;
+  const {error}=await supabase.storage.from("docs").upload(fileName,file);
+  if(error) return alert(error.message);
+  await supabase.from("documentos").insert([{nombre,archivo:fileName}]);
+  document.getElementById("docNombre").value=""; document.getElementById("docArchivo").value="";
+  fetchDocumentos();
+}
+
+// --- INICIALIZACIÓN ---
 fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchPedidos(); fetchDocumentos();
 </script>
 
