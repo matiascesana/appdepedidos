@@ -129,6 +129,12 @@ button:hover{background:var(--accent-2)}
 
         <div style="display:flex;gap:10px;margin-top:20px;margin-bottom:12px">
             <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
+            <div id="pdfProgressBarContainer" style="display:none; margin-top: 15px; width: 300px;">
+    <p style="font-size: 0.9em; color: #555;">Generando PDF, por favor espere...</p>
+    <div id="progressBar" style="width: 100%; height: 8px; background-color: #f3f3f3; border-radius: 4px; overflow: hidden;">
+        <div id="progressFill" style="width: 0%; height: 100%; background-color: #007bff; transition: width 0.3s;"></div>
+    </div>
+</div>
             <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
         </div>
 
@@ -1033,6 +1039,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
