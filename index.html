@@ -22,6 +22,17 @@
 }
 *{box-sizing:border-box}
 
+    /* --- Nuevo CSS para mostrar la sección activa --- */
+.section.active {
+    display: block; /* Muestra la sección que tenga la clase 'active' */
+    /* Asegúrate de que el resto de las propiedades de .section siguen siendo:
+       position: absolute;
+       top: 0;
+       left: var(--sidebar-width);
+       width: calc(100% - var(--sidebar-width));
+       height: 100vh;
+       overflow-y: auto; */
+}
 /* CAMBIO CLAVE 1: Eliminamos display:flex del body */
 body{
     margin:0;
@@ -878,4 +889,5 @@ document.getElementById('refreshOrdersBtn').addEventListener('click', fetchOrder
 
 </body>
 </html>
+
 
