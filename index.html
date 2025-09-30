@@ -12,98 +12,353 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
 <style>
+<style>
+
 /* -----------------------
-    Estilos (Diseño de 2 Columnas y Reseteo)
-    ----------------------- */
-/* -----------------------
-   Estilos mejorados
+
+   Estilos (mantener formato inicial)
+
    ----------------------- */
-:root{--accent:#6a1b9a;--accent-2:#7b1fa2;--danger:#e53935;--sidebar-width:220px}
+
+:root{--accent:#6a1b9a;--accent-2:#7b1fa2;--danger:#e53935}
+
 *{box-sizing:border-box}
-body{margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:#f9f9f9;color:#222} /* <--- Removido display:flex */
-.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-width);background:var(--accent);color:#fff;padding:18px;display:flex;flex-direction:column;height:100vh;z-index:100} /* <--- Agregado position y z-index */
+
+body{margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:#f9f9f9;color:#222;display:flex;min-height:100vh}
+
+.sidebar{width:220px;background:var(--accent);color:#fff;padding:18px;display:flex;flex-direction:column}
+
 .sidebar .logo{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:12px}
+
 .sidebar button{background:transparent;border:0;color:#fff;padding:10px;border-radius:8px;text-align:left;cursor:pointer;margin-bottom:8px;font-weight:700}
+
 .sidebar button.active{background:#fff;color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,0.08)}
 
-/* La clave: Cada sección es una página completa */
-.section{
-    position: absolute; /* O 'fixed' si no quieres que el contenido de la sección se mueva */
-    top: 0;
-    left: var(--sidebar-width); /* Comienza después de la sidebar */
-    width: calc(100% - var(--sidebar-width)); /* Ocupa el espacio restante */
-    height: 100vh; /* Ocupa el 100% de la altura */
-    background: #fff;
-    padding: 20px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-    overflow-y: auto; /* Permite desplazamiento vertical dentro de la sección */
-    display: none;
-}
-.main {
-    /* El main no necesita un estilo especial, pero lo mantenemos para contener las secciones */
-    padding-left: var(--sidebar-width);
-}
+.main{flex:1;padding:20px;overflow:auto}
+
 h1,h2{font-family:'Playfair Display',serif;margin:0 0 12px 0}
+
+.section{display:none;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.06);margin-bottom:18px}
+
 .item-card,.doc-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:#f4f4f4;margin-bottom:10px}
+
 .item-card img{width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px}
+
 label{display:block;margin:8px 0;font-size:14px}
+
 input[type=text],input[type=number],select{padding:8px;margin-top:4px;border-radius:8px;border:1px solid #ddd;width:100%}
+
 button{cursor:pointer;border:0;border-radius:8px;padding:8px 12px;background:var(--accent);color:#fff;font-weight:700}
+
 button:hover{background:var(--accent-2)}
+
 .delete-btn{background:var(--danger)}
+
 .delete-btn:hover{background:#c62828}
+
 .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:999}
+
 .modal-content{background:#fff;padding:16px;border-radius:10px;max-width:860px;width:96%;max-height:86vh;overflow:auto;position:relative}
+
 .modal-close{position:absolute;right:12px;top:8px;cursor:pointer;font-weight:700}
+
 .table {width:100%;border-collapse:collapse;margin:8px 0}
+
 .table th,.table td{padding:8px;border:1px solid #e6e6e6}
+
 .small-muted{font-size:13px;color:#666}
+
 .flex{display:flex;gap:10px;align-items:center}
+
 .row{display:flex;gap:12px}
+
 </style>
+
 </head>
+
 <body>
 
+
+
 <!-- SIDEBAR -->
+
 <div class="sidebar">
-  <div class="logo">App Pedidos</div>
-  <button class="tab-btn active" data-tab="promos">Promociones</button>
-  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-  <button class="tab-btn" data-tab="categorias">Categorías</button>
-  <button class="tab-btn" data-tab="localidades">Localidades</button>
-  <button class="tab-btn" data-tab="documentos">Documentos</button>
-  <div style="margin-top:auto;font-size:12px;opacity:.9">Integrado · PDF catálogo · Stock</div>
+
+  <div class="logo">App Pedidos</div>
+
+  <button class="tab-btn active" data-tab="promos">Promociones</button>
+
+  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
+
+  <button class="tab-btn" data-tab="categorias">Categorías</button>
+
+  <button class="tab-btn" data-tab="localidades">Localidades</button>
+
+  <button class="tab-btn" data-tab="documentos">Documentos</button>
+
+  <div style="margin-top:auto;font-size:12px;opacity:.9">Integrado · PDF catálogo · Stock</div>
+
 </div>
+
+
 
 <!-- MAIN -->
+
 <div class="main">
-    <div class="section" id="promos">
-    <h1>Promociones</h1> </div>
 
-    <div class="section" id="pedidos">
-    <h1>Pedidos</h1> </div>
+  <h1>Promociones y Pedidos</h1>
 
-    <div class="section" id="categorias">
-    <h2>Categorías</h2>
-    </div>
-    
-    <div class="section" id="localidades">
-    <h2>Localidades</h2>
-    </div>
 
-    <div class="section" id="documentos">
-    <h2>Documentos</h2>
-    </div>
+
+  <!-- PROMOCIONES -->
+
+  <div class="section" id="promos">
+
+    <h2>Promociones</h2>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+
+      <div style="flex:1;min-width:220px">
+
+        <label>Nombre / Descripción
+
+          <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
+
+        </label>
+
+      </div>
+
+      <div style="width:140px">
+
+        <label>Precio
+
+          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
+
+        </label>
+
+      </div>
+
+      <div style="width:140px">
+
+        <label>Stock
+
+          <input id="promoStock" type="number" placeholder="0">
+
+        </label>
+
+      </div>
+
+      <div style="width:220px">
+
+        <label>Categoría
+
+          <select id="promoCategoria"></select>
+
+        </label>
+
+      </div>
+
+     </div>
+
+
+
+      <div style="width:220px">
+
+        <label>Imagen (jpg/png)
+
+          <input id="promoImagen" type="file" accept="image/*">
+
+        </label>
+
+      </div>
+
+    </div>
+
+
+
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+
+      <button id="addPromoBtn">Agregar Promoción</button>
+
+      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
+
+      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
+
+    </div>
+
+
+
+    <h3>Lista de Promociones</h3>
+
+    <div id="promoList"></div>
+
+  </div>
+
+
+
+  <!-- PEDIDOS -->
+
+  <div class="section" id="pedidos">
+
+    <h2>Pedidos</h2>
+
+    <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+
+      <div style="flex:1;min-width:220px">
+
+        <label>Cliente
+
+          <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
+
+        </label>
+
+      </div>
+
+      <div style="width:220px">
+
+        <label>Localidad
+
+          <select id="pedidoLocalidad"></select>
+
+        </label>
+
+      </div>
+
+
+
+      <div style="display:flex;gap:8px;align-items:center">
+
+        <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
+
+      </div>
+
+
+
+      <div style="width:100%;margin-top:6px">
+
+        <div id="selectedProductsContainer" class="small-muted"></div>
+
+      </div>
+
+
+
+      <div style="display:flex;gap:8px">
+
+        <button type="button" id="addOrderBtn">Agregar Pedido</button>
+
+        <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
+
+      </div>
+
+    </form>
+
+
+
+    <h3>Lista de Pedidos</h3>
+
+    <div id="pedidoList"></div>
+
+  </div>
+
+
+
+  <!-- CATEGORÍAS -->
+
+  <div class="section" id="categorias">
+
+    <h2>Categorías</h2>
+
+    <form id="categoriaForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
+
+      <input id="categoriaNombre" placeholder="Nombre categoría" />
+
+      <button id="addCategoriaBtn">Agregar Categoría</button>
+
+    </form>
+
+    <div id="categoriaList"></div>
+
+  </div>
+
+
+
+  <!-- LOCALIDADES -->
+
+  <div class="section" id="localidades">
+
+    <h2>Localidades</h2>
+
+    <form id="localidadForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
+
+      <input id="localidadNombre" placeholder="Nombre localidad" />
+
+      <button id="addLocalidadBtn">Agregar Localidad</button>
+
+    </form>
+
+    <div id="localidadList"></div>
+
+  </div>
+
+
+
+  <!-- DOCUMENTOS -->
+
+  <div class="section" id="documentos">
+
+    <h2>Documentos</h2>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+
+      <input id="searchDoc" placeholder="Buscar por DNI">
+
+      <input id="docFiles" type="file" multiple>
+
+      <button id="uploadDocsBtn">Subir Documentos</button>
+
+      <button id="deleteAllDocsBtn" class="delete-btn">Eliminar Todos</button>
+
+    </div>
+
+
+
+    <div id="docProgressContainer" style="width:100%;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:8px;display:none">
+
+      <div id="docProgress" style="width:0;height:8px;background:green"></div>
+
+    </div>
+
+
+
+    <h3>Documentos subidos</h3>
+
+    <div id="documentsList"></div>
+
+  </div>
+
+
 
 </div>
+
+
 
 <!-- MODAL -->
+
 <div id="modal" class="modal">
-  <div class="modal-content">
-    <span class="modal-close" onclick="closeModal()">×</span>
-    <div id="modalInner"></div>
-  </div>
+
+  <div class="modal-content">
+
+    <span class="modal-close" onclick="closeModal()">×</span>
+
+    <div id="modalInner"></div>
+
+  </div>
+
 </div>
+
+
+
+<script>
 
 <script>
 
@@ -924,6 +1179,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
