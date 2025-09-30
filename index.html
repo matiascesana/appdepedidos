@@ -77,121 +77,23 @@ button:hover{background:var(--accent-2)}
 
 <!-- MAIN -->
 <div class="main">
-  <h1>Promociones y Pedidos</h1>
+    <div class="section" id="promos">
+    <h1>Promociones</h1> </div>
 
-  <!-- PROMOCIONES -->
-  <div class="section" id="promos">
-    <h2>Promociones</h2>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:220px">
-        <label>Nombre / Descripción
-          <input id="promoNombre" type="text" placeholder="Ej: Promo de Tinturas">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Precio
-          <input id="promoPrecio" type="number" step="0.01" placeholder="0.00">
-        </label>
-      </div>
-      <div style="width:140px">
-        <label>Stock
-          <input id="promoStock" type="number" placeholder="0">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Categoría
-          <select id="promoCategoria"></select>
-        </label>
-      </div>
-     </div>
+    <div class="section" id="pedidos">
+    <h1>Pedidos</h1> </div>
 
-      <div style="width:220px">
-        <label>Imagen (jpg/png)
-          <input id="promoImagen" type="file" accept="image/*">
-        </label>
-      </div> 
-      <button id="addPromoBtn">Agregar Promoción</button>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="exportPromoPdfBtn">Exportar Catálogo PDF</button>
-      <button id="refreshPromosBtn" style="background:#444">Refrescar</button>
-    </div>
-
-    <h3>Lista de Promociones</h3>
-    <div id="promoList"></div>
-  </div>
-
-  <!-- PEDIDOS -->
-  <div class="section" id="pedidos">
-    <h2>Pedidos</h2>
-    <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <div style="flex:1;min-width:220px">
-        <label>Cliente
-          <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Localidad
-          <select id="pedidoLocalidad"></select>
-        </label>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center">
-        <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
-      </div>
-
-      <div style="width:100%;margin-top:6px">
-        <div id="selectedProductsContainer" class="small-muted"></div>
-      </div>
-
-      <div style="display:flex;gap:8px">
-        <button type="button" id="addOrderBtn">Agregar Pedido</button>
-        <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-      </div>
-    </form>
-
-    <h3>Lista de Pedidos</h3>
-    <div id="pedidoList"></div>
-  </div>
-
-  <!-- CATEGORÍAS -->
-  <div class="section" id="categorias">
+    <div class="section" id="categorias">
     <h2>Categorías</h2>
-    <form id="categoriaForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
-      <input id="categoriaNombre" placeholder="Nombre categoría" />
-      <button id="addCategoriaBtn">Agregar Categoría</button>
-    </form>
-    <div id="categoriaList"></div>
-  </div>
-
-  <!-- LOCALIDADES -->
-  <div class="section" id="localidades">
+    </div>
+    
+    <div class="section" id="localidades">
     <h2>Localidades</h2>
-    <form id="localidadForm" onsubmit="return false;" style="display:flex;gap:8px;margin-bottom:12px">
-      <input id="localidadNombre" placeholder="Nombre localidad" />
-      <button id="addLocalidadBtn">Agregar Localidad</button>
-    </form>
-    <div id="localidadList"></div>
-  </div>
+    </div>
 
-  <!-- DOCUMENTOS -->
-  <div class="section" id="documentos">
+    <div class="section" id="documentos">
     <h2>Documentos</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <input id="searchDoc" placeholder="Buscar por DNI">
-      <input id="docFiles" type="file" multiple>
-      <button id="uploadDocsBtn">Subir Documentos</button>
-      <button id="deleteAllDocsBtn" class="delete-btn">Eliminar Todos</button>
     </div>
-
-    <div id="docProgressContainer" style="width:100%;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:8px;display:none">
-      <div id="docProgress" style="width:0;height:8px;background:green"></div>
-    </div>
-
-    <h3>Documentos subidos</h3>
-    <div id="documentsList"></div>
-  </div>
 
 </div>
 
@@ -1022,6 +924,7 @@ fetchDocuments();
 </script>
 </body>
 </html>
+
 
 
 
