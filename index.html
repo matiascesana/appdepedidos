@@ -208,11 +208,13 @@ const supabase = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 // --- SIDEBAR ---
 document.querySelectorAll(".tab-btn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-    document.getElementById(btn.dataset.tab).classList.add("active");
+  ['click', 'touchstart'].forEach(ev=>{
+    btn.addEventListener(ev, ()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+      document.getElementById(btn.dataset.tab).classList.add("active");
+    });
   });
 });
 
@@ -1124,3 +1126,4 @@ fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDo
 
 </body>
 </html>
+
