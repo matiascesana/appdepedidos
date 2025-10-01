@@ -207,6 +207,7 @@ const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 // --- SIDEBAR ---
+// --- SIDEBAR --- (modificado para móviles)
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   ['click', 'touchstart'].forEach(ev=>{
     btn.addEventListener(ev, ()=>{
@@ -1126,4 +1127,5 @@ fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDo
 
 </body>
 </html>
+
 
