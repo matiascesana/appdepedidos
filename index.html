@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -44,13 +43,74 @@ h1 { margin-top:0; margin-bottom:15px; }
 input, select, button { margin-bottom:8px; padding:6px; font-size:14px; border-radius:4px; border:1px solid #ccc; }
 button[type=submit]{background:var(--accent); color:#fff; border:none; cursor:pointer;}
 button[type=submit]:hover{background:#e8434f;}
+
+/* ========== RESPONSIVE MEDIA QUERIES ========== */
+@media (max-width: 900px) {
+  .sidebar { width:180px; }
+  .content { padding:12px; }
+  .card img { width:80px; height:80px; }
+}
+
+@media (max-width: 700px) {
+  body { flex-direction:column; height:auto; }
+  .sidebar {
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 54px;
+    padding-top: 0;
+    padding-bottom: 0;
+    z-index: 9000;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.13);
+  }
+  .sidebar h2 { display:none; }
+  .sidebar button {
+    font-size:14px;
+    padding: 8px 0;
+    flex: 1;
+    text-align: center;
+    border-radius:0;
+    margin:0;
+  }
+  .content { padding:8px; margin-bottom:56px; }
+  #modalInner { max-width: 98vw; }
+}
+
+@media (max-width: 500px) {
+  .sidebar { height:48px; }
+  .sidebar button { font-size:12px; }
+  .content { padding:4px; }
+  h1, h2, h3 { font-size:1.1em; }
+  .card, .item-card {
+    flex-direction:column;
+    align-items: flex-start;
+    padding:8px;
+    gap:8px;
+  }
+  .card img, .item-card img {
+    width:90vw;
+    max-width:220px;
+    height:auto;
+    margin-bottom:8px;
+  }
+  input, select, button { font-size:13px; }
+  #modalInner { padding:8px; }
+}
+
+/* Oculta el scrollbar lateral en móviles */
+@media (pointer:coarse) {
+  ::-webkit-scrollbar { display:none; }
+}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
-<div class="sidebar">
+  <div class="sidebar">
   <h2>Admin</h2>
   <button class="tab-btn active" data-tab="promos">Promociones</button>
   <button class="tab-btn" data-tab="pedidos">Pedidos</button>
