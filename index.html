@@ -1,5 +1,5 @@
 <html lang="es">
-  <style>
+<style>
 .section.active {
   display: block !important;
   opacity: 1 !important;
@@ -213,11 +213,13 @@ const SUPABASE_URL="https://ejbqlejlgprvwzrptojo.supabase.co";
 const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
 const supabase = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-// --- SIDEBAR ---
 // --- SIDEBAR --- (modificado para móviles)
+// --- DEPURACIÓN DE TABS ---
+console.log("Script tabs cargado");
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   ['click', 'touchstart'].forEach(ev=>{
     btn.addEventListener(ev, ()=>{
+      console.log("Tab clicked:", btn.dataset.tab);
       document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
@@ -225,6 +227,8 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     });
   });
 });
+
+
 
 // --- MODAL ---
 function openModal(title, html){ document.getElementById("modalInner").innerHTML=`<h3>${title}</h3>${html}`; document.getElementById("modal").style.display="flex"; }
@@ -1134,6 +1138,3 @@ fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDo
 
 </body>
 </html>
-
-
-
