@@ -212,21 +212,25 @@ console.log("Tabs JS cargado");
 
 // Espera al DOM listo para máxima compatibilidad en móviles
 document.addEventListener("DOMContentLoaded", function() {
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", function(e) {
-      console.log("Click tab:", btn.dataset.tab);
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-      const section = document.getElementById(btn.dataset.tab);
-      if (section) {
-        section.classList.add("active");
-        console.log("Se muestra sección:", btn.dataset.tab);
-      } else {
-        console.warn("No existe sección con id:", btn.dataset.tab);
-      }
-    });
-  });
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", function(e) {
+      console.log("Click tab:", btn.dataset.tab);
+      // Quita la clase 'active' de todos los botones
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      // Añade la clase 'active' al botón clickeado
+      btn.classList.add("active");
+      // Oculta todas las secciones
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      // Muestra la sección correcta
+      const section = document.getElementById(btn.dataset.tab);
+      if (section) {
+        section.classList.add("active");
+        console.log("Se muestra sección:", btn.dataset.tab);
+      } else {
+        console.warn("No existe sección con id:", btn.dataset.tab);
+      }
+    });
+  });
 });
 
 
@@ -260,6 +264,7 @@ document.getElementById("modal").addEventListener("click",(e)=>{ if(e.target.id=
 
 // --- ESCAPE HTML ---
 function escapeHtml(text){ var div=document.createElement("div"); div.innerText=text; return div.innerHTML; }
+
 
 // ================= PROMOCIONES =================
 async function fetchPromotions() {
