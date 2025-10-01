@@ -128,14 +128,13 @@ button[type=submit]:hover{background:#e8434f;}
 
 
   <!-- DOCUMENTOS -->
-  <div id="documentos" class="section">
-    <h1>Gestión de Documentos</h1>
-    <input type="text" id="docNombre" placeholder="Nombre del documento">
-    <input type="file" id="docArchivo">
-    <button onclick="addDocumento()">Agregar Documento</button>
-    <button onclick="fetchDocumentos()">Actualizar Documentos</button>
-    <div id="docList"></div>
-  </div>
+<div id="documentos" class="section">
+  <h1>Gestión de Documentos</h1>
+  <input type="file" id="docArchivo">
+  <button onclick="addDocumento()">Agregar Documento</button>
+  <button onclick="fetchDocumentos()">Actualizar Documentos</button>
+  <div id="docList" style="margin-top:18px;"></div>
+</div>
 
 </div>
 
@@ -998,29 +997,66 @@ async function deleteOrder(id){
 }
 
 // ================= DOCUMENTOS =================
-async function fetchDocumentos(){
-  const { data, error } = await supabase.from("documentos").select("*").order("id",{ascending:false});
-  if(error){ console.error(error); return; }
-  const container=document.getElementById("docList"); container.innerHTML="";
-  data.forEach(d=>{
-    const a=document.createElement("a");
-    a.href=supabase.storage.from("docs").getPublicUrl(d.archivo).data.publicUrl;
-    a.target="_blank"; a.textContent=d.nombre;
-    container.appendChild(a); container.appendChild(document.createElement("br"));
-  });
-}
-
-async function addDocumento(){	
-  const nombre=document.getElementById("docNombre").value.trim();
-  const file=document.getElementById("docArchivo").files[0];
-  if(!nombre || !file) return alert("Nombre y archivo");
-  const fileName=`${Date.now()}_${file.name}`;
-  const {error}=await supabase.storage.from("docs").upload(fileName,file);
-  if(error) return alert(error.message);
-  await supabase.from("documentos").insert([{nombre,archivo:fileName}]);
-  document.getElementById("docNombre").value=""; document.getElementById("docArchivo").value="";
+// Subir documento al bucket y guardar referencia
+async function addDocumento() {
+  const file = document.getElementById("docArchivo").files[0];
+  if (!file) return alert("Seleccione un archivo");
+  const fileName = `${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabase.storage.from("private-documents").upload(fileName, file);
+  if (uploadError) {
+    alert("Error al subir: " + uploadError.message);
+    return;
+  }
+  await supabase.from("documentos").insert([{ nombre: file.name, archivo: fileName }]);
+  document.getElementById("docArchivo").value = "";
   fetchDocumentos();
 }
+
+// Mostrar listado de documentos
+async function fetchDocumentos() {
+  const { data, error } = await supabase.from("documentos").select("*").order("created_at", { ascending: false });
+  const container = document.getElementById("docList");
+  container.innerHTML = "";
+
+  if (error) {
+    container.innerHTML = `<span style="color:red;">Error: ${escapeHtml(error.message)}</span>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<span style="color:#888;">No hay documentos subidos.</span>';
+    return;
+  }
+
+  for (const doc of data) {
+    let url = "";
+    if (doc.archivo) {
+      const { data: urlData } = await supabase.storage.from("private-documents").createSignedUrl(doc.archivo, 60 * 60);
+      url = urlData?.signedUrl || "#";
+    }
+    const fecha = doc.created_at ? new Date(doc.created_at).toLocaleString() : '';
+    container.innerHTML += `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
+        <div>
+          <a href="${url}" target="_blank">${escapeHtml(doc.nombre)}</a>
+          <span style="color:#888;font-size:0.97em;margin-left:8px;">${fecha}</span>
+        </div>
+        <button onclick="deleteDocumento(${doc.id}, '${doc.archivo}')" style="background:#ff4d4f;color:#fff;border:none;padding:7px 12px;border-radius:6px;font-weight:bold;cursor:pointer;">Eliminar</button>
+      </div>
+    `;
+  }
+}
+
+// Eliminar documento
+async function deleteDocumento(id, archivo) {
+  if (!confirm("¿Eliminar documento?")) return;
+  await supabase.storage.from("private-documents").remove([archivo]);
+  await supabase.from("documentos").delete().eq("id", id);
+  fetchDocumentos();
+}
+
+// Mostrar documentos al entrar en la pestaña
+document.querySelector("button[data-tab='documentos']").addEventListener("click", fetchDocumentos);
 
 // --- INICIALIZACIÓN ---
 fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos();
