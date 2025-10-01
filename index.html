@@ -1,11 +1,4 @@
 <html lang="es">
-<style>
-.section.active {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-</style>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -111,6 +104,12 @@ button[type=submit]:hover{background:#e8434f;}
   ::-webkit-scrollbar { display:none; }
 }
 
+/* --- CSS EMERGENCIA para mostrar secciones siempre --- */
+.section.active {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -208,6 +207,30 @@ button[type=submit]:hover{background:#e8434f;}
 <div id="modal"><div id="modalInner"></div></div>
 
 <script>
+// --- SIDEBAR / TABS --- (MODIFICADO Y DEPURADO)
+console.log("Tabs JS cargado");
+
+// Espera al DOM listo para máxima compatibilidad en móviles
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", function(e) {
+      console.log("Click tab:", btn.dataset.tab);
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      const section = document.getElementById(btn.dataset.tab);
+      if (section) {
+        section.classList.add("active");
+        console.log("Se muestra sección:", btn.dataset.tab);
+      } else {
+        console.warn("No existe sección con id:", btn.dataset.tab);
+      }
+    });
+  });
+});
+
+
+
 // --- CONFIGURACIÓN SUPABASE ---
 const SUPABASE_URL="https://ejbqlejlgprvwzrptojo.supabase.co";
 const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
