@@ -51,12 +51,13 @@ button[type=submit]:hover{background:#e8434f;}
   .card img { width:80px; height:80px; }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
   body {
         /* Es mejor usar min-height en vez de height:auto para forzar la ocupación total */
         min-height: 100vh; 
         flex-direction: column;
     }
+
   .sidebar {
     flex-direction: row;
     position: fixed;
@@ -111,12 +112,57 @@ button[type=submit]:hover{background:#e8434f;}
   ::-webkit-scrollbar { display:none; }
 }
 
-/* --- CSS EMERGENCIA para mostrar secciones siempre --- */
-.section.active {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
+.card {
+        /* 1. ANULAR CAMBIO A COLUMNA Y REDUCIR PADDING */
+        flex-direction: row; /* Vuelve a poner los elementos en fila */
+        align-items: center; /* Centra verticalmente */
+        padding: 6px; /* Reduce el relleno de la tarjeta */
+        gap: 8px; /* Reduce el espacio entre elementos */
+        max-width: none; /* Asegura que ocupe todo el ancho disponible */
+    }
+
+    .card img {
+        /* 2. REDUCIR TAMAÑO DE IMAGEN */
+        width: 60px; /* Tamaño de imagen más pequeño */
+        height: 60px;
+        /* Aseguramos que la imagen se mantenga al inicio */
+        margin-bottom: 0; 
+        max-width: 60px; 
+        flex-shrink: 0; /* Evita que se encoja la imagen */
+    }
+
+    .card-info {
+        /* 3. OPTIMIZAR INFO (nombre, precio) */
+        flex: 1; /* Permite que la información ocupe el espacio restante */
+        display: block; /* Vuelve a un flujo normal para que los textos fluyan en la línea */
+        white-space: nowrap; /* Evita que el texto se salte de línea */
+        overflow: hidden; /* Oculta el texto si es muy largo */
+        text-overflow: ellipsis; /* Añade puntos suspensivos si el texto se corta */
+    }
+    
+    .card-info b {
+        font-size: 0.9em; /* Reduce el tamaño del nombre */
+    }
+
+    .card-price, .card-stock {
+        font-size: 0.8em; /* Reduce el tamaño del texto de precios y stock */
+        display: inline; /* Hace que el precio y el stock puedan estar en la misma línea */
+        margin-right: 5px; /* Pequeño margen entre ellos */
+    }
+    
+    .card-actions {
+        /* 4. POSICIONAR BOTONES EN VERTICAL PEQUEÑO */
+        flex-direction: column; 
+        gap: 4px;
+        flex-shrink: 0; /* Evita que los botones se achiquen */
+    }
+    
+    .card-actions button {
+        padding: 4px 8px; /* Reduce el relleno de los botones */
+        font-size: 0.7em; /* Reduce el tamaño de la fuente de los botones */
+    }
 }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
