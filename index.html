@@ -323,8 +323,11 @@ function escapeHtml(text){ var div=document.createElement("div"); div.innerText=
 async function fetchPromotions() {
     console.log('👉 fetchPromotions ejecutado');
 
-    // Consulta con JOIN para obtener el nombre de la categoría
-    const { data, error } = await supabase.from('promociones').select('*, categorias(nombre)').order('id');
+    const { data, error } = await supabase
+        .from('promociones')
+        .select('*, categorias(nombre)')
+        .order('id');
+
     if (error) return console.error(error);
 
     const container = document.getElementById('promoList');
@@ -332,7 +335,7 @@ async function fetchPromotions() {
 
     // Agrupar promociones por categoría
     const groupedPromos = data.reduce((groups, promo) => {
-        const categoryName = promo.categorias?.nombre || promo.categoria || 'Sin Categoría';
+        const categoryName = promo.categorias?.nombre || 'Sin Categoría';
         if (!groups[categoryName]) groups[categoryName] = [];
         groups[categoryName].push(promo);
         return groups;
@@ -352,10 +355,10 @@ async function fetchPromotions() {
             // Obtener URL de imagen
             let imgUrl = '';
             if (promo.imagen) {
-                const { data: signedData, error: imgError } = await supabase.storage.from('promo_images').createSignedUrl(promo.imagen, 60 * 60);
+                const { data: signedData } = await supabase
+                    .storage.from('promo_images')
+                    .createSignedUrl(promo.imagen, 3600);
                 imgUrl = signedData?.signedUrl || '';
-            } else if (promo.imagen_url) {
-                imgUrl = promo.imagen_url;
             }
 
             const imgHTML = imgUrl
@@ -369,17 +372,7 @@ async function fetchPromotions() {
                               <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
             }
 
-            // JSON seguro para checkbox
-            const promoData = JSON.stringify({
-                id: promo.id,
-                nombre: promo.nombre,
-                precio: promo.precio,
-                precio_anterior: promo.precio_anterior,
-                stock: promo.stock,
-                imagen_url: imgUrl,
-                categoria: categoryName
-            }).replace(/'/g, "&apos;"); // Escapa comillas simples
-
+            // JSON seguro en dataset
             const div = document.createElement('div');
             div.className = 'item-card';
             div.style.display = 'flex';
@@ -387,58 +380,77 @@ async function fetchPromotions() {
             div.style.marginBottom = '8px';
 
             div.innerHTML = `
-                <input type="checkbox" class="promo-export-check" data-promo='${promoData}' checked style="margin-right: 12px; transform: scale(1.4);">
+                <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
+                    id: promo.id,
+                    nombre: promo.nombre,
+                    precio: promo.precio,
+                    precio_anterior: promo.precio_anterior,
+                    stock: promo.stock,
+                    imagen: promo.imagen,
+                    categoria: categoryName
+                }).replace(/'/g, "&apos;")}' checked style="margin-right: 12px; transform: scale(1.4);">
                 ${imgHTML}
                 <div style="flex:1">
                     <strong>${escapeHtml(promo.nombre || '')}</strong>
                     <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
                 </div>
                 <div>
-                    <button onclick='editPromo(${JSON.stringify(promo)})'>Editar</button>
+                    <button class="edit-btn" data-promo='${JSON.stringify(promo).replace(/'/g, "&apos;")}'>Editar</button>
                     <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
                 </div>
             `;
             container.appendChild(div);
+
+            // Vincular evento de edición
+            div.querySelector('.edit-btn').addEventListener('click', () => editPromo(promo));
         }
     }
 }
 
-async function addPromo(){
-  const nombre=document.getElementById("promoNombre").value.trim();
-  const precio=document.getElementById("promoPrecio").value;
-  const precio_anterior=document.getElementById("promoPrecioAnterior").value;
-  const stock=document.getElementById("promoStock").value;
-  const categoria=document.getElementById("promoCategoria").value;
-  const file=document.getElementById("promoImagen").files[0];
-  if(!nombre || !precio) return alert("Nombre y precio requeridos");
-  let fileName=null;
-  if(file){ fileName=`${Date.now()}_${file.name}`; await supabase.storage.from("promo_images").upload(fileName,file); }
-  const { error }=await supabase.from("promociones").insert([{nombre,precio,precio_anterior:precio_anterior||null,stock:stock||0,categoria_id:categoria,imagen_url:fileName}]);
-  if(error) return alert(error.message);
-  document.getElementById("promoForm").reset(); fetchPromotions();
+async function addPromo() {
+    const nombre = document.getElementById("promoNombre").value.trim();
+    const precio = document.getElementById("promoPrecio").value;
+    const precio_anterior = document.getElementById("promoPrecioAnterior").value;
+    const stock = document.getElementById("promoStock").value;
+    const categoria = document.getElementById("promoCategoria").value;
+    const file = document.getElementById("promoImagen").files[0];
+    if (!nombre || !precio) return alert("Nombre y precio requeridos");
+
+    let fileName = null;
+    if (file) {
+        fileName = `${Date.now()}_${file.name}`;
+        await supabase.storage.from("promo_images").upload(fileName, file);
+    }
+
+    const { error } = await supabase.from("promociones").insert([{
+        nombre,
+        precio,
+        precio_anterior: precio_anterior || null,
+        stock: stock || 0,
+        categoria_id: categoria,
+        imagen: fileName
+    }]);
+
+    if (error) return alert(error.message);
+    document.getElementById("promoForm").reset();
+    fetchPromotions();
 }
 
 async function editPromo(promo){
   let imagenFinalUrl = "";
-  // Si tienes promo.imagen_url ya como URL directa, úsala
-  if (promo.imagen_url) {
-    imagenFinalUrl = promo.imagen_url;
-  }
-  // Si tienes solo el nombre del archivo, genera la URL pública o firmada con Supabase
-  else if (promo.imagen) {
-    // Intenta obtener la URL firmada
-    try {
-      const { data: signedData, error: imgError } = await supabase.storage.from('promo_images').createSignedUrl(promo.imagen, 60 * 60);
-      if (!imgError && signedData) {
-        imagenFinalUrl = signedData.signedUrl;
-      }
-    } catch(e) { imagenFinalUrl = ""; }
+  if (promo.imagen) {
+    const { data: signedData } = await supabase
+      .storage.from('promo_images')
+      .createSignedUrl(promo.imagen, 3600);
+    imagenFinalUrl = signedData?.signedUrl || "";
   }
 
   openModal(
     `
     <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
-      ${imagenFinalUrl ? `<img src="${imagenFinalUrl}" alt="Imagen promoción" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #ccc;margin-bottom:10px;">` : '<div style="color:#aaa;margin-bottom:10px;">Sin imagen actual</div>'}
+      ${imagenFinalUrl 
+        ? `<img src="${imagenFinalUrl}" alt="Imagen promoción" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #ccc;margin-bottom:10px;">` 
+        : '<div style="color:#aaa;margin-bottom:10px;">Sin imagen actual</div>'}
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:2em;">✏️</span>
         <h2 style="margin:0;">${escapeHtml(promo.nombre)}</h2>
@@ -475,6 +487,7 @@ async function editPromo(promo){
     </div>
     `
   );
+
   // Llenar categorías
   supabase.from("categorias").select("id,nombre").then(({data})=>{
     const sel=document.getElementById("editCategoria");
@@ -486,29 +499,41 @@ async function editPromo(promo){
 }
 
 
-async function updatePromo(id){
-  const nombre=document.getElementById("editNombre").value.trim();
-  const precio=document.getElementById("editPrecio").value;
-  const precio_anterior=document.getElementById("editPrecioAnterior").value;
-  const stock=document.getElementById("editStock").value;
-  const categoria=document.getElementById("editCategoria").value;
-  const file=document.getElementById("editImagen").files[0];
-  let fileName=null;
-  if(file){ fileName=`${Date.now()}_${file.name}`; await supabase.storage.from("promo_images").upload(fileName,file); }
-  const updateObj={nombre,precio,precio_anterior:precio_anterior||null,stock:stock||0,categoria_id:categoria};
-  if(fileName) updateObj.imagen_url=fileName;
-  const {error}=await supabase.from("promociones").update(updateObj).eq("id",id);
-  if(error) return alert(error.message); closeModal(); fetchPromotions();
+async function updatePromo(id) {
+    const nombre=document.getElementById("editNombre").value.trim();
+    const precio=document.getElementById("editPrecio").value;
+    const precio_anterior=document.getElementById("editPrecioAnterior").value;
+    const stock=document.getElementById("editStock").value;
+    const categoria=document.getElementById("editCategoria").value;
+    const file=document.getElementById("editImagen").files[0];
+
+    let fileName=null;
+    if(file){ 
+        fileName=`${Date.now()}_${file.name}`; 
+        await supabase.storage.from("promo_images").upload(fileName,file); 
+    }
+
+    const updateObj={nombre,precio,precio_anterior:precio_anterior||null,stock:stock||0,categoria_id:categoria};
+    if(fileName) updateObj.imagen=fileName;
+
+    const {error}=await supabase.from("promociones").update(updateObj).eq("id",id);
+    if(error) return alert(error.message); 
+    closeModal(); 
+    fetchPromotions();
 }
 
-async function deletePromo(id){ if(!confirm("Eliminar promoción?")) return; await supabase.from("promociones").delete().eq("id",id); fetchPromotions(); }
+async function deletePromo(id){ 
+    if(!confirm("Eliminar promoción?")) return; 
+    await supabase.from("promociones").delete().eq("id",id); 
+    fetchPromotions(); 
+}
 
-// Función auxiliar para convertir imagen remota a Base64
+// Convertir imagen a Base64 desde URL firmada
 async function getBase64ImageFromUrl(imageUrl) {
     if(!imageUrl) return '';
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         const img = new Image();
-        img.crossOrigin = 'Anonymous'; // importante para Supabase
+        img.crossOrigin = 'Anonymous';
         img.src = imageUrl;
         img.onload = () => {
             const canvas = document.createElement('canvas');
@@ -518,7 +543,7 @@ async function getBase64ImageFromUrl(imageUrl) {
             ctx.drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = err => resolve(''); // si falla, devuelve vacío
+        img.onerror = () => resolve('');
     });
 }
 
@@ -554,12 +579,10 @@ async function exportPDF() {
             const catTitle = document.createElement("h2");
             catTitle.textContent = category;
             catTitle.style.borderBottom = "2px solid #333";
-            catTitle.style.paddingBottom = "6px";
             page.appendChild(catTitle);
 
             const slice = promos.slice(pageCount * 6, pageCount * 6 + 6);
 
-            // Convertir imágenes a Base64 para cada promoción
             for (const p of slice) {
                 const promoDiv = document.createElement("div");
                 promoDiv.style.display = "flex";
@@ -568,12 +591,13 @@ async function exportPDF() {
                 promoDiv.style.padding = "10px";
                 promoDiv.style.border = "1px solid #ddd";
                 promoDiv.style.borderRadius = "8px";
-                promoDiv.style.boxShadow = "0 3px 8px rgba(0,0,0,0.1)";
 
                 let imgSrc = '';
-                if (p.imagen_url) {
-                    // Convertir URL de Supabase a Base64
-                    imgSrc = await getBase64ImageFromUrl(p.imagen_url);
+                if (p.imagen) {
+                    const { data: signedData } = await supabase
+                        .storage.from('promo_images')
+                        .createSignedUrl(p.imagen, 3600);
+                    imgSrc = await getBase64ImageFromUrl(signedData?.signedUrl);
                 }
 
                 const img = document.createElement("img");
@@ -610,7 +634,6 @@ async function exportPDF() {
         jsPDF: { unit: "pt", format: "a4", orientation: "portrait" }
     }).save();
 }
-
 
 // ================= CATEGORÍAS =================
 async function fetchCategorias(){
