@@ -64,13 +64,6 @@ button[type=submit]:hover{background:#e8434f;}
     z-index: 9000; /* Asegurar que esté sobre el contenido */
 }
 
-<button id="menuBtn">☰</button>
-<div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div> 
-<div class="sidebar">
-    <h2>Admin</h2>
-    </div>
-
-
 /* --- NUEVO BOTÓN DE MENÚ (Oculto por defecto) --- */
 #menuBtn {
     display: none; /* Oculto en escritorio */
@@ -150,8 +143,14 @@ button[type=submit]:hover{background:#e8434f;}
 </head>
 <body>
 
+
   <div class="sidebar">
-  <h2>Admin</h2>
+  
+<button id="menuBtn">☰</button>
+<div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div> 
+<div class="sidebar">
+    <h2>MENU</h2>
+    </div>
   <button class="tab-btn active" data-tab="promos">Promociones</button>
   <button class="tab-btn" data-tab="pedidos">Pedidos</button>
   <button class="tab-btn" data-tab="categorias">Categorías</button>
