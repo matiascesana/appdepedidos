@@ -265,29 +265,24 @@ button[type=submit]:hover{background:#e8434f;}
 // --- SIDEBAR / TABS --- (MODIFICADO Y DEPURADO)
 console.log("Tabs JS cargado");
 
-// Espera al DOM listo para máxima compatibilidad en móviles
-document.addEventListener("DOMContentLoaded", function() {
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", function(e) {
-      console.log("Click tab:", btn.dataset.tab);
-      // Quita la clase 'active' de todos los botones
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      // Añade la clase 'active' al botón clickeado
-      btn.classList.add("active");
-      // Oculta todas las secciones
-      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-      // Muestra la sección correcta
-      const section = document.getElementById(btn.dataset.tab);
-      if (section) {
-        section.classList.add("active");
-        console.log("Se muestra sección:", btn.dataset.tab);
-      } else {
-        console.warn("No existe sección con id:", btn.dataset.tab);
-      }
-    });
-  });
-});
+/* ========== MANEJO DE PESTAÑAS Y CIERRE DE SIDEBAR EN MÓVIL ========== */
+document.querySelectorAll('.tab-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        const tab = button.getAttribute('data-tab');
+        
+        // 1. Lógica de cambio de pestaña (original)
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
 
+        // 2. Lógica de cierre de sidebar (NUEVO: Integrado)
+        // Cierra la sidebar si está abierta y estamos en móvil
+        if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
+            toggleSidebar(); // Esta función ya la definiste, solo la llamamos.
+        }
+    });
+});
 
 
 // --- CONFIGURACIÓN SUPABASE ---
