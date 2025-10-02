@@ -46,70 +46,105 @@ button[type=submit]:hover{background:#e8434f;}
 
 /* ========== RESPONSIVE MEDIA QUERIES ========== */
 @media (max-width: 900px) {
-  .sidebar { width:180px; }
-  .content { padding:12px; }
-  .card img { width:80px; height:80px; }
+  .sidebar { width:180px; }
+  .content { padding:12px; }
+  .card img { width:80px; height:80px; }
 }
 
 @media (max-width: 500px) {
   body {
-        /* Es mejor usar min-height en vez de height:auto para forzar la ocupación total */
-        min-height: 100vh; 
-        flex-direction: column;
-    }
+        min-height: 100vh; 
+        flex-direction: column;
+    }
 
-  .sidebar {
-    flex-direction: row;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100vw;
-    height: 54px;
-    padding-top: 0;
-    padding-bottom: 0;
-    z-index: 9000;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.13);
-  }
-  .sidebar h2 { display:none; }
-  .sidebar button {
-    font-size:14px;
-    padding: 8px 0;
-    flex: 1;
-    text-align: center;
-    border-radius:0;
-    margin:0;
-  }
-     .content { 
-        flex: 1; /* Esto es CLAVE: permite que el contenido ocupe todo el espacio disponible */
-        overflow-y: auto; /* Asegura que el scroll funciona dentro de .content */
-        padding: 8px; 
-        margin-bottom: 56px; /* Para dejar espacio a la barra inferior */
-    }
+  .sidebar {
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 48px; /* Valor consolidado, más limpio */
+    padding-top: 0;
+    padding-bottom: 0;
+    z-index: 9000;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.13);
+  }
+  .sidebar h2 { display:none; }
+  .sidebar button {
+    font-size:12px; /* Valor consolidado */
+    padding: 8px 0;
+    flex: 1;
+    text-align: center;
+    border-radius:0;
+    margin:0;
+  }
+  .content { 
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px; /* Valor consolidado */
+        margin-bottom: 56px; /* Deja espacio para la barra lateral fija */
+    }
 
-@media (max-width: 500px) {
-  .sidebar { height:48px; }
-  .sidebar button { font-size:12px; }
-  .content { padding:4px; }
-  h1, h2, h3 { font-size:1.1em; }
-  .card, .item-card {
-    flex-direction:column;
-    align-items: flex-start;
-    padding:8px;
-    gap:8px;
-  }
-  .card img, .item-card img {
-    width:90vw;
-    max-width:220px;
-    height:auto;
-    margin-bottom:8px;
-  }
-  input, select, button { font-size:13px; }
-  #modalInner { padding:8px; }
-}
+  h1, h2, h3 { font-size:1.1em; }
+  .card, .item-card {
+    flex-direction:column;
+    align-items: flex-start;
+    padding:8px;
+    gap:8px;
+  }
+  
+  /* Estilos optimizados para tarjetas y botones */
+  .card {
+        flex-direction: row; 
+        align-items: center; 
+        padding: 6px; 
+        gap: 8px; 
+        max-width: none; 
+    }
+
+    .card img {
+        width: 60px; 
+        height: 60px;
+        margin-bottom: 0; 
+        max-width: 60px; 
+        flex-shrink: 0;
+    }
+
+    .card-info {
+        flex: 1;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .card-info b {
+        font-size: 0.9em;
+    }
+
+    .card-price, .card-stock {
+        font-size: 0.8em;
+        display: inline;
+        margin-right: 5px;
+    }
+    
+    .card-actions {
+        flex-direction: column; 
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    
+    .card-actions button {
+        padding: 4px 8px;
+        font-size: 0.7em;
+    }
+    
+  #modalInner { padding:8px; }
+} /* 👈 CIERRE CORRECTO del @media (max-width: 500px) */
 
 /* Oculta el scrollbar lateral en móviles */
 @media (pointer:coarse) {
-  ::-webkit-scrollbar { display:none; }
+  ::-webkit-scrollbar { display:none; }
 }
 
 .card {
@@ -170,15 +205,37 @@ button[type=submit]:hover{background:#e8434f;}
 <body>
 
   <div class="sidebar">
-  <h2>Admin</h2>
-  <button class="tab-btn active" data-tab="promos">Promociones</button>
-  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-  <button class="tab-btn" data-tab="categorias">Categorías</button>
-  <button class="tab-btn" data-tab="localidades">Localidades</button>
-  <button class="tab-btn" data-tab="documentos">Documentos</button>
-</div>
+  <h2>Admin</h2>
+  <button class="tab-btn active" data-tab="promos">Promociones</button>
+  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
+  <button class="tab-btn" data-tab="categorias">Categorías</button>
+  <button class="tab-btn" data-tab="localidades">Localidades</button>
+  <button class="tab-btn" data-tab="documentos">Documentos</button>
+  <button class="tab-btn" data-tab="clientes">Clientes</button>
+</div> <div class="content">
 
-<div class="content">
+    <!-- CLIENTES -->
+    <div id="clientes" class="section">
+      <h1>Gestión de Clientes</h1>
+      <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
+  <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;">
+  <input type="text" id="clienteLocalidad" placeholder="Localidad" required style="flex: 1; min-width: 100px;">
+  <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;">
+  <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
+</form>
+ 
+<h3>Búsqueda de Clientes</h3>
+
+<input type="text" id="clienteSearch" placeholder="🔍 Buscar cliente por nombre..." 
+       oninput="fetchClientes()" 
+       style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px;">
+
+<h3>Lista de Clientes y Seguimiento</h3><div id="clienteList">
+  </div>
+     <div id="clienteList">
+      </div>
+  </div>
+
 
   <!-- PROMOCIONES -->
   <div id="promos" class="section active">
@@ -1174,6 +1231,226 @@ async function deleteOrder(id){
   showToast('Pedido eliminado y stock restaurado');
 }
 
+// ================= CLIENTES =================
+
+/**
+ * Inserta un nuevo cliente con la carga rápida.
+ * El DNI, Teléfono y Hora de Visita quedan vacíos.
+ * El estado se establece en 'Pendiente'.
+ */
+async function addClienteRapido() {
+    const nombre = document.getElementById("clienteNombre").value.trim();
+    const localidad = document.getElementById("clienteLocalidad").value.trim();
+
+    if (!nombre || !localidad) {
+        return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
+    }
+
+    // Insertar solo los campos obligatorios
+    const { error } = await supabase.from("clientes").insert([{
+        nombre_completo: nombre,
+        localidad: localidad,
+        estado_visita: 'Pendiente' // Estado por defecto
+    }]);
+
+    if (error) {
+        console.error("Error al guardar cliente:", error);
+        return alert("Error al guardar cliente: " + error.message);
+    }
+
+    document.getElementById("clienteForm").reset();
+    alert("Cliente cargado como Pendiente de Visita.");
+    fetchClientes(); // Recarga la lista
+}
+
+/**
+ * Obtiene, filtra, ordena y agrupa la lista de clientes.
+ */
+async function fetchClientes() {
+    // Obtener el valor del campo de búsqueda y normalizarlo a minúsculas
+    const searchTerm = document.getElementById('clienteSearch').value.toLowerCase();
+    
+    // Obtener todos los datos ordenados
+    const { data: allClientes, error } = await supabase
+        .from('clientes')
+        .select('*')
+        // Ordena primero por Localidad (alfabético)
+        .order('localidad', { ascending: true })
+        // Luego por Estado (Pendiente primero, Visitado después)
+        .order('estado_visita', { ascending: true }) 
+        // Finalmente por ID para que los nuevos salgan arriba dentro de cada grupo
+        .order('id', { ascending: false });
+
+    if (error) return console.error(error);
+
+    // 1. FILTRADO POR NOMBRE
+    let filteredClientes = allClientes;
+    if (searchTerm) {
+        filteredClientes = allClientes.filter(cliente => 
+            cliente.nombre_completo.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    const container = document.getElementById('clienteList');
+    container.innerHTML = '';
+    
+    if (filteredClientes.length === 0) {
+        container.innerHTML = `<span style="color:#888; display:block; padding: 20px;">
+          ${searchTerm ? `No se encontraron clientes con el nombre: "${escapeHtml(searchTerm)}".` : 'No hay clientes cargados.'}
+        </span>`;
+        return;
+    }
+
+    // 2. AGRUPAMIENTO POR LOCALIDAD Y ESTADO
+    const groupedClients = filteredClientes.reduce((acc, cliente) => {
+        const localidad = cliente.localidad.trim() || 'Sin Localidad';
+        const estado = cliente.estado_visita; // 'Pendiente' o 'Visitado'
+
+        if (!acc[localidad]) {
+            acc[localidad] = { Pendiente: [], Visitado: [] };
+        }
+        acc[localidad][estado].push(cliente);
+        return acc;
+    }, {});
+
+    // 3. RENDERIZADO AGRUPADO
+    
+    let lastLocalidad = null;
+    
+    // Recorrer las localidades ordenadas alfabéticamente
+    const orderedLocalidades = Object.keys(groupedClients).sort();
+
+    orderedLocalidades.forEach(localidad => {
+        const clientesByStatus = groupedClients[localidad];
+
+        // Título Separador por Localidad
+        const localidadTitle = document.createElement('h2');
+        localidadTitle.textContent = escapeHtml(localidad);
+        localidadTitle.style.cssText = `
+            margin: 25px 0 10px 0; 
+            padding: 8px 15px; 
+            background: #3498db; 
+            color: #fff; 
+            border-radius: 8px; 
+            font-size: 1.3em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        `;
+        container.appendChild(localidadTitle);
+        
+        // Función para renderizar el grupo (Pendiente o Visitado)
+        const renderStatusGroup = (status, list) => {
+            if (list.length === 0) return;
+
+            const statusSection = document.createElement('div');
+            statusSection.style.marginBottom = '20px';
+            
+            // Subtítulo por Estado (Pendiente o Visitado)
+            const isVisitado = status === 'Visitado';
+            const statusColor = isVisitado ? '#27ae60' : '#e74c3c';
+            const statusText = isVisitado ? '✅ VISITADOS' : '⏳ PENDIENTES';
+            
+            const statusSubtitle = document.createElement('h3');
+            statusSubtitle.textContent = `${statusText} (${list.length})`;
+            statusSubtitle.style.cssText = `
+                border-bottom: 2px solid ${statusColor}; 
+                padding-bottom: 5px; 
+                color: ${statusColor}; 
+                margin-bottom: 15px;
+            `;
+            statusSection.appendChild(statusSubtitle);
+            
+            list.forEach(cliente => {
+                const bgColor = isVisitado ? '#e6f7e6' : '#fff0f0';
+                
+                // Mostrar la hora de visita, que ahora puede ser una fecha (ISO) o texto (simple)
+                const horaVisitaText = cliente.hora_visita 
+                    ? (isNaN(new Date(cliente.hora_visita))
+                        ? `Hora: ${escapeHtml(cliente.hora_visita)}`
+                        : new Date(cliente.hora_visita).toLocaleString())
+                    : 'No Agendada';
+
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.style.background = bgColor;
+                div.style.borderLeft = `5px solid ${statusColor}`;
+
+                div.innerHTML = `
+                    <div class="card-info" style="flex:1; gap:4px;">
+                        <b>${escapeHtml(cliente.nombre_completo)}</b>
+                        <div style="font-size: 0.9em; color: #555;">
+                            DNI: ${cliente.dni || 'N/A'} · Teléfono: ${cliente.telefono || 'N/A'}<br>
+                            Visita: ${horaVisitaText}
+                        </div>
+                    </div>
+                    <div class="card-actions" style="min-width: 170px;">
+                        <button class="edit-btn" onclick="openEditClienteModal(${cliente.id})">✏️ Editar Datos</button>
+                        <button class="${isVisitado ? 'edit-btn' : 'delete-btn'}" 
+                                style="background:${statusColor};"
+                                onclick="toggleEstadoCliente(${cliente.id}, '${isVisitado ? 'Pendiente' : 'Visitado'}')">
+                            ${isVisitado ? 'Marcar como Pendiente' : 'Marcar como Visitado'}
+                        </button>
+                        <button class="delete-btn" onclick="deleteCliente(${cliente.id})" style="background:#95a5a6;">🗑️ Eliminar</button>
+                    </div>
+                `;
+                statusSection.appendChild(div);
+            });
+            container.appendChild(statusSection);
+        };
+        
+        // 4. Renderizar por Estado (Pendientes primero)
+        renderStatusGroup('Pendiente', clientesByStatus.Pendiente);
+        renderStatusGroup('Visitado', clientesByStatus.Visitado);
+    });
+}
+
+async function updateCliente(id) {
+    const nombre = document.getElementById("editClienteNombre").value.trim();
+    const localidad = document.getElementById("editClienteLocalidad").value.trim();
+    const dni = document.getElementById("editClienteDNI").value.trim() || null;
+    const telefono = document.getElementById("editClienteTelefono").value.trim() || null;
+    const visita = document.getElementById("editClienteVisita").value;
+    const estado = document.getElementById("editClienteEstado").value;
+    
+    // Convertir a formato ISO si existe para Supabase
+    const hora_visita = visita ? new Date(visita).toISOString() : null;
+
+    const updateObj = {
+        nombre_completo: nombre,
+        localidad: localidad,
+        dni: dni,
+        telefono: telefono,
+        hora_visita: hora_visita,
+        estado_visita: estado
+    };
+
+    const { error } = await supabase.from("clientes").update(updateObj).eq("id", id);
+    
+    if (error) {
+        console.error("Error al actualizar:", error);
+        return alert("Error al actualizar cliente: " + error.message);
+    }
+    
+    closeModal();
+    fetchClientes();
+    showToast('Cliente actualizado');
+}
+
+/**
+ * Elimina un cliente.
+ */
+async function deleteCliente(id){
+    if(!confirm("¿Desea eliminar este cliente permanentemente?")) return;
+    
+    const { error } = await supabase.from("clientes").delete().eq("id", id);
+    
+    if(error) {
+        console.error(error);
+        return alert("Error al eliminar cliente.");
+    }
+    fetchClientes();
+    showToast('Cliente eliminado');
+}
+
 // ================= DOCUMENTOS =================
 // Subir documento al bucket y guardar referencia
 async function addDocumento() {
@@ -1237,7 +1514,7 @@ async function deleteDocumento(id, archivo) {
 document.querySelector("button[data-tab='documentos']").addEventListener("click", fetchDocumentos);
 
 // --- INICIALIZACIÓN ---
-fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos();
+fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos(); fetchClientes();
 </script>
 
 </body>
