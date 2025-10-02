@@ -45,157 +45,90 @@ button[type=submit]{background:var(--accent); color:#fff; border:none; cursor:po
 button[type=submit]:hover{background:#e8434f;}
 
 /* ========== RESPONSIVE MEDIA QUERIES ========== */
-@media (max-width: 900px) {
-  .sidebar { width:180px; }
-  .content { padding:12px; }
-  .card img { width:80px; height:80px; }
+/* --- ESTILOS BASE DE LA BARRA LATERAL (Escritorio) --- */
+.sidebar { 
+    width: 220px; 
+    background: var(--sidebar-bg); 
+    color: #fff; 
+    display: flex; 
+    flex-direction: column; 
+    padding-top: 20px; 
+    flex-shrink: 0; 
+    transition: transform 0.3s ease; /* 👈 Añadir transición para el deslizamiento */
+    z-index: 9000; /* Asegurar que esté sobre el contenido */
 }
 
+/* --- NUEVO BOTÓN DE MENÚ (Oculto por defecto) --- */
+#menuBtn {
+    display: none; /* Oculto en escritorio */
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 9500; /* Sobre la sidebar */
+}
+
+/* --- RESPONSIVE MEDIA QUERY (Móvil) --- */
 @media (max-width: 500px) {
-  body {
-        min-height: 100vh; 
-        flex-direction: column;
-    }
-
-  .sidebar {
-    flex-direction: row;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100vw;
-    height: 48px; /* Valor consolidado, más limpio */
-    padding-top: 0;
-    padding-bottom: 0;
-    z-index: 9000;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.13);
-  }
-  .sidebar h2 { display:none; }
-  .sidebar button {
-    font-size:12px; /* Valor consolidado */
-    padding: 8px 0;
-    flex: 1;
-    text-align: center;
-    border-radius:0;
-    margin:0;
-  }
-  .content { 
-        flex: 1;
-        overflow-y: auto;
-        padding: 4px; /* Valor consolidado */
-        margin-bottom: 56px; /* Deja espacio para la barra lateral fija */
-    }
-
-  h1, h2, h3 { font-size:1.1em; }
-  .card, .item-card {
-    flex-direction:column;
-    align-items: flex-start;
-    padding:8px;
-    gap:8px;
-  }
-  
-  /* Estilos optimizados para tarjetas y botones */
-  .card {
-        flex-direction: row; 
-        align-items: center; 
-        padding: 6px; 
-        gap: 8px; 
-        max-width: none; 
-    }
-
-    .card img {
-        width: 60px; 
-        height: 60px;
-        margin-bottom: 0; 
-        max-width: 60px; 
-        flex-shrink: 0;
-    }
-
-    .card-info {
-        flex: 1;
-        display: block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .card-info b {
-        font-size: 0.9em;
-    }
-
-    .card-price, .card-stock {
-        font-size: 0.8em;
-        display: inline;
-        margin-right: 5px;
-    }
-    
-    .card-actions {
-        flex-direction: column; 
-        gap: 4px;
-        flex-shrink: 0;
-    }
-    
-    .card-actions button {
-        padding: 4px 8px;
-        font-size: 0.7em;
-    }
-    
-  #modalInner { padding:8px; }
-} /* 👈 CIERRE CORRECTO del @media (max-width: 500px) */
-
-/* Oculta el scrollbar lateral en móviles */
-@media (pointer:coarse) {
-  ::-webkit-scrollbar { display:none; }
-}
-
-.card {
-        /* 1. ANULAR CAMBIO A COLUMNA Y REDUCIR PADDING */
-        flex-direction: row; /* Vuelve a poner los elementos en fila */
-        align-items: center; /* Centra verticalmente */
-        padding: 6px; /* Reduce el relleno de la tarjeta */
-        gap: 8px; /* Reduce el espacio entre elementos */
-        max-width: none; /* Asegura que ocupe todo el ancho disponible */
+    /* El botón de menú solo aparece en móvil */
+    #menuBtn { 
+        display: block; 
     }
 
-    .card img {
-        /* 2. REDUCIR TAMAÑO DE IMAGEN */
-        width: 60px; /* Tamaño de imagen más pequeño */
-        height: 60px;
-        /* Aseguramos que la imagen se mantenga al inicio */
-        margin-bottom: 0; 
-        max-width: 60px; 
-        flex-shrink: 0; /* Evita que se encoja la imagen */
-    }
-
-    .card-info {
-        /* 3. OPTIMIZAR INFO (nombre, precio) */
-        flex: 1; /* Permite que la información ocupe el espacio restante */
-        display: block; /* Vuelve a un flujo normal para que los textos fluyan en la línea */
-        white-space: nowrap; /* Evita que el texto se salte de línea */
-        overflow: hidden; /* Oculta el texto si es muy largo */
-        text-overflow: ellipsis; /* Añade puntos suspensivos si el texto se corta */
+    /* La sidebar se oculta */
+    .sidebar {
+        /* Deslizamos fuera de la vista */
+        transform: translateX(-100%); 
+        position: fixed; /* Fija en la pantalla */
+        top: 0; 
+        left: 0; 
+        height: 100vh; /* Ocupa toda la altura */
+        width: 70%; /* Ocupa 70% del ancho de la pantalla */
+        padding-top: 50px; /* Espacio para que el contenido no quede pegado al top */
+        flex-direction: column; /* Vuelve a ser vertical */
+        box-shadow: 2px 0 10px rgba(0,0,0,0.5);
     }
     
-    .card-info b {
-        font-size: 0.9em; /* Reduce el tamaño del nombre */
+    /* Estado "abierto" de la sidebar */
+    .sidebar.open {
+        transform: translateX(0); /* Deslizar a la vista */
     }
 
-    .card-price, .card-stock {
-        font-size: 0.8em; /* Reduce el tamaño del texto de precios y stock */
-        display: inline; /* Hace que el precio y el stock puedan estar en la misma línea */
-        margin-right: 5px; /* Pequeño margen entre ellos */
+    /* El contenido ocupa todo el espacio */
+    .content {
+        flex: 1;
+        padding: 8px; 
+        margin-top: 50px; /* Para no quedar debajo del botón de menú */
     }
     
-    .card-actions {
-        /* 4. POSICIONAR BOTONES EN VERTICAL PEQUEÑO */
-        flex-direction: column; 
-        gap: 4px;
-        flex-shrink: 0; /* Evita que los botones se achiquen */
+    .sidebar h2 { display: block; text-align: center; }
+    .sidebar button {
+        text-align: left;
+        font-size: 16px; 
+        padding: 12px 20px;
+        /* Quitamos el flex: 1 de la versión anterior para que no se repartan */
     }
     
-    .card-actions button {
-        padding: 4px 8px; /* Reduce el relleno de los botones */
-        font-size: 0.7em; /* Reduce el tamaño de la fuente de los botones */
+    /* ... (mantener el resto de los estilos de tarjetas y modales para 500px) ... */
+    
+    /* El fondo oscuro para simular el "canvas" oculto */
+    .backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 8000;
     }
+    .backdrop.show { display: block; }
 }
 
 </style>
