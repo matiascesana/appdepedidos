@@ -51,18 +51,6 @@ button[type=submit]{background:var(--accent); color:#fff; border:none; cursor:po
 button[type=submit]:hover{background:#e8434f;}
 
 /* ========== RESPONSIVE MEDIA QUERIES ========== */
-/* --- ESTILOS BASE DE LA BARRA LATERAL (Escritorio) --- */
-.sidebar { 
-    width: 220px; 
-    background: var(--sidebar-bg); 
-    color: #fff; 
-    display: flex; 
-    flex-direction: column; 
-    padding-top: 20px; 
-    flex-shrink: 0; 
-    transition: transform 0.3s ease; /* 👈 Añadir transición para el deslizamiento */
-    z-index: 9000; /* Asegurar que esté sobre el contenido */
-}
 
 /* --- NUEVO BOTÓN DE MENÚ (Oculto por defecto) --- */
 #menuBtn {
@@ -79,6 +67,21 @@ button[type=submit]:hover{background:#e8434f;}
     cursor: pointer;
     z-index: 9500; /* Sobre la sidebar */
 }
+
+
+/* --- ESTILOS BASE DE LA BARRA LATERAL (Escritorio) --- */
+.sidebar { 
+    width: 220px; 
+    background: var(--sidebar-bg); 
+    color: #fff; 
+    display: flex; 
+    flex-direction: column; 
+    padding-top: 20px; 
+    flex-shrink: 0; 
+    transition: transform 0.3s ease; /* 👈 Añadir transición para el deslizamiento */
+    z-index: 9000; /* Asegurar que esté sobre el contenido */
+}
+
 
 /* --- RESPONSIVE MEDIA QUERY (Móvil) --- */
 @media (max-width: 500px) {
