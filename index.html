@@ -91,6 +91,56 @@ button[type=submit]:hover{background:#e8434f;}
   }
 }
 
+/* 🚩 SOLUCIÓN PARA LOS BOTONES DENTRO DE LAS TARJETAS (Editar/Eliminar) */
+  .card {
+    /* Permitir que la tarjeta se apile verticalmente si es necesario */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px; /* Separación entre la imagen/info y los botones */
+  }
+
+  /* Aseguramos que la información ocupe todo el ancho */
+  .card-info {
+    width: 100%;
+    /* Eliminar el flex:1 para que no se contraiga en móvil */
+    flex: initial; 
+  }
+
+  .card-actions {
+    /* Forzar apilamiento vertical */
+    flex-direction: column;
+    width: 100%; /* Ocupar todo el ancho de la tarjeta */
+    gap: 8px; /* Separación entre los botones apilados */
+  }
+
+  .card-actions button {
+    width: 100%; /* Los botones ocupan todo el ancho disponible */
+    padding: 10px 12px; /* Aumentar el padding para hacerlos más fáciles de tocar */
+    font-size: 16px;
+    box-sizing: border-box; /* Incluir padding en el width */
+  }
+}
+
+/* Solución específica para las listas de Categorías/Localidades */
+#categoriaList > div, #localidadList > div {
+    flex-direction: column; /* Apilar nombre y botones */
+    align-items: flex-start !important; /* Alinear el texto a la izquierda */
+}
+
+#categoriaList > div > div, #localidadList > div > div {
+    /* Este es el contenedor de los dos botones (Editar y Eliminar) */
+    display: flex; 
+    flex-direction: column; /* Forzar apilamiento vertical de los botones */
+    width: 100%; /* Ocupar todo el ancho para los botones */
+    gap: 8px; /* Separación entre botones */
+    margin-top: 10px;
+}
+
+#categoriaList button, #localidadList button {
+    width: 100%; /* Botones de categoría/localidad ocupan todo el ancho */
+    padding: 10px 18px !important;
+    box-sizing: border-box;
+}
 
 /* --- ESTILOS BASE DE LA BARRA LATERAL (Escritorio) --- */
 .sidebar { 
