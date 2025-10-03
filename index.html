@@ -1378,6 +1378,207 @@ async function fetchClientes() {
 }
 
 
+/* -------------------------
+   Función: toggleEstadoCliente
+   Actualiza el estado (Pendiente / Visitado) y refresca la lista
+   ------------------------- */
+async function toggleEstadoCliente(id, nuevoEstado){
+  try {
+    if (!id) return console.warn('toggleEstadoCliente: id inválido', id);
+    // Confirmación sencilla (opcional)
+    if (!confirm(`¿Marcar este cliente como "${nuevoEstado}"?`)) return;
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({ estado_visita: nuevoEstado })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error actualizando estado:', error);
+      return alert('Error al actualizar estado: ' + error.message);
+    }
+
+    // Refrescar la lista y notificar
+    await fetchClientes();
+    showToast(`Cliente marcado como ${nuevoEstado}`);
+  } catch (err) {
+    console.error('toggleEstadoCliente error', err);
+    alert('Ocurrió un error inesperado al actualizar el estado.');
+  }
+}
+
+/* -------------------------
+   Función: showToast (si no la tenías)
+   Pequeña notificación visual
+   ------------------------- */
+function showToast(text, tiempo = 2200) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.style.cssText =
+      'position:fixed;right:16px;bottom:20px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:15000;opacity:0;transition:opacity .25s;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.style.opacity = '1';
+  clearTimeout(toast._to);
+  toast._to = setTimeout(() => { toast.style.opacity = '0'; }, tiempo);
+}
+
+/* -------------------------
+   Reemplazo recomendado de openEditClienteModal(id)
+   (Usa ID para evitar colisiones con versiones que reciben el objeto)
+   ------------------------- */
+async function openEditClienteModal(id) {
+  const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
+  if (error || !data) {
+    console.error('Cliente no encontrado', error);
+    return alert('Cliente no encontrado');
+  }
+  const cliente = data;
+
+  // Formateo seguro para input datetime-local (si tiene fecha válida)
+  let fechaVisitaVal = '';
+  if (cliente.hora_visita) {
+    const d = new Date(cliente.hora_visita);
+    if (!isNaN(d)) {
+      fechaVisitaVal = d.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
+    } else {
+      // si no es una fecha válida, lo tratamos como texto (dejar vacío para evitar errores)
+      fechaVisitaVal = '';
+    }
+  }
+
+  openModal(
+    `Editar Cliente: ${escapeHtml(cliente.nombre_completo || '')}`,
+    `
+      <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
+        <label>Nombre completo</label>
+        <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo||'')}" required>
+        <label>Localidad</label>
+        <input type="text" id="editClienteLocalidad" value="${escapeHtml(cliente.localidad||'')}" required>
+        <label>DNI</label>
+        <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni||'')}">
+        <label>Teléfono</label>
+        <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono||'')}">
+        <label>Hora de visita (fecha y hora)</label>
+        <input type="datetime-local" id="editClienteVisita" value="${fechaVisitaVal}">
+        <label>Estado de visita</label>
+        <select id="editClienteEstado">
+          <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+          <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button type="button" onclick="updateCliente(${cliente.id})" style="background:#3498db;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">💾 Guardar</button>
+          <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cancelar</button>
+        </div>
+      </form>
+    `
+  );
+}
+/* -------------------------
+   Función: toggleEstadoCliente
+   Actualiza el estado (Pendiente / Visitado) y refresca la lista
+   ------------------------- */
+async function toggleEstadoCliente(id, nuevoEstado){
+  try {
+    if (!id) return console.warn('toggleEstadoCliente: id inválido', id);
+    // Confirmación sencilla (opcional)
+    if (!confirm(`¿Marcar este cliente como "${nuevoEstado}"?`)) return;
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({ estado_visita: nuevoEstado })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error actualizando estado:', error);
+      return alert('Error al actualizar estado: ' + error.message);
+    }
+
+    // Refrescar la lista y notificar
+    await fetchClientes();
+    showToast(`Cliente marcado como ${nuevoEstado}`);
+  } catch (err) {
+    console.error('toggleEstadoCliente error', err);
+    alert('Ocurrió un error inesperado al actualizar el estado.');
+  }
+}
+
+/* -------------------------
+   Función: showToast (si no la tenías)
+   Pequeña notificación visual
+   ------------------------- */
+function showToast(text, tiempo = 2200) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.style.cssText =
+      'position:fixed;right:16px;bottom:20px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:15000;opacity:0;transition:opacity .25s;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.style.opacity = '1';
+  clearTimeout(toast._to);
+  toast._to = setTimeout(() => { toast.style.opacity = '0'; }, tiempo);
+}
+
+/* -------------------------
+   Reemplazo recomendado de openEditClienteModal(id)
+   (Usa ID para evitar colisiones con versiones que reciben el objeto)
+   ------------------------- */
+async function openEditClienteModal(id) {
+  const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
+  if (error || !data) {
+    console.error('Cliente no encontrado', error);
+    return alert('Cliente no encontrado');
+  }
+  const cliente = data;
+
+  // Formateo seguro para input datetime-local (si tiene fecha válida)
+  let fechaVisitaVal = '';
+  if (cliente.hora_visita) {
+    const d = new Date(cliente.hora_visita);
+    if (!isNaN(d)) {
+      fechaVisitaVal = d.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
+    } else {
+      // si no es una fecha válida, lo tratamos como texto (dejar vacío para evitar errores)
+      fechaVisitaVal = '';
+    }
+  }
+
+  openModal(
+    `Editar Cliente: ${escapeHtml(cliente.nombre_completo || '')}`,
+    `
+      <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
+        <label>Nombre completo</label>
+        <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo||'')}" required>
+        <label>Localidad</label>
+        <input type="text" id="editClienteLocalidad" value="${escapeHtml(cliente.localidad||'')}" required>
+        <label>DNI</label>
+        <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni||'')}">
+        <label>Teléfono</label>
+        <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono||'')}">
+        <label>Hora de visita (fecha y hora)</label>
+        <input type="datetime-local" id="editClienteVisita" value="${fechaVisitaVal}">
+        <label>Estado de visita</label>
+        <select id="editClienteEstado">
+          <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+          <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button type="button" onclick="updateCliente(${cliente.id})" style="background:#3498db;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">💾 Guardar</button>
+          <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cancelar</button>
+        </div>
+      </form>
+    `
+  );
+}
+
+
+
 /**
  * Abre el modal para editar todos los campos del cliente.
  */
