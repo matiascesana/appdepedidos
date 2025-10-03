@@ -13,6 +13,8 @@
   --card-bg: #fff;
   --text-muted: #555;
 }
+
+
 body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; background:#f0f2f5; }
 .sidebar { width:220px; background:var(--sidebar-bg); color:#fff; display:flex; flex-direction:column; padding-top:20px; flex-shrink:0; }
 .sidebar h2 { text-align:center; margin-bottom:20px; font-size:22px; }
@@ -23,9 +25,6 @@ body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; backg
 .section.active { display:block; }
 h1 { margin-top:0; margin-bottom:15px; }
 
-</script>
-</head>
-<body>
 
 /* Tarjetas y listas */
 .card { display:flex; align-items:center; gap:15px; background:var(--card-bg); padding:15px; border-radius:10px; margin-bottom:12px; border:1px solid #ddd; transition:0.3s; }
@@ -49,6 +48,13 @@ h1 { margin-top:0; margin-bottom:15px; }
 input, select, button { margin-bottom:8px; padding:6px; font-size:14px; border-radius:4px; border:1px solid #ccc; }
 button[type=submit]{background:var(--accent); color:#fff; border:none; cursor:pointer;}
 button[type=submit]:hover{background:#e8434f;}
+
+
+</head>
+<body>
+</script>
+
+
 
 /* ========== RESPONSIVE MEDIA QUERIES ========== */
 
@@ -156,9 +162,8 @@ button[type=submit]:hover{background:#e8434f;}
   
 <button id="menuBtn">☰</button>
 <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div> 
-<div class="sidebar">
     <h2>MENU</h2>
-    </div>
+  
   <button class="tab-btn active" data-tab="promos">Promociones</button>
   <button class="tab-btn" data-tab="pedidos">Pedidos</button>
   <button class="tab-btn" data-tab="categorias">Categorías</button>
@@ -185,8 +190,7 @@ button[type=submit]:hover{background:#e8434f;}
 
 <h3>Lista de Clientes y Seguimiento</h3><div id="clienteList">
   </div>
-     <div id="clienteList">
-      </div>
+    
   </div>
 
 
@@ -1426,29 +1430,33 @@ async function updateCliente(id) {
     const telefono = document.getElementById("editClienteTelefono").value.trim() || null;
     const visita = document.getElementById("editClienteVisita").value;
     const estado = document.getElementById("editClienteEstado").value;
-    
+
     // Convertir a formato ISO si existe para Supabase
     const hora_visita = visita ? new Date(visita).toISOString() : null;
 
-    const updateObj = {
-        nombre_completo: nombre,
-        localidad: localidad,
-        dni: dni,
-        telefono: telefono,
-        hora_visita: hora_visita,
-        estado_visita: estado
-    };
+    if (!nombre || !localidad) {
+        return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
+    }
 
-    const { error } = await supabase.from("clientes").update(updateObj).eq("id", id);
-    
+    const { error } = await supabase.from("clientes")
+        .update({
+            nombre_completo: nombre,
+            localidad,
+            dni,
+            telefono,
+            hora_visita,
+            estado_visita: estado
+        })
+        .eq("id", id);
+
     if (error) {
-        console.error("Error al actualizar:", error);
+        console.error("Error al actualizar cliente:", error);
         return alert("Error al actualizar cliente: " + error.message);
     }
-    
+
     closeModal();
     fetchClientes();
-    showToast('Cliente actualizado');
+    showToast("Cliente actualizado con éxito ✅");
 }
 
 /**
