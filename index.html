@@ -58,26 +58,36 @@ button[type=submit]:hover{background:#e8434f;}
 
 /* ========== RESPONSIVE MEDIA QUERIES ========== */
 
-/* --- NUEVO BOTÓN DE MENÚ (Oculto por defecto) --- */
+/* Botón hamburguesa oculto en escritorio */
 #menuBtn {
-  position: fixed;
-  top: 12px;
+  position: absolute;
   left: 12px;
-  background: #3498db;
-  color: #e74c3c;
+  top: 12px;
+  background: #3498db;   /* color azul */
+  color: white;
   font-size: 22px;
   border: none;
   border-radius: 6px;
   padding: 8px 12px;
   cursor: pointer;
-  z-index: 2000; /* aseguro que quede arriba de la sidebar */
-  display: none; /* oculto por defecto en escritorio */
+  z-index: 2000; /* por encima del título y sidebar */
+  display: none; /* solo se muestra en móvil */
 }
 
-/* Mostrar solo en pantallas pequeñas (móvil/tablet) */
-@media (max-width: 1024px) {
+/* En móvil se hace visible */
+@media (max-width: 768px) {
   #menuBtn {
     display: block;
+  }
+
+  .header {
+    position: relative; /* para que el botón se ubique encima del título */
+  }
+
+  .header h1 {
+    text-align: center; /* centramos el texto aunque el botón esté a la izquierda */
+    margin: 0;
+    padding: 12px 0;
   }
 }
 
@@ -211,6 +221,9 @@ button[type=submit]:hover{background:#e8434f;}
 
   <!-- PROMOCIONES -->
   <div id="promos" class="section active">
+<div class="header">
+  <button id="menuBtn" onclick="toggleSidebar()">☰</button>
+  </div>
     <h1>Gestión de Promociones</h1>
     <form id="promoForm" onsubmit="event.preventDefault(); addPromo();">
       <input type="text" id="promoNombre" placeholder="Nombre" required>
