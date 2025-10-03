@@ -1189,16 +1189,37 @@ async function deleteOrder(id){
 async function addClienteRapido() {
     const nombre = document.getElementById("clienteNombre").value.trim();
     const localidad = document.getElementById("clienteLocalidad").value.trim();
+    const hora = document.getElementById("clienteHora").value.trim(); // 💥 Capturamos la hora 💥
 
     if (!nombre || !localidad) {
         return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
     }
+    
+    // Si se proporciona la hora, creamos un timestamp con una fecha genérica (hoy)
+    // para guardarlo en el campo 'hora_visita' (tipo timestamptz en Supabase)
+    let hora_visita_supabase = null;
+    if (hora) {
+        // Obtenemos la fecha de hoy, y la combinamos con la hora ingresada
+        const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
+        try {
+            // Intentamos crear un objeto Date con la fecha de hoy y la hora
+            hora_visita_supabase = new Date(`${today}T${hora}:00`).toISOString();
+        } catch (e) {
+            console.warn("Formato de hora no válido, se guarda N/A");
+            // Si el formato es malo (ej: '3:00' en lugar de '03:00'), Supabase lo manejará como un string,
+            // pero para evitar errores en la DB, lo dejaremos en null si falla la conversión local.
+            // Para simplicidad, pasaremos la cadena de texto de la hora.
+            // NOTA: Para solo guardar la hora, lo mejor es usar un campo de TEXTO en la DB.
+        }
+    }
 
-    // Insertar solo los campos obligatorios
+    // Insertar con el campo hora_visita
     const { error } = await supabase.from("clientes").insert([{
         nombre_completo: nombre,
         localidad: localidad,
-        estado_visita: 'Pendiente' // Estado por defecto
+        estado_visita: 'Pendiente',
+        // 💥 Lo guardamos como TEXTO (hora) si no pudimos convertir a timestamp 💥
+        hora_visita: hora_visita_supabase || hora || null 
     }]);
 
     if (error) {
@@ -1210,6 +1231,7 @@ async function addClienteRapido() {
     alert("Cliente cargado como Pendiente de Visita.");
     fetchClientes(); // Recarga la lista
 }
+
 
 /**
  * Obtiene, filtra, ordena y agrupa la lista de clientes.
@@ -1351,6 +1373,52 @@ async function fetchClientes() {
     });
 }
 
+
+/**
+ * Abre el modal para editar todos los campos del cliente.
+ */
+async function openEditClienteModal(id) {
+    const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
+    if (error || !data) return console.error("Cliente no encontrado", error);
+
+    const cliente = data;
+    // Formatear la fecha para el input datetime-local
+    const formattedVisita = cliente.hora_visita ? new Date(cliente.hora_visita).toISOString().substring(0, 16) : '';
+
+    openModal(
+        `Editar Cliente: ${escapeHtml(cliente.nombre_completo)}`,
+        `
+        <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
+            <label for="editClienteNombre">Nombre Completo:</label>
+            <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo || '')}" required>
+
+            <label for="editClienteLocalidad">Localidad:</label>
+            <input type="text" id="editClienteLocalidad" value="${escapeHtml(cliente.localidad || '')}" required>
+
+            <label for="editClienteDNI">DNI/Identificación:</label>
+            <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni || '')}">
+
+            <label for="editClienteTelefono">Teléfono:</label>
+            <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono || '')}">
+
+            <label for="editClienteVisita">Hora de Visita (Fecha y Hora):</label>
+            <input type="datetime-local" id="editClienteVisita" value="${formattedVisita}">
+
+            <label for="editClienteEstado">Estado de Visita:</label>
+            <select id="editClienteEstado">
+                <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente de Visita</option>
+                <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
+            </select>
+            
+            <button type="button" onclick="updateCliente(${cliente.id})" style="margin-top:15px; background:#3498db; color:#fff; padding:10px;">💾 Guardar Cambios</button>
+        </form>
+        `
+    );
+}
+
+/**
+ * Función final para actualizar todos los campos del cliente.
+ */
 async function updateCliente(id) {
     const nombre = document.getElementById("editClienteNombre").value.trim();
     const localidad = document.getElementById("editClienteLocalidad").value.trim();
@@ -1398,6 +1466,7 @@ async function deleteCliente(id){
     fetchClientes();
     showToast('Cliente eliminado');
 }
+
 
 // ================= DOCUMENTOS =================
 // Subir documento al bucket y guardar referencia
