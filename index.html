@@ -366,42 +366,6 @@
     }
   }
 </style>
-
-<script>
-    // 1. Obtener referencias a los elementos
-    const sidebar = document.querySelector('.sidebar');
-    const backdrop = document.getElementById('backdrop');
-    const menuBtn = document.getElementById('menuBtn'); // Aunque no lo usaremos directamente, es bueno tenerlo
-
-    // 2. Función que alterna la clase 'open'
-    function toggleSidebar() {
-        // Alterna la clase 'open' en el sidebar
-        sidebar.classList.toggle('open');
-        
-        // Alterna la clase 'show' en el backdrop
-        backdrop.classList.toggle('show');
-    }
-
-    // Opcional: Cerrar el menú al hacer clic en un botón de navegación
-    const sidebarButtons = document.querySelectorAll('.sidebar button');
-    
-    sidebarButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Solo si el sidebar está abierto (es decir, en móvil)
-            if (sidebar.classList.contains('open')) {
-                toggleSidebar();
-            }
-        });
-    });
-    
-    // Si tienes una función showSection(), agrégala aquí también
-    function showSection(sectionId) {
-        // Lógica para cambiar la sección activa...
-        console.log("Mostrando sección:", sectionId);
-    }
-</script>
-
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -413,7 +377,7 @@
   <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
 
   <!-- Sidebar -->
-  <div class="sidebar" id="sidebar">
+  <div class="sidebar">
     <h2>MENU</h2>
     <button class="tab-btn active" data-tab="promos">Promociones</button>
     <button class="tab-btn" data-tab="pedidos">Pedidos</button>
@@ -495,21 +459,30 @@
       <div id="docList" style="margin-top:18px;"></div>
     </div>
 
-    <!-- CLIENTES -->
-    <div id="clientes" class="section">
-      <h1>Gestión de Clientes</h1>
-      <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
-        <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;" />
-        <input type="text" id="clienteLocalidad" placeholder="Localidad" required style="flex: 1; min-width: 100px;" />
-        <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
-        <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
-      </form>
-      <h3>Búsqueda de Clientes</h3>
-      <input type="text" id="clienteSearch" placeholder="🔍 Buscar cliente por nombre..." oninput="fetchClientes()" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px;" />
-      <h3>Lista de Clientes y Seguimiento</h3>
-      <div id="clienteList"></div>
-    </div>
-  </div>
+
+    <!-- ================= CLIENTES ================= -->
+<div id="clientes" class="section">
+  <h1>Gestión de Clientes</h1>
+  
+  <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
+    <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;" />
+
+    <!-- SELECT de Localidades dinámico -->
+    <select id="clienteLocalidad" required style="flex: 1; min-width: 120px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <option value="">Seleccionar Localidad...</option>
+    </select>
+
+    <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
+    <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
+  </form>
+
+  <h3>Búsqueda de Clientes</h3>
+  <input type="text" id="clienteSearch" placeholder="🔍 Buscar cliente por nombre..." oninput="fetchClientes()" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px;" />
+
+  <h3>Lista de Clientes y Seguimiento</h3>
+  <div id="clienteList"></div>
+</div>
+
 
   <!-- Modal -->
   <div id="modal"><div id="modalInner"></div></div>
@@ -1447,6 +1420,9 @@ async function deleteOrder(id){
   showToast('Pedido eliminado y stock restaurado');
 }
 
+
+
+
 // ================= CLIENTES =================
 
 /**
@@ -1454,50 +1430,37 @@ async function deleteOrder(id){
  * El DNI, Teléfono y Hora de Visita quedan vacíos.
  * El estado se establece en 'Pendiente'.
  */
+/* -------------------------
+   Agregar Cliente Rápido
+------------------------- */
 async function addClienteRapido() {
-    const nombre = document.getElementById("clienteNombre").value.trim();
-    const localidad = document.getElementById("clienteLocalidad").value.trim();
-    const hora = document.getElementById("clienteHora").value.trim(); // 💥 Capturamos la hora 💥
+  const nombre = document.getElementById("clienteNombre").value.trim();
+  const localidad = document.getElementById("clienteLocalidad").value;
+  const hora = document.getElementById("clienteHora").value.trim();
 
-    if (!nombre || !localidad) {
-        return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
-    }
-    
-    // Si se proporciona la hora, creamos un timestamp con una fecha genérica (hoy)
-    // para guardarlo en el campo 'hora_visita' (tipo timestamptz en Supabase)
-    let hora_visita_supabase = null;
-    if (hora) {
-        // Obtenemos la fecha de hoy, y la combinamos con la hora ingresada
-        const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
-        try {
-            // Intentamos crear un objeto Date con la fecha de hoy y la hora
-            hora_visita_supabase = new Date(`${today}T${hora}:00`).toISOString();
-        } catch (e) {
-            console.warn("Formato de hora no válido, se guarda N/A");
-            // Si el formato es malo (ej: '3:00' en lugar de '03:00'), Supabase lo manejará como un string,
-            // pero para evitar errores en la DB, lo dejaremos en null si falla la conversión local.
-            // Para simplicidad, pasaremos la cadena de texto de la hora.
-            // NOTA: Para solo guardar la hora, lo mejor es usar un campo de TEXTO en la DB.
-        }
-    }
+  if (!nombre || !localidad) {
+    showToast("⚠️ Complete los campos obligatorios");
+    return;
+  }
 
-    // Insertar con el campo hora_visita
-    const { error } = await supabase.from("clientes").insert([{
-        nombre_completo: nombre,
-        localidad: localidad,
-        estado_visita: 'Pendiente',
-        // 💥 Lo guardamos como TEXTO (hora) si no pudimos convertir a timestamp 💥
-        hora_visita: hora_visita_supabase || hora || null 
-    }]);
+  try {
+    const nuevoCliente = {
+      nombre_completo: nombre,
+      localidad,
+      hora_visita: hora || null,
+      estado_visita: 'Pendiente'
+    };
 
-    if (error) {
-        console.error("Error al guardar cliente:", error);
-        return alert("Error al guardar cliente: " + error.message);
-    }
+    const { error } = await supabase.from('clientes').insert([nuevoCliente]);
+    if (error) throw error;
 
     document.getElementById("clienteForm").reset();
-    alert("Cliente cargado como Pendiente de Visita.");
-    fetchClientes(); // Recarga la lista
+    await fetchClientes();
+    showToast("✅ Cliente agregado correctamente");
+  } catch (err) {
+    console.error("Error al agregar cliente:", err);
+    showToast("❌ Error al agregar cliente");
+  }
 }
 
 
@@ -1640,6 +1603,29 @@ async function fetchClientes() {
         renderStatusGroup('Visitado', clientesByStatus.Visitado);
     });
 }
+
+
+/* -------------------------
+   Cargar Localidades en el menú desplegable de Clientes
+------------------------- */
+async function cargarLocalidadesEnSelect() {
+  try {
+    const { data, error } = await supabase.from('localidades').select('*').order('nombre', { ascending: true });
+    if (error) throw error;
+
+    const select = document.getElementById('clienteLocalidad');
+    select.innerHTML = '<option value="">Seleccionar Localidad...</option>';
+    data.forEach(loc => {
+      const option = document.createElement('option');
+      option.value = loc.nombre;
+      option.textContent = loc.nombre;
+      select.appendChild(option);
+    });
+  } catch (err) {
+    console.error('Error cargando localidades:', err);
+  }
+}
+
 
 
 /* -------------------------
@@ -2006,6 +1992,11 @@ document.querySelector("button[data-tab='documentos']").addEventListener("click"
 // --- INICIALIZACIÓN ---
 fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos(); fetchClientes();
 
+document.addEventListener('DOMContentLoaded', async () => {
+  await cargarLocalidadesEnSelect();
+  await fetchClientes();
+});
+
 
 /* ========== FUNCIÓN PARA DESLIZAR SIDEBAR EN MÓVIL ========== */
 function toggleSidebar() {
@@ -2030,8 +2021,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
-
-
 
 
 </script>
