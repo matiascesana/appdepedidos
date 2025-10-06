@@ -1,206 +1,230 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Panel Administrativo Completo</title>
 <style>
+  :root {
+    --sidebar-bg: #2c3e50;
+    --sidebar-hover: #34495e;
+    --accent: #ff4d4f;
+    --card-bg: #fff;
+    --text-muted: #555;
+  }
 
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    height: 100vh;
+    background: #f0f2f5;
+  }
 
-:root {
-  --sidebar-bg: #2c3e50;
-  --sidebar-hover: #34495e;
-  --accent: #ff4d4f;
-  --card-bg: #fff;
-  --text-muted: #555;
-}
+  /* Sidebar */
+  .sidebar {
+    width: 220px;
+    background: var(--sidebar-bg);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    z-index: 9000;
+  }
 
+  .sidebar h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 22px;
+  }
 
-body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; background:#f0f2f5; }
-.sidebar { width:220px; background:var(--sidebar-bg); color:#fff; display:flex; flex-direction:column; padding-top:20px; flex-shrink:0; }
-.sidebar h2 { text-align:center; margin-bottom:20px; font-size:22px; }
-.sidebar button { background:none; border:none; color:white; text-align:left; padding:12px 20px; cursor:pointer; font-size:16px; width:100%; transition:0.2s; }
-.sidebar button:hover, .sidebar button.active { background:var(--sidebar-hover); }
-.content { flex:1; padding:20px; overflow-y:auto; }
-.section { display:none; }
-.section.active { display:block; }
-h1 { margin-top:0; margin-bottom:15px; }
+  .sidebar button {
+    background: none;
+    border: none;
+    color: white;
+    text-align: left;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    transition: 0.2s;
+  }
 
+  .sidebar button:hover,
+  .sidebar button.active {
+    background: var(--sidebar-hover);
+  }
 
-/* Tarjetas y listas */
-.card { display:flex; align-items:center; gap:15px; background:var(--card-bg); padding:15px; border-radius:10px; margin-bottom:12px; border:1px solid #ddd; transition:0.3s; }
-.card:hover { box-shadow:0 6px 18px rgba(0,0,0,0.15); }
-.card img { width:100px; height:100px; object-fit:cover; border-radius:10px; border:1px solid #ccc; }
-.card-info { flex:1; display:flex; flex-direction:column; gap:6px; }
-.card-info b { font-size:1.1em; }
-.card-price { font-size:1em; color:var(--accent); }
-.card-price del { color:#999; margin-right:6px; }
-.card-stock { font-size:0.85em; color:var(--text-muted); }
-.card-actions { display:flex; flex-direction:column; gap:6px; }
-.card-actions button { cursor:pointer; border:none; border-radius:6px; padding:6px 12px; font-weight:bold; transition:0.2s; }
-.card-actions .edit-btn { background:#3498db; color:#fff; }
-.card-actions .edit-btn:hover { background:#2980b9; }
-.card-actions .delete-btn { background:var(--accent); color:#fff; }
-.card-actions .delete-btn:hover { background:#e8434f; }
+  /* Content */
+  .content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+  }
 
-/* Modal */
-#modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:9999; }
-#modalInner { background:white; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90%; overflow-y:auto; }
-input, select, button { margin-bottom:8px; padding:6px; font-size:14px; border-radius:4px; border:1px solid #ccc; }
-button[type=submit]{background:var(--accent); color:#fff; border:none; cursor:pointer;}
-button[type=submit]:hover{background:#e8434f;}
+  /* Sections */
+  .section {
+    display: none;
+  }
 
-
-</head>
-<body>
-</script>
-
-
-
-/* ========== RESPONSIVE MEDIA QUERIES ========== */
-
-/* Botón hamburguesa oculto en escritorio */
-#menuBtn {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  background: #3498db;   /* color azul */
-  color: white;
-  font-size: 22px;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
-  z-index: 2000; /* por encima del título y sidebar */
-  display: none; /* solo se muestra en móvil */
-}
-
-/* En móvil se hace visible */
-@media (max-width: 768px) {
-  #menuBtn {
+  .section.active {
     display: block;
   }
 
-  .header {
-    position: relative; /* para que el botón se ubique encima del título */
+  h1 {
+    margin-top: 0;
+    margin-bottom: 15px;
   }
 
-  .header h1 {
-    text-align: center; /* centramos el texto aunque el botón esté a la izquierda */
-    margin: 0;
-    padding: 12px 0;
-  }
-}
-
-/* 🚩 SOLUCIÓN PARA LOS BOTONES DENTRO DE LAS TARJETAS (Editar/Eliminar) */
+  /* Cards */
   .card {
-    /* Permitir que la tarjeta se apile verticalmente si es necesario */
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px; /* Separación entre la imagen/info y los botones */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    transition: 0.3s;
   }
 
-  /* Aseguramos que la información ocupe todo el ancho */
+  .card:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  }
+
+  .card img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+  }
+
   .card-info {
-    width: 100%;
-    /* Eliminar el flex:1 para que no se contraiga en móvil */
-    flex: initial; 
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .card-info b {
+    font-size: 1.1em;
+  }
+
+  .card-price {
+    font-size: 1em;
+    color: var(--accent);
+  }
+
+  .card-price del {
+    color: #999;
+    margin-right: 6px;
+  }
+
+  .card-stock {
+    font-size: 0.85em;
+    color: var(--text-muted);
   }
 
   .card-actions {
-    /* Forzar apilamiento vertical */
+    display: flex;
     flex-direction: column;
-    width: 100%; /* Ocupar todo el ancho de la tarjeta */
-    gap: 8px; /* Separación entre los botones apilados */
+    gap: 6px;
   }
 
   .card-actions button {
-    width: 100%; /* Los botones ocupan todo el ancho disponible */
-    padding: 10px 12px; /* Aumentar el padding para hacerlos más fáciles de tocar */
-    font-size: 16px;
-    box-sizing: border-box; /* Incluir padding en el width */
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-weight: bold;
+    transition: 0.2s;
   }
-}
 
-/* Solución específica para las listas de Categorías/Localidades */
-#categoriaList > div, #localidadList > div {
-    flex-direction: column; /* Apilar nombre y botones */
-    align-items: flex-start !important; /* Alinear el texto a la izquierda */
-}
+  .card-actions .edit-btn {
+    background: #3498db;
+    color: #fff;
+  }
 
-#categoriaList > div > div, #localidadList > div > div {
-    /* Este es el contenedor de los dos botones (Editar y Eliminar) */
-    display: flex; 
-    flex-direction: column; /* Forzar apilamiento vertical de los botones */
-    width: 100%; /* Ocupar todo el ancho para los botones */
-    gap: 8px; /* Separación entre botones */
-    margin-top: 10px;
-}
+  .card-actions .edit-btn:hover {
+    background: #2980b9;
+  }
 
-#categoriaList button, #localidadList button {
-    width: 100%; /* Botones de categoría/localidad ocupan todo el ancho */
-    padding: 10px 18px !important;
-    box-sizing: border-box;
-}
+  .card-actions .delete-btn {
+    background: var(--accent);
+    color: #fff;
+  }
 
-/* --- ESTILOS BASE DE LA BARRA LATERAL (Escritorio) --- */
-.sidebar { 
-    width: 220px; 
-    background: var(--sidebar-bg); 
-    color: #fff; 
-    display: flex; 
-    flex-direction: column; 
-    padding-top: 20px; 
-    flex-shrink: 0; 
-    transition: transform 0.3s ease; /* 👈 Añadir transición para el deslizamiento */
-    z-index: 9000; /* Asegurar que esté sobre el contenido */
-}
+  .card-actions .delete-btn:hover {
+    background: #e8434f;
+  }
 
+  /* Modal */
+  #modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
 
-/* --- RESPONSIVE MEDIA QUERY (Móvil) --- */
-@media (max-width: 500px) {
-    /* El botón de menú solo aparece en móvil */
-    #menuBtn { 
-        display: block; 
-    }
+  #modalInner {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90%;
+    overflow-y: auto;
+  }
 
-    /* La sidebar se oculta */
-    .sidebar {
-        /* Deslizamos fuera de la vista */
-        transform: translateX(-100%); 
-        position: fixed; /* Fija en la pantalla */
-        top: 0; 
-        left: 0; 
-        height: 100vh; /* Ocupa toda la altura */
-        width: 70%; /* Ocupa 70% del ancho de la pantalla */
-        padding-top: 50px; /* Espacio para que el contenido no quede pegado al top */
-        flex-direction: column; /* Vuelve a ser vertical */
-        box-shadow: 2px 0 10px rgba(0,0,0,0.5);
-    }
-    
-    /* Estado "abierto" de la sidebar */
-    .sidebar.open {
-        transform: translateX(0); /* Deslizar a la vista */
-    }
+  input,
+  select,
+  button {
+    margin-bottom: 8px;
+    padding: 6px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
 
-    /* El contenido ocupa todo el espacio */
-    .content {
-        flex: 1;
-        padding: 8px; 
-        margin-top: 50px; /* Para no quedar debajo del botón de menú */
-    }
-    
-    .sidebar h2 { display: block; text-align: center; }
-    .sidebar button {
-        text-align: left;
-        font-size: 16px; 
-        padding: 12px 20px;
-        /* Quitamos el flex: 1 de la versión anterior para que no se repartan */
-    }
-    
-    /* ... (mantener el resto de los estilos de tarjetas y modales para 500px) ... */
-    
-    /* El fondo oscuro para simular el "canvas" oculto */
-.backdrop {
+  button[type=submit] {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+
+  button[type=submit]:hover {
+    background: #e8434f;
+  }
+
+  /* Botón hamburguesa */
+  #menuBtn {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    background: #3498db;
+    color: white;
+    font-size: 22px;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    z-index: 2000;
+    display: none;
+  }
+
+  /* Backdrop */
+  .backdrop {
     display: none;
     position: fixed;
     top: 0;
@@ -209,201 +233,327 @@ button[type=submit]:hover{background:#e8434f;}
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     z-index: 8000;
-    /* 💥 SOLUCIÓN 1: Ignorar el clic por defecto 💥 */
-    pointer-events: none; 
-}
-.backdrop.show { 
-    display: block; 
-    /* 💥 SOLUCIÓN 2: Solo interceptar clics cuando está visible (sidebar abierta) 💥 */
-    pointer-events: auto; 
-}
+    pointer-events: none;
+  }
 
+  .backdrop.show {
+    display: block;
+    pointer-events: auto;
+  }
+
+  /* Tablas */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .table th {
+    background: #f8f9fa;
+    font-weight: bold;
+  }
+
+  /* Toast */
+  #appToast {
+    position: fixed;
+    right: 16px;
+    bottom: 20px;
+    background: #222;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    z-index: 15000;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    #menuBtn {
+      display: block;
+    }
+
+    .card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .card-info {
+      width: 100%;
+      flex: initial;
+    }
+
+    .card-actions {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+
+    .card-actions button {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+  }
+
+  @media (max-width: 500px) {
+    #menuBtn {
+      display: block;
+    }
+
+    .sidebar {
+      transform: translateX(-100%);
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 70%;
+      padding-top: 50px;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .content {
+      flex: 1;
+      padding: 8px;
+      margin-top: 50px;
+    }
+
+    .sidebar h2 {
+      display: block;
+      text-align: center;
+    }
+
+    .sidebar button {
+      text-align: left;
+      font-size: 16px;
+      padding: 12px 20px;
+    }
+
+    #categoriaList > div,
+    #localidadList > div {
+      flex-direction: column;
+      align-items: flex-start !important;
+    }
+
+    #categoriaList > div > div,
+    #localidadList > div > div {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    #categoriaList button,
+    #localidadList button {
+      width: 100%;
+      padding: 10px 18px !important;
+      box-sizing: border-box;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
+  <!-- Botón hamburguesa -->
+  <button id="menuBtn" onclick="toggleSidebar()">☰</button>
 
+  <!-- Backdrop -->
+  <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
 
+  <!-- Sidebar -->
   <div class="sidebar">
-  
-<!-- Botón hamburguesa -->
-<button id="menuBtn" onclick="toggleSidebar()">☰</button>
+    <h2>MENU</h2>
+    <button class="tab-btn active" data-tab="promos">Promociones</button>
+    <button class="tab-btn" data-tab="pedidos">Pedidos</button>
+    <button class="tab-btn" data-tab="categorias">Categorías</button>
+    <button class="tab-btn" data-tab="localidades">Localidades</button>
+    <button class="tab-btn" data-tab="documentos">Documentos</button>
+    <button class="tab-btn" data-tab="clientes">Clientes</button>
+  </div>
 
-<!-- Fondo oscuro -->
-<div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
+  <!-- Contenido -->
+  <div class="content">
+    <!-- PROMOCIONES -->
+    <div id="promos" class="section active">
+      <h1>Gestión de Promociones</h1>
+      <form id="promoForm" onsubmit="event.preventDefault(); addPromo();">
+        <input type="text" id="promoNombre" placeholder="Nombre" required />
+        <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required />
+        <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01" />
+        <input type="number" id="promoStock" placeholder="Stock" />
+        <select id="promoCategoria"></select>
+        <input type="file" id="promoImagen" accept="image/*" />
+        <button type="submit">Agregar promoción</button>
+      </form>
+      <button onclick="exportPDF()">Exportar PDF</button>
+      <div id="promoList"></div>
+    </div>
 
-<!-- Sidebar -->
-<div class="sidebar">
-  <h2>MENU</h2>
-  <!-- tus links aquí -->
-</div>
-  
-  <button class="tab-btn active" data-tab="promos">Promociones</button>
-  <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-  <button class="tab-btn" data-tab="categorias">Categorías</button>
-  <button class="tab-btn" data-tab="localidades">Localidades</button>
-  <button class="tab-btn" data-tab="documentos">Documentos</button>
-  <button class="tab-btn" data-tab="clientes">Clientes</button>
-</div> <div class="content">
+    <!-- PEDIDOS -->
+    <div id="pedidos" class="section">
+      <h2>Pedidos</h2>
+      <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <div style="flex:1;min-width:220px">
+          <label>Cliente
+            <input id="pedidoCliente" type="text" placeholder="Nombre cliente" />
+          </label>
+        </div>
+        <div style="width:220px">
+          <label>Localidad
+            <select id="pedidoLocalidad"></select>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
+        </div>
+        <div style="width:100%;margin-top:6px">
+          <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="addOrderBtn">Agregar Pedido</button>
+          <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
+        </div>
+      </form>
+      <h3>Lista de Pedidos</h3>
+      <div id="pedidoList"></div>
+    </div>
+
+    <!-- CATEGORÍAS -->
+    <div id="categorias" class="section">
+      <h1>Gestión de Categorías</h1>
+      <input type="text" id="categoriaNombre" placeholder="Nueva categoría" />
+      <button onclick="addCategoria()">Agregar</button>
+      <div id="categoriaList"></div>
+    </div>
+
+    <!-- LOCALIDADES -->
+    <div id="localidades" class="section">
+      <h1>Gestión de Localidades</h1>
+      <input type="text" id="localidadNombre" placeholder="Nueva localidad" />
+      <button onclick="addLocalidad()">Agregar</button>
+      <div id="localidadList"></div>
+    </div>
+
+    <!-- DOCUMENTOS -->
+    <div id="documentos" class="section">
+      <h1>Gestión de Documentos</h1>
+      <input type="file" id="docArchivo" />
+      <button onclick="addDocumento()">Agregar Documento</button>
+      <button onclick="fetchDocumentos()">Actualizar Documentos</button>
+      <div id="docList" style="margin-top:18px;"></div>
+    </div>
 
     <!-- CLIENTES -->
     <div id="clientes" class="section">
       <h1>Gestión de Clientes</h1>
       <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
-  <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;">
-  <input type="text" id="clienteLocalidad" placeholder="Localidad" required style="flex: 1; min-width: 100px;">
-  <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;">
-  <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
-</form>
- 
-<h3>Búsqueda de Clientes</h3>
-
-<input type="text" id="clienteSearch" placeholder="🔍 Buscar cliente por nombre..." 
-       oninput="fetchClientes()" 
-       style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px;">
-
-<h3>Lista de Clientes y Seguimiento</h3><div id="clienteList">
-  </div>
-    
+        <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;" />
+        <input type="text" id="clienteLocalidad" placeholder="Localidad" required style="flex: 1; min-width: 100px;" />
+        <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
+        <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
+      </form>
+      <h3>Búsqueda de Clientes</h3>
+      <input type="text" id="clienteSearch" placeholder="🔍 Buscar cliente por nombre..." oninput="fetchClientes()" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px;" />
+      <h3>Lista de Clientes y Seguimiento</h3>
+      <div id="clienteList"></div>
+    </div>
   </div>
 
-
-  <!-- PROMOCIONES -->
-  <div id="promos" class="section active">
-<div class="header">
-  <button id="menuBtn" onclick="toggleSidebar()">☰</button>
-  </div>
-    <h1>Gestión de Promociones</h1>
-    <form id="promoForm" onsubmit="event.preventDefault(); addPromo();">
-      <input type="text" id="promoNombre" placeholder="Nombre" required>
-      <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required>
-      <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01">
-      <input type="number" id="promoStock" placeholder="Stock">
-      <select id="promoCategoria"></select>
-      <input type="file" id="promoImagen" accept="image/*">
-      <button type="submit">Agregar promoción</button>
-    </form>
-    <button onclick="exportPDF()">Exportar PDF</button>
-    <div id="promoList"></div>
-  </div>
-
-  <!-- CATEGORÍAS -->
-  <div id="categorias" class="section">
-    <h1>Gestión de Categorías</h1>
-    <input type="text" id="categoriaNombre" placeholder="Nueva categoría">
-    <button onclick="addCategoria()">Agregar</button>
-    <div id="categoriaList"></div>
-  </div>
-
-  <!-- LOCALIDADES -->
-  <div id="localidades" class="section">
-    <h1>Gestión de Localidades</h1>
-    <input type="text" id="localidadNombre" placeholder="Nueva localidad">
-    <button onclick="addLocalidad()">Agregar</button>
-    <div id="localidadList"></div>
-  </div>
-
-  <!-- PEDIDOS -->
-  <div class="section" id="pedidos">
-    <h2>Pedidos</h2>
-    <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <div style="flex:1;min-width:220px">
-        <label>Cliente
-          <input id="pedidoCliente" type="text" placeholder="Nombre cliente">
-        </label>
-      </div>
-      <div style="width:220px">
-        <label>Localidad
-          <select id="pedidoLocalidad"></select>
-        </label>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center">
-        <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
-      </div>
-
-      <div style="width:100%;margin-top:6px">
-        <div id="selectedProductsContainer" class="small-muted"></div>
-      </div>
-
-      <div style="display:flex;gap:8px">
-        <button type="button" id="addOrderBtn">Agregar Pedido</button>
-        <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-      </div>
-    </form>
-
-    <h3>Lista de Pedidos</h3>
-    <div id="pedidoList"></div>
-  </div>
-
-
-  <!-- DOCUMENTOS -->
-<div id="documentos" class="section">
-  <h1>Gestión de Documentos</h1>
-  <input type="file" id="docArchivo">
-  <button onclick="addDocumento()">Agregar Documento</button>
-  <button onclick="fetchDocumentos()">Actualizar Documentos</button>
-  <div id="docList" style="margin-top:18px;"></div>
-</div>
-
-</div>
-
-<div id="modal"><div id="modalInner"></div></div>
+  <!-- Modal -->
+  <div id="modal"><div id="modalInner"></div></div>
 
 <script>
-// --- SIDEBAR / TABS --- (MODIFICADO Y DEPURADO)
-console.log("Tabs JS cargado");
+  // --- Configuración Supabase ---
+const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ========== MANEJO DE PESTAÑAS Y CIERRE DE SIDEBAR EN MÓVIL ========== */
-document.querySelectorAll('.tab-btn').forEach(button => {
-    button.addEventListener('click', () => {
-        const tab = button.getAttribute('data-tab');
-        
-        // 1. Lógica de cambio de pestaña (original)
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
-        document.getElementById(tab).classList.add('active');
+  // --- Funciones auxiliares ---
+  function escapeHtml(text) {
+    var div = document.createElement("div");
+    div.innerText = text;
+    return div.innerHTML;
+  }
 
-        // 2. Lógica de cierre de sidebar (NUEVO: Integrado)
-        // Cierra la sidebar si está abierta y estamos en móvil
-        if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
-            toggleSidebar(); // Esta función ya la definiste, solo la llamamos.
-        }
-    });
-});
+  function showToast(text, tiempo = 2200) {
+    let toast = document.getElementById("appToast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "appToast";
+      toast.style.cssText =
+        "position:fixed;right:16px;bottom:20px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:15000;opacity:0;transition:opacity .25s;";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    toast.style.opacity = "1";
+    clearTimeout(toast._to);
+    toast._to = setTimeout(() => {
+      toast.style.opacity = "0";
+    }, tiempo);
+  }
 
+  // --- Modal ---
+  function openModal(title, html) {
+    document.getElementById("modalInner").innerHTML = `<h3>${title}</h3>${html}`;
+    document.getElementById("modal").style.display = "flex";
+  }
+  function closeModal() {
+    document.getElementById("modal").style.display = "none";
+  }
+  document.getElementById("modal").addEventListener("click", (e) => {
+    if (e.target.id === "modal") closeModal();
+  });
 
-// --- CONFIGURACIÓN SUPABASE ---
-const SUPABASE_URL="https://ejbqlejlgprvwzrptojo.supabase.co";
-const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
-const supabase = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  // --- Sidebar toggle ---
+  function toggleSidebar() {
+    const sidebar = document.querySelector(".sidebar");
+    const backdrop = document.getElementById("backdrop");
 
-// --- SIDEBAR --- (modificado para móviles)
-// --- DEPURACIÓN DE TABS ---
-console.log("Script tabs cargado");
-document.querySelectorAll(".tab-btn").forEach(btn=>{
-  ['click', 'touchstart'].forEach(ev=>{
-    btn.addEventListener(ev, ()=>{
-      console.log("Tab clicked:", btn.dataset.tab);
-      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-      document.getElementById(btn.dataset.tab).classList.add("active");
-    });
+    sidebar.classList.toggle("open");
+    backdrop.classList.toggle("show");
+  }
+
+  // --- Manejo de pestañas ---
+document.querySelectorAll(".tab-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    const tab = button.getAttribute("data-tab");
+    // Cambiar pestaña activa
+    document.querySelectorAll(".tab-btn").forEach((btn) =>
+      btn.classList.remove("active")
+    );
+    button.classList.add("active");
+    // Mostrar sección correspondiente
+    document.querySelectorAll(".section").forEach((section) =>
+      section.classList.remove("active")
+    );
+    const activeSection = document.getElementById(tab);
+    if (activeSection) activeSection.classList.add("active");
+    // Cerrar sidebar en móvil si está abierta
+    if (
+      window.innerWidth <= 500 &&
+      document.querySelector(".sidebar").classList.contains("open")
+    ) {
+      toggleSidebar();
+    }
   });
 });
 
-
-
-// --- MODAL ---
-function openModal(title, html){ document.getElementById("modalInner").innerHTML=`<h3>${title}</h3>${html}`; document.getElementById("modal").style.display="flex"; }
-function closeModal(){ document.getElementById("modal").style.display="none"; }
-document.getElementById("modal").addEventListener("click",(e)=>{ if(e.target.id==="modal") closeModal(); });
-
-// --- ESCAPE HTML ---
-function escapeHtml(text){ var div=document.createElement("div"); div.innerText=text; return div.innerHTML; }
 
 
 // ================= PROMOCIONES =================
@@ -1819,6 +1969,7 @@ document.querySelector("button[data-tab='documentos']").addEventListener("click"
 
 // --- INICIALIZACIÓN ---
 fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos(); fetchClientes();
+
 
 /* ========== FUNCIÓN PARA DESLIZAR SIDEBAR EN MÓVIL ========== */
 function toggleSidebar() {
