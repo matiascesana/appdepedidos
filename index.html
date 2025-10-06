@@ -476,8 +476,14 @@
     <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
   </form>
 
-  <h3>Búsqueda de Clientes</h3>
-  <input type="text" id="clienteSearch" placeholder="🔍 Buscar cliente por nombre..." oninput="fetchClientes()" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px;" />
+ <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+  <input type="text" id="clienteSearch" placeholder="Buscar por cliente..." style="flex:1;padding:6px 10px;border-radius:5px;border:1px solid #ccc;">
+
+  <select id="clienteLocalidadFilter" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
+    <option value="">Todas las localidades</option>
+  </select>
+</div>
+
 
   <h3>Lista de Clientes y Seguimiento</h3>
   <div id="clienteList"></div>
@@ -1464,145 +1470,169 @@ async function addClienteRapido() {
 }
 
 
+async function loadLocalidadesFilter() {
+    const select = document.getElementById("clienteLocalidadFilter");
+    if (!select) return;
+
+    const { data, error } = await supabase
+        .from("localidades")
+        .select("nombre")
+        .order("nombre", { ascending: true });
+
+    if (error) {
+        console.error("Error al cargar localidades para filtro:", error);
+        return;
+    }
+
+    select.innerHTML = `<option value="">Todas las localidades</option>`;
+    data.forEach(loc => {
+        const opt = document.createElement("option");
+        opt.value = loc.nombre;
+        opt.textContent = loc.nombre;
+        select.appendChild(opt);
+    });
+}
+
+
 /**
  * Obtiene, filtra, ordena y agrupa la lista de clientes.
  */
 async function fetchClientes() {
-    // Obtener el valor del campo de búsqueda y normalizarlo a minúsculas
-    const searchTerm = document.getElementById('clienteSearch').value.toLowerCase();
-    
-    // Obtener todos los datos ordenados
-    const { data: allClientes, error } = await supabase
-        .from('clientes')
-        .select('*')
-        // Ordena primero por Localidad (alfabético)
-        .order('localidad', { ascending: true })
-        // Luego por Estado (Pendiente primero, Visitado después)
-        .order('estado_visita', { ascending: true }) 
-        // Finalmente por ID para que los nuevos salgan arriba dentro de cada grupo
-        .order('id', { ascending: false });
+  const searchTerm = document.getElementById('clienteSearch')?.value.toLowerCase() || '';
+  const localidadFilter = document.getElementById('clienteLocalidadFilter')?.value || '';
 
-    if (error) return console.error(error);
+  const { data: allClientes, error } = await supabase
+    .from('clientes')
+    .select('*')
+    .order('localidad', { ascending: true })
+    .order('estado_visita', { ascending: true })
+    .order('id', { ascending: false });
 
-    // 1. FILTRADO POR NOMBRE
-    let filteredClientes = allClientes;
-    if (searchTerm) {
-        filteredClientes = allClientes.filter(cliente => 
-            cliente.nombre_completo.toLowerCase().includes(searchTerm)
-        );
+  if (error) return console.error(error);
+
+  let filteredClientes = allClientes;
+
+  // Filtrar por localidad primero
+  if (localidadFilter) {
+    filteredClientes = filteredClientes.filter(cliente =>
+      cliente.localidad === localidadFilter
+    );
+  }
+
+  // Filtrar por nombre solo si se está escribiendo algo
+  if (searchTerm) {
+    filteredClientes = filteredClientes.filter(cliente =>
+      cliente.nombre_completo.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  const container = document.getElementById('clienteList');
+  container.innerHTML = '';
+
+  if (filteredClientes.length === 0) {
+    container.innerHTML = `<span style="color:#888; display:block; padding: 20px;">
+      ${localidadFilter 
+        ? `No se encontraron clientes en la localidad: "${escapeHtml(localidadFilter)}".` 
+        : 'No hay clientes cargados.'}
+    </span>`;
+    return;
+  }
+
+  // Agrupar clientes por localidad y estado
+  const groupedClients = filteredClientes.reduce((acc, cliente) => {
+    const localidad = cliente.localidad.trim() || 'Sin Localidad';
+    const estado = cliente.estado_visita;
+
+    if (!acc[localidad]) {
+      acc[localidad] = { Pendiente: [], Visitado: [] };
     }
-    
-    const container = document.getElementById('clienteList');
-    container.innerHTML = '';
-    
-    if (filteredClientes.length === 0) {
-        container.innerHTML = `<span style="color:#888; display:block; padding: 20px;">
-          ${searchTerm ? `No se encontraron clientes con el nombre: "${escapeHtml(searchTerm)}".` : 'No hay clientes cargados.'}
-        </span>`;
-        return;
-    }
+    acc[localidad][estado].push(cliente);
+    return acc;
+  }, {});
 
-    // 2. AGRUPAMIENTO POR LOCALIDAD Y ESTADO
-    const groupedClients = filteredClientes.reduce((acc, cliente) => {
-        const localidad = cliente.localidad.trim() || 'Sin Localidad';
-        const estado = cliente.estado_visita; // 'Pendiente' o 'Visitado'
+  const orderedLocalidades = Object.keys(groupedClients).sort();
 
-        if (!acc[localidad]) {
-            acc[localidad] = { Pendiente: [], Visitado: [] };
-        }
-        acc[localidad][estado].push(cliente);
-        return acc;
-    }, {});
+  orderedLocalidades.forEach(localidad => {
+    const clientesByStatus = groupedClients[localidad];
 
-    // 3. RENDERIZADO AGRUPADO
-    
-    let lastLocalidad = null;
-    
-    // Recorrer las localidades ordenadas alfabéticamente
-    const orderedLocalidades = Object.keys(groupedClients).sort();
+    const localidadTitle = document.createElement('h2');
+    localidadTitle.textContent = escapeHtml(localidad);
+    localidadTitle.style.cssText = `
+      margin: 25px 0 10px 0; 
+      padding: 8px 15px; 
+      background: #3498db; 
+      color: #fff; 
+      border-radius: 8px; 
+      font-size: 1.3em;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    `;
+    container.appendChild(localidadTitle);
 
-    orderedLocalidades.forEach(localidad => {
-        const clientesByStatus = groupedClients[localidad];
+    const renderStatusGroup = (status, list) => {
+      if (list.length === 0) return;
 
-        // Título Separador por Localidad
-        const localidadTitle = document.createElement('h2');
-        localidadTitle.textContent = escapeHtml(localidad);
-        localidadTitle.style.cssText = `
-            margin: 25px 0 10px 0; 
-            padding: 8px 15px; 
-            background: #3498db; 
-            color: #fff; 
-            border-radius: 8px; 
-            font-size: 1.3em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      const statusSection = document.createElement('div');
+      statusSection.style.marginBottom = '20px';
+
+      const isVisitado = status === 'Visitado';
+      const statusColor = isVisitado ? '#27ae60' : '#e74c3c';
+      const statusText = isVisitado ? '✅ VISITADOS' : '⏳ PENDIENTES';
+
+      const statusSubtitle = document.createElement('h3');
+      statusSubtitle.textContent = `${statusText} (${list.length})`;
+      statusSubtitle.style.cssText = `
+        border-bottom: 2px solid ${statusColor}; 
+        padding-bottom: 5px; 
+        color: ${statusColor}; 
+        margin-bottom: 15px;
+      `;
+      statusSection.appendChild(statusSubtitle);
+
+      list.forEach(cliente => {
+        const bgColor = isVisitado ? '#e6f7e6' : '#fff0f0';
+        const horaVisitaText = cliente.hora_visita
+          ? (isNaN(new Date(cliente.hora_visita))
+            ? `Hora: ${escapeHtml(cliente.hora_visita)}`
+            : new Date(cliente.hora_visita).toLocaleString())
+          : 'No Agendada';
+
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.background = bgColor;
+        div.style.borderLeft = `5px solid ${statusColor}`;
+
+        div.innerHTML = `
+          <div class="card-info" style="flex:1; gap:4px;">
+            <b>${escapeHtml(cliente.nombre_completo)}</b>
+            <div style="font-size: 0.9em; color: #555;">
+              DNI: ${cliente.dni || 'N/A'} · Teléfono: ${cliente.telefono || 'N/A'}<br>
+              Visita: ${horaVisitaText}
+            </div>
+          </div>
+          <div class="card-actions" style="min-width: 170px;">
+            <button class="edit-btn" onclick="openEditClienteModal(${cliente.id})">✏️ Editar Datos</button>
+            <button class="${isVisitado ? 'edit-btn' : 'delete-btn'}" 
+                    style="background:${statusColor};"
+                    onclick="toggleEstadoCliente(${cliente.id}, '${isVisitado ? 'Pendiente' : 'Visitado'}')">
+              ${isVisitado ? 'Marcar como Pendiente' : 'Marcar como Visitado'}
+            </button>
+            <button class="delete-btn" onclick="deleteCliente(${cliente.id})" style="background:#95a5a6;">🗑️ Eliminar</button>
+          </div>
         `;
-        container.appendChild(localidadTitle);
-        
-        // Función para renderizar el grupo (Pendiente o Visitado)
-        const renderStatusGroup = (status, list) => {
-            if (list.length === 0) return;
+        statusSection.appendChild(div);
+      });
+      container.appendChild(statusSection);
+    };
 
-            const statusSection = document.createElement('div');
-            statusSection.style.marginBottom = '20px';
-            
-            // Subtítulo por Estado (Pendiente o Visitado)
-            const isVisitado = status === 'Visitado';
-            const statusColor = isVisitado ? '#27ae60' : '#e74c3c';
-            const statusText = isVisitado ? '✅ VISITADOS' : '⏳ PENDIENTES';
-            
-            const statusSubtitle = document.createElement('h3');
-            statusSubtitle.textContent = `${statusText} (${list.length})`;
-            statusSubtitle.style.cssText = `
-                border-bottom: 2px solid ${statusColor}; 
-                padding-bottom: 5px; 
-                color: ${statusColor}; 
-                margin-bottom: 15px;
-            `;
-            statusSection.appendChild(statusSubtitle);
-            
-            list.forEach(cliente => {
-                const bgColor = isVisitado ? '#e6f7e6' : '#fff0f0';
-                
-                // Mostrar la hora de visita, que ahora puede ser una fecha (ISO) o texto (simple)
-                const horaVisitaText = cliente.hora_visita 
-                    ? (isNaN(new Date(cliente.hora_visita))
-                        ? `Hora: ${escapeHtml(cliente.hora_visita)}`
-                        : new Date(cliente.hora_visita).toLocaleString())
-                    : 'No Agendada';
-
-                const div = document.createElement('div');
-                div.className = 'card';
-                div.style.background = bgColor;
-                div.style.borderLeft = `5px solid ${statusColor}`;
-
-                div.innerHTML = `
-                    <div class="card-info" style="flex:1; gap:4px;">
-                        <b>${escapeHtml(cliente.nombre_completo)}</b>
-                        <div style="font-size: 0.9em; color: #555;">
-                            DNI: ${cliente.dni || 'N/A'} · Teléfono: ${cliente.telefono || 'N/A'}<br>
-                            Visita: ${horaVisitaText}
-                        </div>
-                    </div>
-                    <div class="card-actions" style="min-width: 170px;">
-                        <button class="edit-btn" onclick="openEditClienteModal(${cliente.id})">✏️ Editar Datos</button>
-                        <button class="${isVisitado ? 'edit-btn' : 'delete-btn'}" 
-                                style="background:${statusColor};"
-                                onclick="toggleEstadoCliente(${cliente.id}, '${isVisitado ? 'Pendiente' : 'Visitado'}')">
-                            ${isVisitado ? 'Marcar como Pendiente' : 'Marcar como Visitado'}
-                        </button>
-                        <button class="delete-btn" onclick="deleteCliente(${cliente.id})" style="background:#95a5a6;">🗑️ Eliminar</button>
-                    </div>
-                `;
-                statusSection.appendChild(div);
-            });
-            container.appendChild(statusSection);
-        };
-        
-        // 4. Renderizar por Estado (Pendientes primero)
-        renderStatusGroup('Pendiente', clientesByStatus.Pendiente);
-        renderStatusGroup('Visitado', clientesByStatus.Visitado);
-    });
+    renderStatusGroup('Pendiente', clientesByStatus.Pendiente);
+    renderStatusGroup('Visitado', clientesByStatus.Visitado);
+  });
 }
+
+
+
+document.getElementById('clienteSearch').addEventListener('input', fetchClientes);
+document.getElementById('clienteLocalidadFilter').addEventListener('change', fetchClientes);
 
 
 /* -------------------------
@@ -1680,23 +1710,27 @@ function showToast(text, tiempo = 2200) {
    Reemplazo recomendado de openEditClienteModal(id)
    (Usa ID para evitar colisiones con versiones que reciben el objeto)
    ------------------------- */
+/* -------------------------
+   Editar Cliente (Modal con Select de Localidades)
+------------------------- */
 async function openEditClienteModal(id) {
   const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
   if (error || !data) {
     console.error('Cliente no encontrado', error);
     return alert('Cliente no encontrado');
   }
+
   const cliente = data;
 
-  // Formateo seguro para input datetime-local (si tiene fecha válida)
-  let fechaVisitaVal = '';
+  // --- CORRECCIÓN SEGURA DE hora_visita ---
+  let formattedVisita = '';
   if (cliente.hora_visita) {
-    const d = new Date(cliente.hora_visita);
-    if (!isNaN(d)) {
-      fechaVisitaVal = d.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
+    const fecha = new Date(cliente.hora_visita);
+    if (!isNaN(fecha.getTime())) { // Verifica que la fecha sea válida
+      formattedVisita = fecha.toISOString().substring(0, 16);
     } else {
-      // si no es una fecha válida, lo tratamos como texto (dejar vacío para evitar errores)
-      fechaVisitaVal = '';
+      console.warn('Hora de visita inválida para cliente ID:', cliente.id);
+      formattedVisita = '';
     }
   }
 
@@ -1705,20 +1739,28 @@ async function openEditClienteModal(id) {
     `
       <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
         <label>Nombre completo</label>
-        <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo||'')}" required>
+        <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo || '')}" required>
+
         <label>Localidad</label>
-        <input type="text" id="editClienteLocalidad" value="${escapeHtml(cliente.localidad||'')}" required>
+        <select id="editClienteLocalidad">
+          <option value="">Cargando localidades...</option>
+        </select>
+
         <label>DNI</label>
-        <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni||'')}">
+        <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni || '')}">
+
         <label>Teléfono</label>
-        <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono||'')}">
+        <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono || '')}">
+
         <label>Hora de visita (fecha y hora)</label>
-        <input type="datetime-local" id="editClienteVisita" value="${fechaVisitaVal}">
+        <input type="datetime-local" id="editClienteVisita" value="${formattedVisita}">
+
         <label>Estado de visita</label>
         <select id="editClienteEstado">
           <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
           <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
         </select>
+
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button type="button" onclick="updateCliente(${cliente.id})" style="background:#3498db;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">💾 Guardar</button>
           <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cancelar</button>
@@ -1726,7 +1768,29 @@ async function openEditClienteModal(id) {
       </form>
     `
   );
+
+  // --- CARGA DE LOCALIDADES EN EL SELECT ---
+  const select = document.getElementById("editClienteLocalidad");
+  if (!select) return;
+
+  const { data: localidades, error: locError } = await supabase.from("localidades").select("nombre").order("nombre", { ascending: true });
+  if (locError) {
+    console.error("Error al cargar localidades:", locError);
+    select.innerHTML = `<option value="">Error al cargar</option>`;
+    return;
+  }
+
+  select.innerHTML = `<option value="">Seleccionar localidad...</option>`;
+  localidades.forEach(loc => {
+    const opt = document.createElement("option");
+    opt.value = loc.nombre;
+    opt.textContent = loc.nombre;
+    if (loc.nombre === cliente.localidad) opt.selected = true;
+    select.appendChild(opt);
+  });
 }
+
+
 /* -------------------------
    Función: toggleEstadoCliente
    Actualiza el estado (Pendiente / Visitado) y refresca la lista
@@ -1838,7 +1902,18 @@ async function openEditClienteModal(id) {
 
     const cliente = data;
     // Formatear la fecha para el input datetime-local
-    const formattedVisita = cliente.hora_visita ? new Date(cliente.hora_visita).toISOString().substring(0, 16) : '';
+    // --- CORRECCIÓN SEGURA DE hora_visita ---
+let formattedVisita = '';
+if (cliente.hora_visita) {
+    const fecha = new Date(cliente.hora_visita);
+    if (fecha instanceof Date && !isNaN(fecha)) {  // Verifica que sea válida
+        formattedVisita = fecha.toISOString().substring(0,16); // Formato yyyy-MM-ddTHH:mm
+    } else {
+        console.warn('Hora de visita inválida para cliente ID:', cliente.id);
+        formattedVisita = '';
+    }
+}
+
 
     openModal(
         `Editar Cliente: ${escapeHtml(cliente.nombre_completo)}`,
@@ -1874,41 +1949,43 @@ async function openEditClienteModal(id) {
 /**
  * Función final para actualizar todos los campos del cliente.
  */
+/* -------------------------
+   Actualizar Cliente
+------------------------- */
 async function updateCliente(id) {
-    const nombre = document.getElementById("editClienteNombre").value.trim();
-    const localidad = document.getElementById("editClienteLocalidad").value.trim();
-    const dni = document.getElementById("editClienteDNI").value.trim() || null;
-    const telefono = document.getElementById("editClienteTelefono").value.trim() || null;
-    const visita = document.getElementById("editClienteVisita").value;
-    const estado = document.getElementById("editClienteEstado").value;
+  const nombre = document.getElementById("editClienteNombre").value.trim();
+  const localidad = document.getElementById("editClienteLocalidad").value.trim();
+  const dni = document.getElementById("editClienteDNI").value.trim() || null;
+  const telefono = document.getElementById("editClienteTelefono").value.trim() || null;
+  const visita = document.getElementById("editClienteVisita").value;
+  const estado = document.getElementById("editClienteEstado").value;
 
-    // Convertir a formato ISO si existe para Supabase
-    const hora_visita = visita ? new Date(visita).toISOString() : null;
+  if (!nombre || !localidad) {
+    return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
+  }
 
-    if (!nombre || !localidad) {
-        return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
-    }
+  const hora_visita = visita ? new Date(visita).toISOString() : null;
 
-    const { error } = await supabase.from("clientes")
-        .update({
-            nombre_completo: nombre,
-            localidad,
-            dni,
-            telefono,
-            hora_visita,
-            estado_visita: estado
-        })
-        .eq("id", id);
+  const { error } = await supabase.from("clientes").update({
+    nombre_completo: nombre,
+    localidad,
+    dni,
+    telefono,
+    hora_visita,
+    estado_visita: estado
+  }).eq("id", id);
 
-    if (error) {
-        console.error("Error al actualizar cliente:", error);
-        return alert("Error al actualizar cliente: " + error.message);
-    }
+  if (error) {
+    console.error("Error al actualizar cliente:", error);
+    return alert("Error al actualizar cliente: " + error.message);
+  }
 
-    closeModal();
-    fetchClientes();
-    showToast("Cliente actualizado con éxito ✅");
+  closeModal();
+  fetchClientes();
+  showToast("✅ Cliente actualizado con éxito");
 }
+
+
 
 /**
  * Elimina un cliente.
@@ -1990,7 +2067,8 @@ async function deleteDocumento(id, archivo) {
 document.querySelector("button[data-tab='documentos']").addEventListener("click", fetchDocumentos);
 
 // --- INICIALIZACIÓN ---
-fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos(); fetchClientes();
+fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos(); fetchClientes(); loadLocalidadesFilter();
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   await cargarLocalidadesEnSelect();
