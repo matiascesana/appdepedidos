@@ -23,23 +23,16 @@
 
   /* Sidebar */
   .sidebar {
-  /* Por defecto en móvil está fuera de pantalla */
-  transform: translateX(-100%);
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 70%;
-  padding-top: 50px;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s ease;
-  z-index: 9000;
-}
-
-.sidebar.open {
-  transform: translateX(0);
-}
-
+    width: 220px;
+    background: var(--sidebar-bg);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    z-index: 9000;
+  }
 
   .sidebar h2 {
     text-align: center;
@@ -216,46 +209,37 @@
 
   /* Botón hamburguesa */
   #menuBtn {
-  position: fixed; /* mejor fixed para que siempre esté visible */
-  left: 12px;
-  top: 12px;
-  background: #3498db;
-  color: white;
-  font-size: 22px;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
-  z-index: 10000; /* más alto que sidebar */
-  display: none; /* visible solo en móvil */
-}
-
-@media (max-width: 768px) {
-  #menuBtn {
-    display: block;
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    background: #3498db;
+    color: white;
+    font-size: 22px;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    z-index: 2000;
+    display: none;
   }
-}
-
 
   /* Backdrop */
   .backdrop {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 8500;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 8000;
+    pointer-events: none;
+  }
 
-.backdrop.show {
-  display: block;
-  pointer-events: auto;
-}
-
+  .backdrop.show {
+    display: block;
+    pointer-events: auto;
+  }
 
   /* Tablas */
   .table {
@@ -1989,11 +1973,11 @@ fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDo
 
 /* ========== FUNCIÓN PARA DESLIZAR SIDEBAR EN MÓVIL ========== */
 function toggleSidebar() {
-  const sidebar = document.querySelector(".sidebar");
-  const backdrop = document.getElementById("backdrop");
-
-  sidebar.classList.toggle("open");
-  backdrop.classList.toggle("show");
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('backdrop');
+    
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('show');
 }
 
 // 💥 Asignar la función al nuevo botón de menú 💥
@@ -2016,3 +2000,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
+
