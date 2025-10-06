@@ -366,6 +366,42 @@
     }
   }
 </style>
+
+<script>
+    // 1. Obtener referencias a los elementos
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('backdrop');
+    const menuBtn = document.getElementById('menuBtn'); // Aunque no lo usaremos directamente, es bueno tenerlo
+
+    // 2. Función que alterna la clase 'open'
+    function toggleSidebar() {
+        // Alterna la clase 'open' en el sidebar
+        sidebar.classList.toggle('open');
+        
+        // Alterna la clase 'show' en el backdrop
+        backdrop.classList.toggle('show');
+    }
+
+    // Opcional: Cerrar el menú al hacer clic en un botón de navegación
+    const sidebarButtons = document.querySelectorAll('.sidebar button');
+    
+    sidebarButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Solo si el sidebar está abierto (es decir, en móvil)
+            if (sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+        });
+    });
+    
+    // Si tienes una función showSection(), agrégala aquí también
+    function showSection(sectionId) {
+        // Lógica para cambiar la sección activa...
+        console.log("Mostrando sección:", sectionId);
+    }
+</script>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -1996,9 +2032,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+
 </script>
 
 </body>
 </html>
-
 
