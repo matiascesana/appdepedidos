@@ -833,7 +833,7 @@ async function exportPDF() {
             catTitle.style.borderBottom = "2px solid #333";
             page.appendChild(catTitle);
 
-            const slice = promos.slice(pageCount * 6, pageCount * 6 + 6);
+            const slice = promos.slice(pageCount * 7, pageCount * 7 + 7);
 
             for (const p of slice) {
                 const promoDiv = document.createElement("div");
@@ -867,7 +867,6 @@ async function exportPDF() {
                     ${p.precio_anterior && Number(p.precio_anterior) > Number(p.precio)
                         ? `<del>$${Number(p.precio_anterior).toFixed(2)}</del> <span style="color: red; font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
                         : `<span style="font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`}<br>
-                    Stock: ${p.stock || 0}<br>
                     Categoría: ${escapeHtml(category)}
                 `;
                 promoDiv.appendChild(info);
@@ -2105,4 +2104,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
