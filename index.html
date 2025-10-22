@@ -1,935 +1,2015 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Panel Administrativo Completo</title>
-<style>
-  :root {
-    --sidebar-bg: #2c3e50;
-    --sidebar-hover: #34495e;
-    --accent: #ff4d4f;
-    --card-bg: #fff;
-    --text-muted: #555;
-  }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel Administrativo Completo</title>
+    <style>
+        :root {
+            --sidebar-bg: #2c3e50;
+            --sidebar-hover: #34495e;
+            --accent: #ff4d4f;
+            --card-bg: #fff;
+            --text-muted: #555;
+        }
+        body { margin: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
+        .sidebar { width: 220px; background: var(--sidebar-bg); color: #fff; display: flex; flex-direction: column; padding-top: 20px; flex-shrink: 0; transition: transform 0.3s ease; z-index: 9000; }
+        .sidebar h2 { text-align: center; margin-bottom: 20px; font-size: 22px; }
+        .sidebar button { background: none; border: none; color: white; text-align: left; padding: 12px 20px; cursor: pointer; font-size: 16px; width: 100%; transition: 0.2s; }
+        .sidebar button:hover, .sidebar button.active { background: var(--sidebar-hover); }
+        .content { flex: 1; padding: 20px; overflow-y: auto; }
+        .section { display: none; }
+        .section.active { display: block; }
+        h1 { margin-top: 0; margin-bottom: 15px; }
+        .card { display: flex; align-items: center; gap: 15px; background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #ddd; transition: 0.3s; }
+        .card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); }
+        .card img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; border: 1px solid #ccc; }
+        .card-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .card-info b { font-size: 1.1em; }
+        .card-price { font-size: 1em; color: var(--accent); }
+        .card-price del { color: #999; margin-right: 6px; }
+        .card-stock { font-size: 0.85em; color: var(--text-muted); }
+        .card-actions { display: flex; flex-direction: column; gap: 6px; }
+        .card-actions button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 12px; font-weight: bold; transition: 0.2s; }
+        .card-actions .edit-btn { background: #3498db; color: #fff; }
+        .card-actions .edit-btn:hover { background: #2980b9; }
+        .card-actions .delete-btn { background: var(--accent); color: #fff; }
+        .card-actions .delete-btn:hover { background: #e8434f; }
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); justify-content: center; align-items: center; z-index: 9999; }
+        #modalInner { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 1100px; max-height: 90%; overflow-y: auto; }
+        input, select, button { margin-bottom: 8px; padding: 6px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; }
+        button[type=submit] { background: var(--accent); color: #fff; border: none; cursor: pointer; }
+        button[type=submit]:hover { background: #e8434f; }
+        #menuBtn { position: absolute; left: 12px; top: 12px; background: #3498db; color: white; font-size: 22px; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; z-index: 2000; display: none; }
+        .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 8000; pointer-events: none; }
+        .backdrop.show { display: block; pointer-events: auto; }
+        .table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .table th, .table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        .table th { background: #f8f9fa; font-weight: bold; }
+        #appToast { position: fixed; right: 16px; bottom: 20px; background: #222; color: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); z-index: 15000; opacity: 0; transition: opacity 0.25s; }
+        @media (max-width: 768px) {
+            #menuBtn { display: block; }
+            .card { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .card-info { width: 100%; flex: initial; }
+            .card-actions { flex-direction: column; width: 100%; gap: 8px; }
+            .card-actions button { width: 100%; padding: 10px 12px; font-size: 16px; box-sizing: border-box; }
+        }
+        @media (max-width: 500px) {
+            #menuBtn { display: block; }
+            .sidebar { transform: translateX(-100%); position: fixed; top: 0; left: 0; height: 100vh; width: 70%; padding-top: 50px; box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5); }
+            .sidebar.open { transform: translateX(0); }
+            .content { flex: 1; padding: 8px; margin-top: 50px; }
+            .sidebar h2 { display: block; text-align: center; }
+            .sidebar button { text-align: left; font-size: 16px; padding: 12px 20px; }
+        }
 
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    display: flex;
-    height: 100vh;
-    background: #f0f2f5;
-  }
+/* Busca el estilo de .promo-group-container y ajústalo así: */
+.promo-group-container {
+    display: grid;
+    /* Reducimos el minmax de 220px a 180px para tarjetas más pequeñas */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+    gap: 12px; /* Reducimos el espacio entre tarjetas */
+    margin-bottom: 25px; 
+}
 
-  /* Sidebar */
-  .sidebar {
-    width: 220px;
-    background: var(--sidebar-bg);
-    color: #fff;
+
+/* Ajuste de la tarjeta para que se vea bien en la cuadrícula */
+.promo-card {
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    padding-top: 20px;
-    flex-shrink: 0;
-    transition: transform 0.3s ease;
-    z-index: 9000;
-  }
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    /* Se elimina el width fijo: width: 200px; */ 
+}
 
-  .sidebar h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 22px;
-  }
+/* Estilos para el Desplegable */
+.dropdown-container {
+    position: relative;
+    width: 100%;
+}
 
-  .sidebar button {
+.dropdown-menu {
+    display: none; /* Inicialmente oculto */
+    background: #34495e; /* Un tono un poco más oscuro que el sidebar */
+    width: 100%;
+    padding: 5px 0;
+    transition: max-height 0.3s ease-out;
+    overflow: hidden;
+    /* Evita que se solape con el botón de abajo visualmente */
+    border-top: 1px solid rgba(0, 0, 0, 0.2); 
+}
+
+.dropdown-menu.open {
+    display: block;
+}
+
+.dropdown-menu button {
     background: none;
     border: none;
     color: white;
     text-align: left;
-    padding: 12px 20px;
+    padding: 8px 30px; /* Más padding para indentar */
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     width: 100%;
     transition: 0.2s;
-  }
+}
 
-  .sidebar button:hover,
-  .sidebar button.active {
-    background: var(--sidebar-hover);
-  }
+.dropdown-menu button:hover, .dropdown-menu button.active {
+    background: #4a677e; /* Tono de hover para el submenú */
+}
 
-  /* Content */
-  .content {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-  }
-
-  /* Sections */
-  .section {
-    display: none;
-  }
-
-  .section.active {
-    display: block;
-  }
-
-  h1 {
-    margin-top: 0;
-    margin-bottom: 15px;
-  }
-
-  /* Cards */
-  .card {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: var(--card-bg);
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    border: 1px solid #ddd;
-    transition: 0.3s;
-  }
-
-  .card:hover {
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-  }
-
-  .card img {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-  }
-
-  .card-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .card-info b {
-    font-size: 1.1em;
-  }
-
-  .card-price {
-    font-size: 1em;
-    color: var(--accent);
-  }
-
-  .card-price del {
-    color: #999;
-    margin-right: 6px;
-  }
-
-  .card-stock {
-    font-size: 0.85em;
-    color: var(--text-muted);
-  }
-
-  .card-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .card-actions button {
-    cursor: pointer;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-weight: bold;
-    transition: 0.2s;
-  }
-
-  .card-actions .edit-btn {
-    background: #3498db;
-    color: #fff;
-  }
-
-  .card-actions .edit-btn:hover {
-    background: #2980b9;
-  }
-
-  .card-actions .delete-btn {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .card-actions .delete-btn:hover {
-    background: #e8434f;
-  }
-
-  /* Modal */
-  #modal {
-    display: none;
-    position: fixed;
-    top: 0;
+/* Estilos del Modal */
+.modal {
+    display: none; /* Oculto por defecto */
+    position: fixed; /* Posicionamiento fijo */
+    z-index: 1000; /* Siempre encima */
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-  }
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.4); /* Fondo semi-transparente */
+}
 
-  #modalInner {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 90%;
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto; /* 10% desde arriba y centrado */
+    padding: 25px;
+    border: 1px solid #888;
+    width: 80%; 
     max-width: 500px;
-    max-height: 90%;
-    overflow-y: auto;
-  }
-
-  input,
-  select,
-  button {
-    margin-bottom: 8px;
-    padding: 6px;
-    font-size: 14px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-  }
-
-  button[type=submit] {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    cursor: pointer;
-  }
-
-  button[type=submit]:hover {
-    background: #e8434f;
-  }
-
-  /* Botón hamburguesa */
-  #menuBtn {
-    position: absolute;
-    left: 12px;
-    top: 12px;
-    background: #3498db;
-    color: white;
-    font-size: 22px;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 12px;
-    cursor: pointer;
-    z-index: 2000;
-    display: none;
-  }
-
-  /* Backdrop */
-  .backdrop {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 8000;
-    pointer-events: none;
-  }
-
-  .backdrop.show {
-    display: block;
-    pointer-events: auto;
-  }
-
-  /* Tablas */
-  .table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 10px 0;
-  }
-
-  .table th,
-  .table td {
-    padding: 8px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-  }
-
-  .table th {
-    background: #f8f9fa;
-    font-weight: bold;
-  }
-
-  /* Toast */
-  #appToast {
-    position: fixed;
-    right: 16px;
-    bottom: 20px;
-    background: #222;
-    color: #fff;
-    padding: 10px 14px;
     border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-    z-index: 15000;
-    opacity: 0;
-    transition: opacity 0.25s;
-  }
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
 
-  /* Responsive */
-  @media (max-width: 768px) {
-    #menuBtn {
-      display: block;
-    }
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
 
-    .card {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
-    }
+.close-button:hover,
+.close-button:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
 
-    .card-info {
-      width: 100%;
-      flex: initial;
-    }
+.modal-content h3 {
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
 
-    .card-actions {
-      flex-direction: column;
-      width: 100%;
-      gap: 8px;
-    }
+.modal-content label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #333;
+}
 
-    .card-actions button {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-  }
+.modal-content input[type="number"],
+.modal-content input[type="file"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Incluye padding y borde en el ancho/alto */
+}
 
-  @media (max-width: 500px) {
-    #menuBtn {
-      display: block;
-    }
+/* Botones */
+.save-btn {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
 
-    .sidebar {
-      transform: translateX(-100%);
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: 70%;
-      padding-top: 50px;
-      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
-    }
+.cancel-btn {
+    background-color: #6c757d;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
 
-    .sidebar.open {
-      transform: translateX(0);
-    }
 
-    .content {
-      flex: 1;
-      padding: 8px;
-      margin-top: 50px;
-    }
+/* 1. Contenedor principal: organiza los elementos en fila y maneja el desbordamiento */
+.category-buttons-container {
+    display: flex;
+    flex-wrap: wrap; /* Permite que los botones salten a la siguiente línea si no hay espacio */
+    gap: 10px; /* Espacio uniforme entre todos los elementos (botones y botón de acción) */
+    padding: 15px 0;
+    align-items: center; /* Alinea verticalmente el botón de acción con los botones de categoría */
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+}
 
-    .sidebar h2 {
-      display: block;
-      text-align: center;
-    }
 
-    .sidebar button {
-      text-align: left;
-      font-size: 16px;
-      padding: 12px 20px;
-    }
+/* 2. Estilo base del botón de categoría */
+.category-button-label {
+    /* Quitamos el borde inline anterior y usamos un diseño más limpio */
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 15px;
+    background-color: #f8f8f8; /* Fondo claro por defecto */
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Bordes redondeados para un aspecto moderno */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 14px;
+    user-select: none; /* Evita selección de texto al hacer clic */
+}
 
-    #categoriaList > div,
-    #localidadList > div {
-      flex-direction: column;
-      align-items: flex-start !important;
-    }
+/* 3. Efecto hover */
+.category-button-label:hover {
+    background-color: #eee;
+    border-color: #aaa;
+}
 
-    #categoriaList > div > div,
-    #localidadList > div > div {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      gap: 8px;
-      margin-top: 10px;
-    }
+/* 4. Estilo de SELECCIONADO (VISTOSO) */
+/* Aplicado cuando el checkbox DENTRO del label está marcado */
+.category-checkbox:checked + label {
+    /* El selector + label no funciona aquí porque el checkbox no está antes del label, está dentro. 
+       Usaremos el selector padre: */
+}
 
-    #categoriaList button,
-    #localidadList button {
-      width: 100%;
-      padding: 10px 18px !important;
-      box-sizing: border-box;
-    }
-  }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+.category-checkbox:checked {
+    /* Para ocultar el checkbox por defecto si quieres que solo se vea el color del label */
+    /* display: none; */ 
+}
+
+/* Estilo para el label cuando el checkbox DENTRO está chequeado. */
+/* Como el checkbox es el primer hijo, debemos usar un selector más complejo si queremos 
+   cambiar el estilo del padre. La forma más sencilla es usar la clase y el selector :has() 
+   (si es soportado) o cambiar ligeramente la estructura. 
+   
+   Por simplicidad y compatibilidad: El estilo se aplicará al label cuando el checkbox esté checked. */
+
+/* Estilo simple (si no ocultas el checkbox): */
+.category-checkbox:checked + .category-button-label { /* Esto requiere que el label esté DENTRO del input, o el checkbox esté FUERA. */
+    
+}
+/* La estructura actual es: <label><input type="checkbox">Texto</label>
+   El CSS debe ser: */
+.category-button-label:has(.category-checkbox:checked) {
+    background-color: #007bff; /* Color de selección azul vibrante */
+    color: white;
+    border-color: #0056b3;
+}
+
+
+/* Si no usas :has() (navegadores antiguos), puedes dejar el diseño del checkbox visible, 
+   o simplificar el JavaScript para que la clase se añada al label con un listener 'change'. */
+
+/* Para el diseño VISTOSO, asegúrate que los checkboxes por defecto sean menos intrusivos */
+.category-checkbox {
+    /* Estilos opcionales para checkbox */
+    accent-color: #007bff;
+}
+
+/* 5. Estilo del botón principal de acción */
+.action-button {
+    background-color: #28a745;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: bold;
+}
+
+.action-button:hover {
+    background-color: #1e7e34;
+}
+
+
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <!-- Botón hamburguesa -->
-  <button id="menuBtn" onclick="toggleSidebar()">☰</button>
-
-  <!-- Backdrop -->
-  <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
-
-  <!-- Sidebar -->
-  <div class="sidebar">
+    <button id="menuBtn">
+    </button>
+    <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
+    <div class="sidebar">
     <h2>MENU</h2>
-    <button class="tab-btn active" data-tab="promos">Promociones</button>
+    
+    <div class="dropdown-container">
+        <button class="tab-btn dropdown-toggle active" data-tab="promos_menu">
+            Promociones (Menú) ▼
+        </button>
+        <div id="promoSubMenu" class="dropdown-menu">
+            </div>
+    </div>
+    
     <button class="tab-btn" data-tab="pedidos">Pedidos</button>
     <button class="tab-btn" data-tab="categorias">Categorías</button>
     <button class="tab-btn" data-tab="localidades">Localidades</button>
     <button class="tab-btn" data-tab="documentos">Documentos</button>
     <button class="tab-btn" data-tab="clientes">Clientes</button>
-  </div>
+</div>
+    <div class="content">
+        <div id="promos" class="section active">
+            <div style="margin-bottom:20px;">
+<div id="promoCategoriaFilter" style="margin-bottom: 50px;">
+    </div>
+     
+    </select>
 
-  <!-- Contenido -->
-  <div class="content">
-    <!-- PROMOCIONES -->
-    <div id="promos" class="section active">
-      <h1>Gestión de Promociones</h1>
-      <form id="promoForm" onsubmit="event.preventDefault(); addPromo();">
-        <input type="text" id="promoNombre" placeholder="Nombre" required />
-        <input type="number" id="promoPrecio" placeholder="Precio" step="0.01" required />
-        <input type="number" id="promoPrecioAnterior" placeholder="Precio anterior" step="0.01" />
-        <input type="number" id="promoStock" placeholder="Stock" />
-        <select id="promoCategoria"></select>
-        <input type="file" id="promoImagen" accept="image/*" />
-        <button type="submit">Agregar promoción</button>
-      </form>
-      <button onclick="exportPDF()">Exportar PDF</button>
-      <div id="promoList"></div>
+                    <option value="">Todas las categorías</option>
+                </select>
+                <button id="exportPromoPDF" style="margin-left:10px;padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;">Exportar seleccionados</button>
+            </div>
+            <div id="promoList" style="display:grid; grid-template-rows: repeat(auto-fill,minmax(250px,1fr)); gap:16px;"></div>
+        </div>
+
+
+
+        <div id="pedidos" class="section">
+            <h2>Pedidos</h2>
+            <form id="pedidoForm" onsubmit="return false;" 
+      style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
+
+    <!-- Cliente: más largo -->
+    <div style="flex:2; min-width:300px; display:flex; flex-direction:column;">
+        <label>Cliente</label>
+        <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:100%;" />
     </div>
 
-    <!-- PEDIDOS -->
-    <div id="pedidos" class="section">
-      <h2>Pedidos</h2>
-      <form id="pedidoForm" onsubmit="return false;" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-        <div style="flex:1;min-width:220px">
-          <label>Cliente
-            <input id="pedidoCliente" type="text" placeholder="Nombre cliente" />
-          </label>
-        </div>
-        <div style="width:220px">
-          <label>Localidad
-            <select id="pedidoLocalidad"></select>
-          </label>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button type="button" id="selectProductsBtn">Seleccionar Productos</button>
-        </div>
-        <div style="width:100%;margin-top:6px">
-          <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button type="button" id="addOrderBtn">Agregar Pedido</button>
-          <button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-        </div>
-      </form>
-      <h3>Lista de Pedidos</h3>
-      <div id="pedidoList"></div>
+    <!-- Localidad -->
+    <div style="flex:1; min-width:180px; display:flex; flex-direction:column;">
+        <label>Localidad</label>
+        <select id="pedidoLocalidad" style="width:100%;"></select>
     </div>
 
-    <!-- CATEGORÍAS -->
-    <div id="categorias" class="section">
-      <h1>Gestión de Categorías</h1>
-      <input type="text" id="categoriaNombre" placeholder="Nueva categoría" />
-      <button onclick="addCategoria()">Agregar</button>
-      <div id="categoriaList"></div>
+    <!-- Seleccionar Productos -->
+    <div style="flex:1; min-width:180px; display:flex; flex-direction:column; justify-content:flex-start;">
+        <label>Productos</label>
+        <button type="button" id="selectProductsBtn" 
+                style="width:100%; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
+            Seleccionar Productos
+        </button>
     </div>
 
-    <!-- LOCALIDADES -->
+    <!-- Productos seleccionados debajo -->
+    <div style="width:100%; margin-top:6px;">
+        <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
+    </div>
+
+    <!-- Botones agregar/exportar -->
+    <div style="display:flex;gap:8px; width:100%; margin-top:6px;">
+        <button type="button" id="addOrderBtn">Agregar Pedido</button>
+	</div>
+	<button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
+	</div>
+</form>
+            <h3>Lista de Pedidos</h3>
+            <div id="pedidoList"></div>
+        </div>
+
+<div id="editPromoModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" onclick="document.getElementById('editPromoModal').style.display = 'none'">&times;</span>
+        
+        <h3>Editar Promoción</h3>
+        
+        <input type="hidden" id="modalPromoId">
+        <input type="hidden" id="modalOldImageName">
+        
+        <label for="modalImageFile">Cambiar Imagen:</label>
+        <input type="file" id="modalImageFile" accept="image/*">
+        <p>Imagen actual: <span id="modalCurrentImageName" style="font-style: italic;"></span></p>
+
+        <label for="modalPrecio">Precio Actual ($):</label>
+        <input type="number" id="modalPrecio" min="0" step="0.01" required>
+        
+        <label for="modalPrecioAnterior">Precio Anterior ($):</label>
+        <input type="number" id="modalPrecioAnterior" min="0" step="0.01">
+        
+        <label for="modalStock">Stock (unidades):</label>
+        <input type="number" id="modalStock" min="0" required>
+        
+        <div style="margin-top: 20px; text-align: right;">
+            <button onclick="document.getElementById('editPromoModal').style.display = 'none'" class="cancel-btn">Cancelar</button>
+            <button onclick="savePromotionChanges()" class="save-btn">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+
+
+
+        <div id="categorias" class="section">
+  <h1>Gestión de Categorías</h1>
+  <input type="text" id="categoriaNombre" placeholder="Nueva categoría" />
+  <button id="addCategoriaBtn">Agregar</button>
+  <div id="categoriaList"></div>
+</div>
+
+        <!-- LOCALIDADES -->
     <div id="localidades" class="section">
       <h1>Gestión de Localidades</h1>
       <input type="text" id="localidadNombre" placeholder="Nueva localidad" />
       <button onclick="addLocalidad()">Agregar</button>
       <div id="localidadList"></div>
     </div>
-
-    <!-- DOCUMENTOS -->
-    <div id="documentos" class="section">
-      <h1>Gestión de Documentos</h1>
-      <input type="file" id="docArchivo" />
-      <button onclick="addDocumento()">Agregar Documento</button>
-      <button onclick="fetchDocumentos()">Actualizar Documentos</button>
-      <div id="docList" style="margin-top:18px;"></div>
+        <div id="documentos" class="section">
+            <h1>Gestión de Documentos</h1>
+            <input type="file" id="docArchivo" />
+            <button id="addDocumentoBtn">Agregar Documento</button>
+            <button id="fetchDocumentosBtn">Actualizar Documentos</button>
+            <div id="docList" style="margin-top:18px;"></div>
+        </div>
+        <div id="clientes" class="section">
+            <h1>Gestión de Clientes</h1>
+            <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
+                <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;" />
+                <select id="clienteLocalidad" required style="flex: 1; min-width: 120px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+                    <option value="">Seleccionar Localidad...</option>
+                </select>
+                <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
+                <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
+            </form>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+                <input type="text" id="clienteSearch" placeholder="Buscar por cliente..." style="flex:1;padding:6px 10px;border-radius:5px;border:1px solid #ccc;">
+                <select id="clienteLocalidadFilter" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
+                    <option value="">Todas las localidades</option>
+                </select>
+            </div>
+            <h3>Lista de Clientes y Seguimiento</h3>
+            <div id="clienteList"></div>
+        </div>
     </div>
+    <div id="modal"><div id="modalInner"></div></div>
+    <div id="appToast"></div>
 
-
-    <!-- ================= CLIENTES ================= -->
-<div id="clientes" class="section">
-  <h1>Gestión de Clientes</h1>
-  
-  <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
-    <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;" />
-
-    <!-- SELECT de Localidades dinámico -->
-    <select id="clienteLocalidad" required style="flex: 1; min-width: 120px; padding:8px; border:1px solid #ccc; border-radius:6px;">
-      <option value="">Seleccionar Localidad...</option>
-    </select>
-
-    <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
-    <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
-  </form>
-
- <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-  <input type="text" id="clienteSearch" placeholder="Buscar por cliente..." style="flex:1;padding:6px 10px;border-radius:5px;border:1px solid #ccc;">
-
-  <select id="clienteLocalidadFilter" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
-    <option value="">Todas las localidades</option>
-  </select>
-</div>
-
-
-  <h3>Lista de Clientes y Seguimiento</h3>
-  <div id="clienteList"></div>
-</div>
-
-
-  <!-- Modal -->
-  <div id="modal"><div id="modalInner"></div></div>
 
 <script>
-  // --- Configuración Supabase ---
+
+
+/* =========================================================
+   Configuración Supabase (cliente)
+   ========================================================= */
+
 const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // --- Funciones auxiliares ---
-  function escapeHtml(text) {
-    var div = document.createElement("div");
-    div.innerText = text;
-    return div.innerHTML;
-  }
+/* ===========================
+   Utilidades
+   =========================== */
 
-  function showToast(text, tiempo = 2200) {
-    let toast = document.getElementById("appToast");
+function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+function safeText(t){ return escapeHtml(t); } // Alias para mayor claridad en el código
+function showToast(text, tiempo = 2200) {
+    let toast = document.getElementById('appToast');
     if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "appToast";
-      toast.style.cssText =
-        "position:fixed;right:16px;bottom:20px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:15000;opacity:0;transition:opacity .25s;";
-      document.body.appendChild(toast);
+        toast = document.createElement('div');
+        toast.id = 'appToast';
+        toast.style.cssText = 'position:fixed;right:16px;bottom:20px;background:#2ecc71;color:#fff;padding:12px 18px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.3);z-index:15000;opacity:0;transition:opacity .25s;';
+        document.body.appendChild(toast);
     }
-    toast.textContent = text;
-    toast.style.opacity = "1";
+    toast.innerText = text;
+    toast.style.opacity = '1';
     clearTimeout(toast._to);
-    toast._to = setTimeout(() => {
-      toast.style.opacity = "0";
-    }, tiempo);
-  }
+    toast._to = setTimeout(() => { toast.style.opacity = '0'; }, tiempo);
+}
+function openModal(innerHtml) {
+    const inner = document.getElementById('modalInner');
+    inner.innerHTML = innerHtml; // Simplificamos openModal
+    document.getElementById('modal').style.display = 'flex';
+}
+function closeModal(){ document.getElementById('modal').style.display = 'none'; }
 
-  // --- Modal ---
-  function openModal(title, html) {
-    document.getElementById("modalInner").innerHTML = `<h3>${title}</h3>${html}`;
-    document.getElementById("modal").style.display = "flex";
-  }
-  function closeModal() {
-    document.getElementById("modal").style.display = "none";
-  }
-  document.getElementById("modal").addEventListener("click", (e) => {
-    if (e.target.id === "modal") closeModal();
-  });
+/* ===========================
+   Sidebar & Tabs
+   =========================== */
 
-  // --- Sidebar toggle ---
-  function toggleSidebar() {
-    const sidebar = document.querySelector(".sidebar");
-    const backdrop = document.getElementById("backdrop");
+function toggleSidebar(){
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('backdrop');
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('show');
+}
 
-    sidebar.classList.toggle("open");
-    backdrop.classList.toggle("show");
-  }
-
-  // --- Manejo de pestañas ---
-document.querySelectorAll(".tab-btn").forEach((button) => {
-  button.addEventListener("click", () => {
-    const tab = button.getAttribute("data-tab");
-    // Cambiar pestaña activa
-    document.querySelectorAll(".tab-btn").forEach((btn) =>
-      btn.classList.remove("active")
-    );
-    button.classList.add("active");
-    // Mostrar sección correspondiente
-    document.querySelectorAll(".section").forEach((section) =>
-      section.classList.remove("active")
-    );
-    const activeSection = document.getElementById(tab);
-    if (activeSection) activeSection.classList.add("active");
-    // Cerrar sidebar en móvil si está abierta
-    if (
-      window.innerWidth <= 500 &&
-      document.querySelector(".sidebar").classList.contains("open")
-    ) {
-      toggleSidebar();
+document.querySelector('.dropdown-toggle').addEventListener('click', function() {
+    const menu = document.getElementById('promoSubMenu');
+    menu.classList.toggle('open');
+    
+    // Asegura que se carguen las categorías si no están ahí
+    if (menu.children.length === 0) {
+        // Llamar a la nueva función que solo llena el submenú
+        loadPromoSubMenu(); 
     }
-  });
+});
+
+document.getElementById('menuBtn')?.addEventListener('click', toggleSidebar);
+document.querySelectorAll('.tab-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+        const tab = button.getAttribute('data-tab');
+        document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.remove('active'));
+        button.classList.add('active');
+        document.querySelectorAll('.section').forEach((section) => section.classList.remove('active'));
+        const activeSection = document.getElementById(tab);
+        if (activeSection) activeSection.classList.add('active');
+        if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) toggleSidebar();
+        if (tab === 'promos') fetchPromos(); 
+        if (tab === 'pedidos') fetchOrders(); 
+        if (tab === 'categorias') fetchCategorias(); // <--- ¡Asegúrate de tener esta línea!
+        if (tab === 'localidades') fetchLocalidades();
+        if (tab === 'clientes') fetchClientes();
+    });
+});
+
+/* =========================================================
+   Variables globales y caches
+   ========================================================= */
+
+let selectedProducts = [];
+let editingOrderId = null;
+
+
+
+/**
+ * Maneja el clic en un botón de categoría del submenú.
+ */
+function handleCategoryFilter() {
+    const categoryId = this.dataset.categoryId;
+    
+    // 1. Marcar el botón activo y resetear los demás
+    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    // 2. Asegurar que la sección de promos esté activa
+    document.querySelectorAll('.section').forEach((section) => section.classList.remove('active'));
+    document.getElementById('promos').classList.add('active');
+    
+    // 3. Llamar a la función de renderizado para cargar las promos filtradas
+    // Si tienes el selector de filtro en el DOM, actualiza su valor:
+    const filterSelect = document.getElementById('promoCategoriaFilter');
+    if (filterSelect) filterSelect.removeEventListener('change', handlePromoFilterChange);
+    
+    // Llamar a la función de renderizado (que ahora debe estar optimizada para el ID)
+    renderPromosByFilter(categoryId); 
+}
+
+
+/* =========================================================
+   Promociones: Carga Inicial de Categorías en Submenú
+   ========================================================= */
+
+async function loadPromoSubMenu() {
+    try {
+        const { data: categorias = [], error: catError } = await supabase.from("categorias").select("id,nombre").order("nombre");
+        if (catError) throw catError;
+        
+        const subMenu = document.getElementById('promoSubMenu');
+        if (!subMenu) return;
+
+        subMenu.innerHTML = ''; // Limpiar el menú antes de llenarlo
+
+        // Opción: "Ver Todas" al inicio
+        const allBtn = document.createElement('button');
+        allBtn.textContent = 'Todas las Promociones';
+        allBtn.className = 'category-btn active'; // Activo por defecto
+        allBtn.dataset.categoryId = ''; 
+        allBtn.addEventListener('click', handleCategoryFilter);
+        subMenu.appendChild(allBtn);
+
+        // Botones de Categoría
+        categorias.forEach(c => {
+            const btn = document.createElement('button');
+            btn.textContent = safeText(c.nombre);
+            btn.className = 'category-btn';
+            btn.dataset.categoryId = c.id;
+            btn.addEventListener('click', handleCategoryFilter);
+            subMenu.appendChild(btn);
+        });
+
+    } catch (err) {
+        console.error('loadPromoSubMenu error', err);
+    }
+}
+
+
+
+
+
+// ===============================================
+// === 🆕 FUNCIONES DE EDICIÓN Y MODAL 🆕 ===
+// ===============================================
+
+/**
+ * Abre el modal y carga los datos de la promoción seleccionada.
+ * @param {number} promoId - ID de la promoción a editar.
+ */
+async function openEditModal(promoId) {
+    const modal = document.getElementById('editPromoModal');
+    if (!modal) {
+        console.error("Modal 'editPromoModal' no encontrado.");
+        return;
+    }
+
+    try {
+        // 1. Obtener los datos de la promoción
+        const { data: promo, error } = await supabase
+            .from('promociones')
+            .select('*')
+            .eq('id', promoId)
+            .maybeSingle();
+
+        if (error || !promo) throw new Error(error?.message || 'Promoción no encontrada');
+
+        // 2. Llenar los campos del modal
+        document.getElementById('modalPromoId').value = promo.id;
+        document.getElementById('modalOldImageName').value = promo.imagen || '';
+        document.getElementById('modalCurrentImageName').textContent = promo.imagen || 'Sin imagen';
+        
+        document.getElementById('modalPrecio').value = promo.precio || 0;
+        document.getElementById('modalPrecioAnterior').value = promo.precio_anterior || '';
+        document.getElementById('modalStock').value = promo.stock || 0;
+        
+        // Limpiar el campo de archivo por si se abre de nuevo
+        document.getElementById('modalImageFile').value = '';
+
+        // 3. Mostrar el modal
+        modal.style.display = 'block';
+
+    } catch (err) {
+        console.error('Error al abrir modal de edición:', err);
+        alert('Error al cargar datos: ' + err.message);
+    }
+}
+
+/**
+ * Guarda los cambios de la promoción, maneja la carga/eliminación de la imagen.
+ */
+async function savePromotionChanges() {
+    const promoId = document.getElementById('modalPromoId').value;
+    const oldImageName = document.getElementById('modalOldImageName').value;
+    const newImageFile = document.getElementById('modalImageFile').files[0];
+    const newPrecio = parseFloat(document.getElementById('modalPrecio').value);
+    const newPrecioAnterior = parseFloat(document.getElementById('modalPrecioAnterior').value) || null;
+    const newStock = parseInt(document.getElementById('modalStock').value) || 0;
+
+    let newImageName = oldImageName;
+    
+    if (!promoId) return alert('ID de promoción no encontrado.');
+    
+    try {
+        // 1. Manejo de la Carga de Imagen
+        if (newImageFile) {
+            // Generar nombre de archivo único
+            const fileExtension = newImageFile.name.split('.').pop();
+            const uniqueName = `${promoId}_${Date.now()}.${fileExtension}`;
+            
+            // Subir nuevo archivo
+            const { error: uploadError } = await supabase.storage
+                .from('promo_images')
+                .upload(uniqueName, newImageFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (uploadError) throw uploadError;
+            
+            newImageName = uniqueName;
+
+            // 2. Eliminación de la Imagen Anterior (si existe y es diferente)
+            if (oldImageName && oldImageName !== newImageName) {
+                const { error: deleteError } = await supabase.storage
+                    .from('promo_images')
+                    .remove([oldImageName]);
+                
+                if (deleteError) console.warn('Advertencia: No se pudo eliminar la imagen anterior:', deleteError);
+            }
+        }
+
+        // 3. Actualizar la BD (promociones)
+        const { error: updateError } = await supabase
+            .from('promociones')
+            .update({
+                precio: newPrecio,
+                precio_anterior: newPrecioAnterior,
+                stock: newStock,
+                imagen: newImageName 
+            })
+            .eq('id', promoId);
+
+        if (updateError) throw updateError;
+
+        alert('Promoción actualizada con éxito!');
+        document.getElementById('editPromoModal').style.display = 'none';
+        
+        // 4. Recargar la lista para reflejar los cambios
+        const currentCategoryId = document.getElementById('promoCategoriaFilter').value;
+        await renderPromosByFilter(currentCategoryId);
+
+    } catch (err) {
+        console.error('Error al guardar cambios:', err);
+        alert('Error al guardar cambios: ' + err.message);
+    }
+}
+
+
+/**
+ * Muestra u oculta y actualiza la barra de progreso.
+ * @param {string} containerId - ID del contenedor de la barra (e.g., 'progressBarContainer').
+ * @param {number} progress - Progreso en porcentaje (0-100).
+ * @param {string} text - Texto a mostrar.
+ * @param {boolean} visible - Si debe ser visible.
+ */
+function updateProgressBar(containerId, progress, text, visible = true) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (visible) {
+        // Asegurar que la barra existe dentro del contenedor (si no existe, la crea)
+        let bar = container.querySelector('.progress-bar');
+        let barText = container.querySelector('.progress-text');
+        
+        if (!bar) {
+            // Estructura mínima de la barra (con estilos inline para simplicidad)
+            container.innerHTML = `
+                <div class="progress-bar-inner" style="height: 10px; background-color: #f3f3f3; border-radius: 5px; margin-top: 5px;">
+                    <div class="progress-bar" style="height: 100%; width: 0%; background-color: #007bff; border-radius: 5px; transition: width 0.3s;"></div>
+                </div>
+                <div class="progress-text" style="font-size: 0.8em; margin-top: 2px;"></div>
+            `;
+            bar = container.querySelector('.progress-bar');
+            barText = container.querySelector('.progress-text');
+        }
+
+        container.style.display = 'block';
+        if (bar) bar.style.width = `${progress}%`;
+        if (barText) barText.textContent = text;
+        
+    } else {
+        // Ocultar al finalizar la carga
+        container.style.display = 'none';
+    }
+}
+
+
+
+/* =========================================================
+   Promociones: carga y render (CORREGIDO PARA AGRUPACIÓN Y ESTILO)
+   ========================================================= */
+
+async function fetchPromos() {
+    try {
+        const { data: categorias = [], error: catError } = await supabase.from("categorias").select("id,nombre").order("nombre");
+        if (catError) throw catError;
+        
+        const container = document.getElementById('promoCategoriaFilter');
+        if (!container) return;
+        
+        // 🆕 APLICAR ESTILOS DE CONTENEDOR FLEXBOX
+        container.className = 'category-buttons-container';
+        container.innerHTML = '';
+        // ---------------------------------------------
+        
+        // 🆕 Botón para mostrar las categorías seleccionadas
+        const showButton = document.createElement('button');
+        showButton.textContent = 'Mostrar Seleccionadas'; // Título más corto
+        showButton.id = 'btnShowSelectedCategories';
+        showButton.className = 'action-button'; // Clase para estilos
+        showButton.addEventListener('click', handleShowSelected);
+        container.appendChild(showButton);
+
+        // Array de opciones (se mantiene igual)
+        const allOptions = [
+            { id: '', nombre: 'Todas' }, 
+            { id: 'sin_categoria', nombre: 'Sin Categoría' },
+            ...categorias.map(c => ({ id: String(c.id), nombre: c.nombre }))
+        ];
+
+        // Crear botones con checkbox para cada categoría
+        allOptions.forEach(c => {
+            const label = document.createElement('label');
+            label.className = 'category-button-label'; // Clase para el diseño del botón
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = c.id;
+            checkbox.className = 'category-checkbox';
+            checkbox.style.marginRight = '5px';
+            
+            // 💡 Listener de Usabilidad (Desmarcar "Todas" si se selecciona otra)
+            checkbox.addEventListener('change', (e) => {
+                const clickedValue = e.target.value;
+                const isChecked = e.target.checked;
+                const todasCheckbox = document.querySelector('.category-checkbox[value=""]');
+
+                if (clickedValue === '') {
+                    if (isChecked) {
+                        document.querySelectorAll('.category-checkbox:not([value=""])').forEach(cb => cb.checked = false);
+                    }
+                } else {
+                    if (isChecked && todasCheckbox) {
+                        todasCheckbox.checked = false;
+                    }
+                }
+            });
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(c.nombre));
+            container.appendChild(label);
+        });
+
+        // ... (Mensaje inicial se mantiene igual) ...
+        
+    } catch (err) {
+        console.error('fetchPromos error', err);
+    }
+}
+
+
+// ----------------------------------------------------
+// 🆕 2. Función para manejar la selección múltiple
+// ----------------------------------------------------
+
+/**
+ * Función que se ejecuta al presionar "Mostrar Categorías Seleccionadas".
+ * Recoge todos los checkboxes marcados y llama al renderizado.
+ */
+function handleShowSelected() {
+    const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked'))
+                            .map(cb => cb.value);
+                            
+    // La función renderPromosByFilter ya está diseñada para manejar arrays de IDs
+    renderPromosByFilter(selectedIds);
+}
+
+// ----------------------------------------------------
+// 🆕 3. Función para manejar el clic individual (Mostrar solo esa)
+// ----------------------------------------------------
+
+/**
+ * Función que se ejecuta al hacer click en un checkbox de categoría.
+ * Deselecciona los demás y dispara la carga inmediata (si está marcada).
+ * @param {Event} e - Evento de click.
+ * @param {Array<string>} allCategoryIds - Todos los IDs de categoría posibles.
+ */
+function handleCategorySingleClick(e, allCategoryIds) {
+    const clickedCheckbox = e.target;
+    
+    // Si el usuario acaba de desmarcar, no hacemos nada más que esperar a "Mostrar seleccionadas"
+    if (!clickedCheckbox.checked) {
+        return;
+    }
+
+    // 1. Desmarcar todos los demás checkboxes
+    document.querySelectorAll('.category-checkbox').forEach(cb => {
+        if (cb !== clickedCheckbox) {
+            cb.checked = false;
+        }
+    });
+
+    // 2. Disparar el renderizado inmediatamente con la única categoría seleccionada
+    renderPromosByFilter([clickedCheckbox.value]);
+}
+
+
+/**
+ * Función manejadora que se dispara al cambiar el filtro.
+ * Lee todos los valores seleccionados del menú múltiple.
+ */
+function handlePromoFilterChange() {
+    const sel = document.getElementById('promoCategoriaFilter');
+    // Mapea todas las opciones seleccionadas y obtiene sus valores
+    const selectedIds = Array.from(sel.options)
+                            .filter(option => option.selected)
+                            .map(option => option.value);
+                            
+    // Llama al renderizado con el array de IDs
+    renderPromosByFilter(selectedIds);
+}
+
+
+async function renderPromosByFilter(categoryIds = []) {
+    const container = document.getElementById('promoList');
+    if (!container) return;
+
+    container.innerHTML = '<p style="padding: 20px;">Cargando promociones...</p>';
+
+    // Si no hay categorías seleccionadas, muestra el mensaje de inicio
+    if (categoryIds.length === 0) {
+        container.innerHTML = '<p style="padding: 20px;">Selecciona una o más categorías para ver las promociones.</p>';
+        return;
+    }
+
+    // --- 2. Obtener Datos Filtrados desde Supabase ---
+    let query = supabase.from("promociones").select("*").order("id");
+    
+    // 🆕 Ajuste de Título
+    let categoryName = 'Promociones Filtradas';
+
+// 🌟 INICIALIZACIÓN Y ASIGNACIÓN SEGURA DE LAS VARIABLES DE CONTROL 🌟
+    const specificCategoryIds = categoryIds.filter(id => id !== 'sin_categoria' && id !== '');
+    const isSinCategoriaSelected = categoryIds.includes('sin_categoria');
+    const isTodasSelected = categoryIds.includes(''); // <-- ¡Aquí se define!
+    
+    let filterApplied = false;
+
+    if (categoryIds.length === 1) {
+        const id = categoryIds[0];
+        if (id === '') {
+            categoryName = 'Todas las Promociones';
+        } else if (id === 'sin_categoria') {
+            categoryName = 'Sin Categoría';
+        } else {
+            // Busca el nombre de la categoría para un solo ID
+            const { data: categoriaData } = await supabase.from("categorias").select("nombre").eq("id", id).maybeSingle();
+            categoryName = categoriaData?.nombre || 'Promociones Filtradas';
+        }
+    } else if (categoryIds.length > 1) {
+        categoryName = `Múltiples Categorías (${categoryIds.length} seleccionadas)`;
+    }
+
+
+
+    if (isTodasSelected) {
+        // Si "Todas las categorías" está seleccionada, no aplicamos ningún filtro
+        categoryName = 'Todas las Promociones';
+        filterApplied = true;
+    } else if (specificCategoryIds.length > 0) {
+        // Filtra por múltiples IDs específicos
+        query = query.in('categoria_id', specificCategoryIds);
+        categoryName = `Múltiples Categorías (${specificCategoryIds.length})`;
+        filterApplied = true;
+    } 
+    
+    if (isSinCategoriaSelected) {
+        if (filterApplied) {
+            // Si ya hay un filtro aplicado (múltiples IDs), es complicado usar 'OR' en el filtro simple.
+            // Para simplificar, si seleccionas "Sin Categoría" junto con otras, solo la mostramos si es la única seleccionada.
+            // Si necesitas lógica OR compleja, necesitarías una función o un RPC en Supabase.
+            categoryName = "Categorías y Sin Categoría";
+        } else {
+            // Solo se selecciona "Sin Categoría"
+            query = query.is('categoria_id', null);
+            categoryName = "Sin Categoría";
+            filterApplied = true;
+        }
+    }
+    
+    // Si no se aplicó ningún filtro (caso no manejado arriba), salimos.
+    if (!filterApplied && specificCategoryIds.length === 0 && !isSinCategoriaSelected) {
+        container.innerHTML = '<p style="padding: 20px;">Selecciona una o más categorías para ver las promociones.</p>';
+        return;
+    }
+
+    // Ejecutar consulta
+    const { data: promos = [], error: promoError } = await query;
+    if (promoError) {
+        console.error("Error al obtener promociones:", promoError);
+        container.innerHTML = 'Error al cargar las promociones.';
+        return;
+    }
+    
+    // --- 3. Renderizado ---
+    
+    container.innerHTML = ''; 
+
+    if (promos.length === 0) {
+        container.innerHTML = `<p style="padding: 20px;">No hay promociones en la categoría: <b>${categoryName}</b></p>`;
+        return;
+    }
+    
+    // Título de Categoría
+    const catTitle = document.createElement('h2');
+   catTitle.style.marginTop = "0px"; 
+// Reducimos el padding o margen entre el texto y la línea (borderBottom)
+catTitle.style.paddingBottom = "3px"; 
+catTitle.style.marginBottom = "0"; // Asegura que no haya margen extra debajo
+catTitle.style.lineHeight = "3";
+catTitle.style.borderBottom = "1px solid #333";
+catTitle.style.fontSize = "18px";
+    container.appendChild(catTitle);
+    
+    // 🆕 Contenedor de la Barra de Progreso
+const progressBarContainer = document.createElement('div');
+progressBarContainer.id = 'renderProgressBarContainer';
+// 💡 Asegúrate de que el contenedor siguiente también tenga un margen superior pequeño o nulo
+progressBarContainer.style.marginTop = '0px'; 
+progressBarContainer.style.marginBottom = '10px'; 
+container.appendChild(progressBarContainer);
+
+    // Contenedor de la Cuadrícula
+    const promoContainer = document.createElement('div');
+    promoContainer.className = "promo-group-container"; 
+    promoContainer.style.marginTop = '0px';
+    promos.sort((a,b)=>a.id-b.id);
+    
+    // 🚨 BUCLE DE RENDERIZADO 🚨
+    const totalPromos = promos.length; 
+    let renderedCount = 0;
+    
+    for (const p of promos) {
+        
+        // LÓGICA DE LA IMAGEN
+        let imgSrc = p.imagen_url || '';
+        if (p.imagen) { 
+            try {
+                // La operación asíncrona CRÍTICA para el progreso
+                const { data: signedData } = await supabase.storage.from('promo_images').createSignedUrl(p.imagen, 3600);
+                imgSrc = signedData?.signedUrl || imgSrc;
+            } catch (err) { 
+                console.warn('Error al obtener signedUrl para:', p.imagen, err); 
+            }
+        } 
+
+        // Creación del elemento de imagen
+        const imgEl = document.createElement('img');
+        imgEl.alt = p.nombre || '';
+        imgEl.src = imgSrc || '';
+        imgEl.crossOrigin = 'anonymous'; 
+        imgEl.style.width = '100%';
+        imgEl.style.height = '120px'; 
+        imgEl.style.objectFit = 'cover';
+        imgEl.style.borderRadius = '6px';
+        imgEl.style.marginBottom = '6px';
+        
+        // Creación de la tarjeta
+        const div = document.createElement('div');
+        div.className = 'promo-card';
+        div.style.position = 'relative'; 
+
+        // Contenido de la tarjeta
+        div.innerHTML = `
+            <input type="checkbox" class="promo-select" data-promo-id="${p.id}" checked>
+            
+            <div style="position: absolute; top: 5px; right: 5px; z-index: 10;">
+                <button 
+                    onclick="openEditModal(${p.id})" 
+                    style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px; transition: background 0.3s;"
+                    onmouseover="this.style.background='#0056b3'"
+                    onmouseout="this.style.background='#007bff'"
+                >
+                    Editar ✏️
+                </button>
+            </div>
+            
+            <b style="text-align:center;">${safeText(p.nombre || '')}</b>
+            <div style="text-align:center;margin-top:4px;">
+                ${p.precio_anterior && Number(p.precio_anterior) > Number(p.precio) 
+                    ? `<del style="color:#888;">$${Number(p.precio_anterior).toFixed(2)}</del> <span style="color:red;font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>` 
+                    : `<span style="font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`}
+            </div>
+            
+            <div style="text-align:center; margin-top: 4px; font-size: 0.9em; color: ${p.stock <= 5 ? 'red' : '#333'};">
+                Stock: <b>${p.stock !== null && p.stock !== undefined ? p.stock : 'N/A'}</b>
+            </div>
+        `;
+
+
+        // Insertar la imagen: 
+        if (imgSrc) {
+            div.insertBefore(imgEl, div.querySelector('b')); 
+        }
+
+        promoContainer.appendChild(div);
+        
+        // 🌟 ACTUALIZAR BARRA DE PROGRESO (Movido al final del bucle)
+        renderedCount++;
+        const progress = Math.round((renderedCount / totalPromos) * 100);
+        updateProgressBar('renderProgressBarContainer', progress, `Cargando Promociones: ${renderedCount} de ${totalPromos}`, true);
+    }
+    
+    container.appendChild(promoContainer);
+
+    // 🆕 OCULTAR BARRA AL TERMINAR
+    updateProgressBar('renderProgressBarContainer', 100, `Carga completa (${totalPromos} promociones).`, false);
+}
+
+// Llama a fetchPromos al inicio
+fetchPromos();
+
+
+
+/* =========================================================
+   Exportar promos a PDF (CORREGIDO: Consulta Supabase)
+   ========================================================= */
+
+async function exportSelectedPromos() {
+    try {
+        // ... (1️⃣ Obtener IDs seleccionados, 2️⃣ Traer datos completos de Supabase, 3️⃣ Categorías, 4️⃣ Agrupar por categoría - ESTOS PASOS SE MANTIENEN IGUAL) ...
+
+        // 1️⃣ Obtener IDs seleccionados
+        const selectedIds = Array.from(document.querySelectorAll('.promo-select:checked'))
+            .map(cb => parseInt(cb.dataset.promoId, 10))
+            .filter(id => !isNaN(id));
+
+        if (!selectedIds.length) return alert('Seleccione al menos un producto.');
+
+        // 2️⃣ Traer datos completos de Supabase
+        const { data: allPromos, error: promoError } = await supabase
+            .from('promociones')
+            .select('*')
+            .in('id', selectedIds);
+
+        if (promoError) throw promoError;
+
+        const selectedPromos = selectedIds
+            .map(id => allPromos.find(p => p.id === id))
+            .filter(Boolean);
+
+        if (!selectedPromos.length) return alert('No se encontraron promociones.');
+
+        // 3️⃣ Categorías
+        const { data: allCategories = [] } = await supabase.from('categorias').select('id, nombre');
+        const getCategoryName = (id) => {
+            if (id === null) return "Sin Categoría";
+            const cat = allCategories.find(c => c.id === id);
+            return cat ? cat.nombre : "Categoría Desconocida";
+        };
+
+        // 4️⃣ Agrupar por categoría
+        const groupedPromos = selectedPromos.reduce((acc, promo) => {
+            const catId = promo.categoria_id || null;
+            if (!acc[catId]) acc[catId] = { name: getCategoryName(catId), promos: [] };
+            acc[catId].promos.push(promo);
+            return acc;
+        }, {});
+
+        let logoImgData = null; 
+        const LOGO_PATH = 'logodistribuidora.png'; // 🌟 RUTA DE LOGO 🌟
+
+        try {
+            const { data: logoSignedData } = await supabase.storage
+                .from('promo_images') // Asumo que el logo está en el bucket 'promo_images'
+                .createSignedUrl(LOGO_PATH, 3600);
+                
+            if (logoSignedData?.signedUrl) {
+                // Cargar y convertir el logo a Base64 para jsPDF
+                const response = await fetch(logoSignedData.signedUrl);
+                const blob = await response.blob();
+                
+                logoImgData = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            }
+        } catch (err) {
+            console.warn('Error al cargar el logo de la empresa:', err);
+        }
+
+
+        // 5️⃣ Config PDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const marginTop = 60;
+        const marginBottom = 60;
+        const marginSides = 30;
+        const spacingX = 15;
+        const spacingY = 15;
+        const cols = 2;
+        const rows = 4;
+        
+        // El cálculo de la altura de la tarjeta debe usar el espacio real entre márgenes
+        const totalUsableHeight = pageHeight - marginTop - marginBottom; 
+        const totalSpacingY = spacingY * (rows - 1);
+        const cardHeight = Math.floor((totalUsableHeight - totalSpacingY) / rows);
+        const usableContentWidth = pageWidth - marginSides * 2; // El ancho usable sin márgenes
+        const cardWidth = (usableContentWidth - spacingX * (cols - 1)) / cols;
+        
+        let x = marginSides;
+        let y = marginTop;
+        let count = 0;
+        // let globalPromoIndex = 0; // Ya no es necesario si solo se usa 'count' de manera local
+
+        const TITLE_HEIGHT = 25; // Altura estimada para el título de categoría + espacio
+        const LOGO_HEIGHT = 60; 
+        const LOGO_WIDTH = 190;
+	const LOGO_VERTICAL_OFFSET = 10;
+        const TITLE_LOGO_AREA_HEIGHT = Math.max(TITLE_HEIGHT, LOGO_HEIGHT) + 5; // Asegurar espacio para ambos
+
+        // 6️⃣ Recorrer categorías
+        let isFirstCategory = true;
+        
+        for (const catId in groupedPromos) {
+            const categoryData = groupedPromos[catId];
+
+            // 🌟 LÓGICA DE POSICIONAMIENTO DE CATEGORÍA 🌟
+
+            if (!isFirstCategory) {
+                // 1. Ajustar 'y' después de la categoría anterior
+                // Si la última fila de la categoría anterior está incompleta
+                const itemsInLastRow = categoryData.promos.length % cols; 
+                if (itemsInLastRow !== 0) {
+                     // El 'y' finaliza en la posición de la última tarjeta dibujada. 
+                     // Si no completó la fila, ya avanzó a la siguiente.
+                } else {
+                    // Si la fila estaba completa, 'y' ya se actualizó en el ciclo interno a la posición de la siguiente fila.
+                }
+                
+                // Forzamos el salto a la posición vertical del siguiente título
+                y += 20; // Pequeño espacio extra antes del nuevo título
+            }
+            
+            // 2. Chequeo de salto de página antes de dibujar el título.
+            // Si el título no cabe o no deja espacio para al menos 1 tarjeta: Salto de página.
+            if (y + TITLE_LOGO_AREA_HEIGHT + cardHeight > pageHeight - marginBottom) {
+                pdf.addPage();
+                y = marginTop;
+            }
+            
+            // 3. Dibujar Título de Categoría
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold'); // Opcional: negrita para el título
+            pdf.text(categoryData.name, marginSides, y);
+            pdf.setFont('helvetica', 'normal');
+
+            // 4. Dibujar el Logo (margen derecho)
+            if (logoImgData) {
+                const logoX = pageWidth - marginSides - LOGO_WIDTH;
+                // Posicionar el logo para que su parte inferior esté justo encima de las tarjetas.
+                const logoY = y - LOGO_HEIGHT + (TITLE_HEIGHT / 2) + LOGO_VERTICAL_OFFSET;
+                
+                pdf.addImage(
+                    logoImgData, 
+                    'PNG', 
+                    logoX, 
+                    logoY, 
+                    LOGO_WIDTH, 
+                    LOGO_HEIGHT
+                );
+            }
+
+            // 5. Ajustar 'y' para el *contenido* de las tarjetas de la nueva categoría
+            y += TITLE_LOGO_AREA_HEIGHT; // Baja 'y' para el inicio de las tarjetas
+            x = marginSides;
+            count = 0; // Reiniciar contador de tarjetas para la posición de la categoría
+            
+            isFirstCategory = false; // Ya no es la primera categoría
+
+            // 🌟 FIN LÓGICA DE POSICIONAMIENTO DE CATEGORÍA 🌟
+            
+            for (const promo of categoryData.promos) {
+                // ... (El bloque para generar la tarjeta con html2canvas se mantiene igual) ...
+                
+                const div = document.createElement('div');
+                div.style.width = `${cardWidth}px`;
+                div.style.height = `${cardHeight}px`;
+                div.style.border = '1px solid #ddd';
+                div.style.borderRadius = '6px';
+                div.style.padding = '4px';
+                div.style.boxSizing = 'border-box';
+                div.style.textAlign = 'center';
+                div.style.display = 'flex';
+                div.style.flexDirection = 'column';
+                div.style.justifyContent = 'flex-start';
+                div.style.background = '#fff';
+                div.style.overflow = 'hidden';
+
+                // Imagen cuadrada (ajustes de la respuesta anterior)
+                const img = document.createElement('img');
+                img.style.width = '40%';
+                img.style.height = '60%'; 
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '6px';
+                img.style.display = 'block';
+                img.style.margin = '4px auto 0 auto';
+                img.crossOrigin = 'anonymous';
+                let imgSrc = promo.imagen_url || '';
+                if (promo.imagen) {
+                    try {
+                        const { data: sd } = await supabase.storage.from('promo_images').createSignedUrl(promo.imagen, 3600);
+                        imgSrc = sd?.signedUrl || imgSrc;
+                    } catch (err) { console.warn('signedUrl in export', err); }
+                }
+                img.src = imgSrc;
+                div.appendChild(img);
+
+                // Nombre
+                const nameEl = document.createElement('div');
+                // Nota: La función safeText() no está definida, se asume que existe o se usa el nombre directo.
+                nameEl.innerHTML = `<b>${promo.nombre}</b>`; 
+                nameEl.style.fontSize = '9pt';
+                nameEl.style.marginTop = '4px';
+                nameEl.style.height = 'auto';
+                nameEl.style.flex = '0';
+                div.appendChild(nameEl);
+
+                // Precio
+                const priceEl = document.createElement('div');
+                priceEl.innerHTML = `$${promo.precio} ${promo.precio_anterior ? `<span style="text-decoration:line-through;color:#888;">$${promo.precio_anterior}</span>` : ''}`;
+                priceEl.style.fontSize = '13pt';
+                priceEl.style.marginTop = '2px';
+                priceEl.style.flex = '0';
+                div.appendChild(priceEl);
+
+                document.body.appendChild(div);
+
+                // Esperar carga imagen
+                if (imgSrc) {
+                    await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+                }
+
+                // html2canvas
+                const canvas = await html2canvas(div, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Añadir imagen al PDF
+                pdf.addImage(imgData, 'PNG', x, y, cardWidth, cardHeight);
+                document.body.removeChild(div);
+                
+                // 🌟 LÓGICA DE AVANCE DE POSICIÓN 🌟
+                
+                count++; // Contador de tarjetas en la página (para las coordenadas)
+                
+                const isEndOfRow = count % cols === 0;
+                
+                if (isEndOfRow) {
+                    // La fila está completa, chequeamos si la SIGUIENTE fila cabe
+                    if (y + cardHeight + spacingY + cardHeight > pageHeight - marginBottom) {
+                        // Salto de página
+                        pdf.addPage();
+                        x = marginSides;
+                        y = marginTop;
+                        count = 0; // Reiniciamos el contador de la página
+                    } else {
+                        // Siguiente fila en la misma página
+                        x = marginSides;
+                        y += cardHeight + spacingY;
+                    }
+                } else {
+                    // La fila NO está completa, solo avanza 'x'.
+                    x += cardWidth + spacingX;
+                }
+                
+                // El contador que estaba aquí (count % (cols * rows)) ya es redundante
+                // ya que la lógica de salto de página está integrada en el 'if (isEndOfRow)'
+                // al chequear si la siguiente tarjeta cabrá.
+            }
+        }
+
+        pdf.save('Promociones_Catalogo.pdf');
+
+    } catch (err) {
+        console.error('Error al exportar promociones:', err);
+        alert('Error al exportar promociones: ' + err.message);
+    }
+}
+
+
+document.getElementById('exportPromoPDF').addEventListener('click', exportSelectedPromos);
+
+
+
+
+/* =========================================================
+   PEDIDOS: Lógica de Persistencia y Control de Stock (CORREGIDO)
+   ========================================================= */
+
+// ==================== FUNCIONES DE CONTROL DE CANTIDAD ====================
+
+// Genera el HTML para el control de cantidad con botones.
+function renderQuantityControls(id, qty, price, stock) {
+    return `
+      <div style="display:flex;align-items:center;width:100px;">
+        <button type="button" class="qty-btn" data-action="minus" data-id="${id}" style="background:#ddd;border:none;padding:5px 8px;cursor:pointer;border-radius:5px 0 0 5px;font-weight:bold;">➖</button>
+        <input type="number" min="0" max="${stock}" value="${qty}" id="prod_${id}" data-price="${price}" data-stock-max="${stock}" style="width:40px;text-align:center;border-left:none;border-right:none;" oninput="updateSubtotal(${id}, ${price}, ${stock})">
+        <button type="button" class="qty-btn" data-action="plus" data-id="${id}" style="background:#ddd;border:none;padding:5px 8px;cursor:pointer;border-radius:0 5px 5px 0;font-weight:bold;">➕</button>
+      </div>
+    `;
+}
+
+// Agrega los event listeners a los botones de + y -
+function addQuantityControlListeners() {
+    // Es mejor remover y re-agregar listeners para asegurar que solo haya uno por botón
+    document.querySelectorAll('.qty-btn').forEach(btn => {
+        btn.removeEventListener('click', handleQuantityChange);
+    });
+    
+    document.querySelectorAll('.qty-btn').forEach(btn => {
+        btn.addEventListener('click', handleQuantityChange);
+    });
+}
+
+function handleQuantityChange() {
+    const action = this.getAttribute('data-action');
+    const id = parseInt(this.getAttribute('data-id'), 10);
+    const input = document.getElementById(`prod_${id}`);
+    
+    if (!input) return;
+
+    // Obtenemos los datos necesarios desde el input
+    const price = parseFloat(input.getAttribute('data-price')) || 0;
+    const stock = parseInt(input.getAttribute('data-stock-max'), 10) || 0;
+    let currentQty = parseInt(input.value, 10) || 0;
+
+    if (action === 'plus') {
+        currentQty = Math.min(stock, currentQty + 1);
+    } else if (action === 'minus') {
+        currentQty = Math.max(0, currentQty - 1);
+    }
+
+    input.value = currentQty;
+    updateSubtotal(id, price, stock);
+}
+
+
+function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
+
+/**
+ * Función que actualiza subtotal, aplica stock y recalcula el total general.
+ */
+function updateSubtotal(id, price, stock){
+    const input = document.getElementById(`prod_${id}`);
+    if(!input) return;
+    
+    let qty = parseInt(input.value,10) || 0;
+    
+    if(qty < 0) qty = 0;
+    if(stock !== undefined && qty > stock) qty = stock;
+    
+    input.value = qty; 
+    
+    const sub = document.getElementById(`sub_${id}`);
+    if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
+    
+    const tot = document.getElementById('totalPedido');
+    if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
+}
+
+function calculateTotal(){
+    let total = 0;
+    const inputs = document.querySelectorAll('#modalInner input[type=number][data-price]');
+    inputs.forEach(inp=>{
+        const qty = parseInt(inp.value,10) || 0;
+        const price = parseFloat(inp.getAttribute('data-price')) || 0;
+        total += qty * price;
+    });
+    return total;
+}
+
+/**
+ * FUNCIÓN CRÍTICA PARA LA PERSISTENCIA: Actualiza la variable global selectedProducts 
+ * con los valores actuales de los inputs visibles en el modal.
+ */
+function updateSelectedProductsFromModal() {
+    const inputs = document.querySelectorAll('#modalInner input[type=number][data-price]');
+    
+    inputs.forEach(inp => {
+        const prodId = parseInt(inp.id.replace('prod_',''), 10);
+        const qty = parseInt(inp.value, 10) || 0;
+        const price = parseFloat(inp.getAttribute('data-price')) || 0;
+        
+        const existingIndex = selectedProducts.findIndex(p => p.id === prodId);
+
+        if (qty > 0) {
+            if (existingIndex !== -1) {
+                selectedProducts[existingIndex].cantidad = qty;
+            } else {
+                // Producto nuevo: obtener nombre del DOM
+                const row = inp.closest('tr');
+                const nombre = row && row.cells.length > 0 ? row.cells[0].textContent : `Producto ${prodId}`; 
+                selectedProducts.push({ id: prodId, nombre: nombre, cantidad: qty, precio: price });
+            }
+        } else {
+            // Cantidad 0: eliminar de la selección si ya existía
+            if (existingIndex !== -1) {
+                selectedProducts.splice(existingIndex, 1);
+            }
+        }
+    });
+}
+
+
+function confirmProducts(){
+    // ✅ Paso de persistencia final antes de cerrar el modal
+    updateSelectedProductsFromModal(); 
+    closeModal(); 
+    renderSelectedProducts();
+}
+
+
+/* ========== MODAL DE SELECCIÓN DE PRODUCTOS ========== */
+document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
+    const { data: categoriasData } = await supabase.from('categorias').select('*').order('id');
+    const { data: promos } = await supabase.from('promociones').select('*').order('id'); // Consulta directa
+    
+    function renderFilteredPromos(categoryId = "") {
+        
+        // ⚠️ PASO CRÍTICO: Guardar el estado actual ANTES de redibujar la tabla.
+        if (document.getElementById('modalInner').querySelector('table')) {
+            updateSelectedProductsFromModal();
+        }
+
+        let filteredPromos = (!categoryId) ? promos : promos.filter(p => String(p.categoria_id) === String(categoryId));
+        let html = `
+            <div style="margin-bottom:14px;display:flex;align-items:center;gap:18px;">
+                <label style="font-weight:bold;" for="filterCategoria">Filtrar por categoría:</label>
+                <select id="filterCategoria" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
+                    <option value="">Todas</option>
+                    ${categoriasData.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join("")}
+                </select>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="table" style="min-width:700px;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        for(const p of filteredPromos){
+            const qty = getSelectedQty(p.id); // Lee de la selección global
+            const stockMax = p.stock ?? 0;
+            const price = Number(p.precio);
+
+            html += `
+                <tr>
+                    <td>${safeText(p.nombre || p.descripcion || '')}</td>
+                    <td>$${price.toFixed(2)}</td>
+                    <td>${stockMax}</td>
+                    <td>
+                        ${renderQuantityControls(p.id, qty, price, stockMax)}
+                    </td>
+                    <td id="sub_${p.id}">$${(qty * price).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+        html += `
+                        <tr>
+                            <td colspan="3" style="text-align:right"><strong>Total:</strong></td>
+                            <td colspan="2" id="totalPedido">$0.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+                <button onclick="confirmProducts()" style="background:#3498db;color:#fff;border:none;padding:12px 24px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;">
+                    💾 Confirmar selección
+                </button>
+            </div>
+        `;
+        document.getElementById('modalInner').innerHTML = `<h3 style="margin-bottom:18px;">Seleccionar Productos</h3>${html}`;
+        document.getElementById("modalInner").style.maxWidth = "950px";
+        document.getElementById("modalInner").style.width = "95%";
+        document.getElementById("modal").style.display="flex";
+        
+        const filterEl = document.getElementById('filterCategoria');
+        if (filterEl) {
+            filterEl.value = categoryId; // Mantiene la categoría seleccionada
+            filterEl.addEventListener('change', function(){
+                renderFilteredPromos(this.value);
+            });
+        }
+
+        // Agrega listeners a los nuevos botones
+        addQuantityControlListeners(); 
+        
+        setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
+    }
+    renderFilteredPromos();
 });
 
 
+function renderSelectedProducts(){
+    const c = document.getElementById('selectedProductsContainer');
+    if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
+    let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
+    selectedProducts.forEach(p=>{
+        html += `<tr><td>${safeText(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
+    });
+    const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
+    html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
+    c.innerHTML = html;
+}
+async function getPromoById(id){
+    const { data } = await supabase.from('promociones').select('*').eq('id', id).single();
+    return data;
+}
 
-// ================= PROMOCIONES =================
-async function fetchPromotions() {
-    console.log('👉 fetchPromotions ejecutado');
+/* ================== AGREGAR PEDIDO ================== */
+document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
+    const cliente = document.getElementById('pedidoCliente').value.trim();
+    const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+    if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
+    
+    const promosActuales = await Promise.all(selectedProducts.map(p => getPromoById(p.id)));
+    for (let i = 0; i < selectedProducts.length; i++) {
+        if (selectedProducts[i].cantidad > (promosActuales[i].stock || 0)) {
+            return alert(`Stock insuficiente para ${selectedProducts[i].nombre} (disponible: ${promosActuales[i].stock})`);
+        }
+    }
+    
+    // SOLO DESCONTAR STOCK UNA VEZ
+    await Promise.all(selectedProducts.map((p, i) =>
+        supabase.from('promociones').update({ stock: (promosActuales[i].stock || 0) - p.cantidad }).eq('id', p.id)
+    ));
+    
+    const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
+    const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+    const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
+    
+    if(error) return alert(error.message);
+    
+    document.getElementById('pedidoForm').reset();
+    selectedProducts = []; renderSelectedProducts();
+    await fetchOrders();
+    await fetchPromos(); // Cambiado a fetchPromos (tu función)
+    showToast('Pedido agregado');
+});
 
-    const { data, error } = await supabase
-        .from('promociones')
-        .select('*, categorias(nombre)')
-        .order('id');
+/* ========== OBTENER LOCALIDAD ========== */
+async function getLocalidadNombre(id) {
+    if (!id) return "";
+    const { data } = await supabase.from('localidades').select('*').order('id');
+    return (data && data.nombre) ? data.nombre : "";
+}
 
-    if (error) return console.error(error);
-
-    const container = document.getElementById('promoList');
+/* ================== LISTADO DE PEDIDOS ================== */
+async function fetchOrders(){
+    const { data } = await supabase.from('pedidos').select('*').order('id');
+    const container = document.getElementById('pedidoList');
     container.innerHTML = '';
-
-    // Agrupar promociones por categoría
-    const groupedPromos = data.reduce((groups, promo) => {
-        const categoryName = promo.categorias?.nombre || 'Sin Categoría';
-        if (!groups[categoryName]) groups[categoryName] = [];
-        groups[categoryName].push(promo);
-        return groups;
+    
+    // Cargar localidades una sola vez para mejorar rendimiento
+    const { data: localidadesData } = await supabase.from('localidades').select('id, nombre');
+    const localidadMap = localidadesData.reduce((map, loc) => {
+        map[loc.id] = loc.nombre;
+        return map;
     }, {});
 
-    const categoryNames = Object.keys(groupedPromos).sort();
+    // Llenar select de localidad en el formulario
+    const locSelect = document.getElementById('pedidoLocalidad');
+    locSelect.innerHTML = '<option value="">Seleccionar Localidad...</option>';
+    localidadesData.forEach(l => {
+        const option = document.createElement('option');
+        option.value = l.id;
+        option.textContent = safeText(l.nombre);
+        locSelect.appendChild(option);
+    });
 
-    for (const categoryName of categoryNames) {
-        const promos = groupedPromos[categoryName];
+    for(const p of data){
+        let localidadNombre = p.localidad_id ? localidadMap[p.localidad_id] || "" : "";
+        const div = document.createElement('div'); 
+        div.className = 'item-card';
+        div.style.display = 'flex';
+        div.style.alignItems = 'stretch';
+        div.style.justifyContent = 'space-between';
+        div.style.padding = '18px 14px';
+        div.style.marginBottom = '14px';
+        div.style.borderRadius = '12px';
+        div.style.background = '#fff';
+        div.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)';
+        div.style.border = '1px solid #eee';
+        
+        let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+        p.productos.forEach(pr => prodHTML += `<li>${safeText(pr.nombre)} <span style="color:#888;">x ${pr.cantidad}</span> <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span></li>`);
+        prodHTML += '</ul>';
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.style.flex = '1';
+        infoDiv.innerHTML = `
+            <strong style="font-size:1.18em;">${safeText(p.cliente)}</strong>
+            <div class="small-muted" style="color:#888;margin-bottom:2px;">${localidadNombre ? 'Localidad: ' + safeText(localidadNombre) : ''}</div>
+            ${prodHTML}
+            <div style="margin-top:8px;font-weight:bold;font-size:1.08em;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+        `;
+        
+        const actionsDiv = document.createElement('div');
+        actionsDiv.style.display = 'flex';
+        actionsDiv.style.flexDirection = 'column';
+        actionsDiv.style.justifyContent = 'center';
+        actionsDiv.style.alignItems = 'flex-end';
+        actionsDiv.style.gap = '10px';
+        actionsDiv.innerHTML = `
+            <button onclick='editOrderModal(${JSON.stringify(p)})' style="background:#3498db;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;margin-bottom:2px;">✏️ Editar</button>
+            <button class="delete-btn" onclick="deleteOrder(${p.id})" style="background:#ff4d4f;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">🗑️ Eliminar</button>
+        `;
+        div.appendChild(infoDiv);
+        div.appendChild(actionsDiv);
+        container.appendChild(div);
+    }
+}
 
-        // Título de categoría
-        const titleDiv = document.createElement('div');
-        titleDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 8px;">${categoryName}</h3>`;
-        container.appendChild(titleDiv);
+/* ========== MODAL DE EDICIÓN DE PEDIDO CON STOCK DIFERENCIAL (Mantenido el código original) ========== */
+async function editOrderModal(pedido) {
+    const { data: localidades } = await supabase.from('localidades').select('*').order('id');
+    const { data: productosDB } = await supabase.from('promociones').select('*').order('id');
+    let productosPedido = pedido.productos.map(pr => ({ ...pr }));
 
-        for (const promo of promos) {
-            // Obtener URL de imagen
-            let imgUrl = '';
-            if (promo.imagen) {
-                const { data: signedData } = await supabase
-                    .storage.from('promo_images')
-                    .createSignedUrl(promo.imagen, 3600);
-                imgUrl = signedData?.signedUrl || '';
-            }
-
-            const imgHTML = imgUrl
-                ? `<img src="${imgUrl}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:10px">`
-                : '';
-
-            // Precio con tachado si aplica
-            let precioHTML = `<strong>$${Number(promo.precio).toFixed(2)}</strong>`;
-            if (promo.precio_anterior && Number(promo.precio_anterior) > Number(promo.precio)) {
-                precioHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 8px;">$${Number(promo.precio_anterior).toFixed(2)}</span>
-                              <strong style="color: #ff4d4f; font-size: 1.1em;">$${Number(promo.precio).toFixed(2)}</strong>`;
-            }
-
-            // JSON seguro en dataset
-            const div = document.createElement('div');
-            div.className = 'item-card';
-            div.style.display = 'flex';
-            div.style.alignItems = 'center';
-            div.style.marginBottom = '8px';
-
-            div.innerHTML = `
-                <input type="checkbox" class="promo-export-check" data-promo='${JSON.stringify({
-                    id: promo.id,
-                    nombre: promo.nombre,
-                    precio: promo.precio,
-                    precio_anterior: promo.precio_anterior,
-                    stock: promo.stock,
-                    imagen: promo.imagen,
-                    categoria: categoryName
-                }).replace(/'/g, "&apos;")}' checked style="margin-right: 12px; transform: scale(1.4);">
-                ${imgHTML}
-                <div style="flex:1">
-                    <strong>${escapeHtml(promo.nombre || '')}</strong>
-                    <div class="small-muted">${precioHTML} &nbsp; · &nbsp; Stock: ${promo.stock ?? 0}</div>
+    function renderModal(stockMsg = "") {
+        document.getElementById("modalInner").style.maxWidth = "1200px";
+        document.getElementById("modalInner").style.width = "98%";
+        let productosDisponibles = productosDB.filter(pdb => !productosPedido.some(pp => pp.id === pdb.id));
+        let selectHTML = `
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+                    <select id="addProductoSelect" style="margin-bottom:5px;">
+                        <option value="">Agregar producto</option>
+                        ${productosDisponibles.map(p=>`<option value="${p.id}">${safeText(p.nombre)} ($${Number(p.precio).toFixed(2)}, stock: ${p.stock ?? 0})</option>`).join('')}
+                    </select>
+                    <input type="number" id="addProductoQty" min="1" value="1" style="width:60px;" placeholder="Cant.">
                 </div>
-                <div>
-                    <button class="edit-btn" data-promo='${JSON.stringify(promo).replace(/'/g, "&apos;")}'>Editar</button>
-                    <button class="delete-btn" onclick="deletePromo(${promo.id}, '${promo.imagen || ''}')">Eliminar</button>
+                <button type="button" id="addProductoBtn" style="background:#eee;color:#333;border:none;padding:8px 14px;border-radius:6px;font-size:17px;cursor:pointer;height:45px;align-self:flex-start;">➕</button>
+            </div>
+        `;
+        let listaHTML = `<ul id="productosPedidoList" style="margin-bottom:8px;">`;
+        productosPedido.forEach((pr, idx) => {
+            const prodInfo = productosDB.find(pdb => pdb.id === pr.id);
+            // Stock disponible: stock actual en DB + cantidad que tiene este pedido (para que el cliente pueda aumentar)
+            // Ya que el stock se devolverá al guardar. Aquí solo queremos mostrar el stock base + la cantidad original para no bloquear aumentos si hay poco stock
+            // CORRECCIÓN: El stock disponible para *agregar* es el stock actual en DB. Si el cliente tiene 5 y el stock es 10, puede subir hasta 10+5=15.
+            const stockActualDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
+            const stockOriginalEnPedido = pedido.productos.find(op => op.id === pr.id)?.cantidad || 0;
+            const stockBase = stockActualDB + stockOriginalEnPedido;
+
+            listaHTML += `
+                <li style="margin-bottom:6px;">
+                    <span style="font-weight:bold;">${safeText(pr.nombre)}</span>
+                    <input type="number" min="1" max="${stockBase}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:45px;margin:0 6px;">
+                    <span style="color:#aaa;">(stock max: ${stockBase})</span>
+                    <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span>
+                    <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f;color:#fff;border:none;padding:2px 7px;border-radius:6px;font-size:14px;cursor:pointer;margin-left:6px;">🗑️</button>
+                </li>
+            `;
+        });
+        listaHTML += `</ul>`;
+        let total = productosPedido.reduce((s,p)=>s + p.precio*p.cantidad, 0);
+
+        openModal(
+            `
+            <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
+                <h2 style="margin:0;font-size:1.3em;">Editar Pedido</h2>
+            </div>
+            <div style="background:#f8f8f8;border-radius:12px;padding:20px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+                <div style="margin-bottom:16px;">
+                    <label for="editPedidoCliente" style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
+                    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label for="editPedidoLocalidad" style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
+                    <select id="editPedidoLocalidad">
+                        <option value="">Seleccione localidad</option>
+                        ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${safeText(l.nombre)}</option>`).join('')}
+                    </select>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:500;display:block;margin-bottom:4px;">Productos</label>
+                    ${selectHTML}
+                    ${listaHTML}
+                    <div style="margin-top:8px;font-weight:bold;">Total: <span id="pedidoTotal" style="color:#ff4d4f;">$${total.toFixed(2)}</span></div>
+                    ${stockMsg ? `<div style="color:#ff4d4f;font-weight:bold;margin-top:10px;">${stockMsg}</div>` : ""}
+                </div>
+                <button onclick="saveEditPedido(${pedido.id})" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                    💾 Guardar cambios
+                </button>
+            </div>
+            `
+        );
+        document.getElementById('addProductoBtn').onclick = function() {
+            const prodId = document.getElementById('addProductoSelect').value;
+            let qty = parseInt(document.getElementById('addProductoQty').value, 10) || 1;
+            if(!prodId) return;
+            const prodObj = productosDB.find(p=>String(p.id)===String(prodId));
+            
+            if(prodObj) {
+                const stockDisp = prodObj.stock ?? 0;
+                if(qty > stockDisp) {
+                    qty = stockDisp;
+                    renderModal(`El stock disponible de "${prodObj.nombre}" es ${stockDisp}.`);
+                    return;
+                }
+                productosPedido.push({
+                    id: prodObj.id,
+                    nombre: prodObj.nombre,
+                    cantidad: qty,
+                    precio: prodObj.precio
+                });
+                renderModal();
+            }
+        };
+        document.querySelectorAll('.editQtyInput').forEach(input => {
+            input.onchange = function() {
+                let idx = parseInt(this.getAttribute('data-idx'));
+                let prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
+                
+                // Stock base: stock actual + cantidad original en este pedido
+                const stockActualDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
+                const stockOriginalEnPedido = pedido.productos.find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const stockBase = stockActualDB + stockOriginalEnPedido;
+
+                let val = Math.max(1, parseInt(this.value, 10));
+                
+                if(val > stockBase) {
+                    val = stockBase;
+                    renderModal(`El stock máximo disponible para "${productosPedido[idx].nombre}" (incluyendo el stock que está en este pedido) es ${stockBase}.`);
+                }
+                
+                productosPedido[idx].cantidad = val;
+                renderModal();
+            };
+        });
+        document.querySelectorAll('.deletePrBtn').forEach(btn => {
+            btn.onclick = function() {
+                let idx = parseInt(this.getAttribute('data-idx'));
+                productosPedido.splice(idx, 1);
+                renderModal();
+            };
+        });
+    }
+
+    renderModal();
+
+    window.saveEditPedido = async function(id) {
+        const cliente = document.getElementById('editPedidoCliente').value.trim();
+        const localidad_id = document.getElementById('editPedidoLocalidad').value || null;
+        if(!cliente || !localidad_id || !productosPedido.length) return alert('Complete todos los campos y agregue productos');
+        const total = productosPedido.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+
+        // --- AJUSTA EL STOCK SOLO POR LA DIFERENCIA ---
+        const { data: pedidoOriginal } = await supabase.from('pedidos').select('*').eq('id', id).single();
+        const productosOriginal = pedidoOriginal.productos || [];
+        const mapOriginal = {};
+        productosOriginal.forEach(p => mapOriginal[p.id] = p.cantidad);
+        const mapNuevo = {};
+        productosPedido.forEach(p => mapNuevo[p.id] = p.cantidad);
+
+        // AJUSTE SOLO POR LA DIFERENCIA
+        const allIds = new Set([...productosOriginal.map(p=>p.id), ...productosPedido.map(p=>p.id)]);
+        for(const prodId of allIds) {
+            const cantOriginal = mapOriginal[prodId] || 0;
+            const cantNueva    = mapNuevo[prodId]    || 0;
+            const dif = cantNueva - cantOriginal;
+            if(dif !== 0) {
+                const promo = await getPromoById(prodId);
+                // Si dif > 0 (más pedidos), el stock disminuye.
+                // Si dif < 0 (menos pedidos), el stock aumenta.
+                await supabase.from('promociones').update({ stock: (promo.stock || 0) - dif }).eq('id', prodId);
+            }
+        }
+
+        const { error } = await supabase.from('pedidos').update({ cliente, localidad_id, productos: productosPedido, total }).eq('id', id);
+        if(error) return alert(error.message);
+        closeModal();
+        await fetchOrders();
+        await fetchPromos(); // Actualizar lista de promociones para reflejar stock
+        showToast('Pedido actualizado');
+    };
+}
+
+
+/* ========== ELIMINAR PEDIDO ========== */
+async function deleteOrder(id){
+    if(!confirm('Eliminar pedido?')) return;
+    const { data } = await supabase.from('pedidos').select('*').eq('id', id).single();
+    if(data.productos && data.productos.length){
+        for(const pr of data.productos){
+            const promo = await getPromoById(pr.id);
+            const newStock = (promo.stock || 0) + pr.cantidad;
+            await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+        }
+    }
+    await supabase.from('pedidos').delete().eq('id', id);
+    await fetchOrders();
+    await fetchPromos(); // Actualizar lista de promociones para reflejar stock
+    showToast('Pedido eliminado y stock restaurado');
+}
+
+
+async function exportPedidoPDF(pedido) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4'); // hoja A4 vertical
+
+    // --- 1. Obtener logo desde Supabase Storage ---
+    // Suponiendo que está en bucket "logos" con nombre "logo.png"
+    let logoUrl = await supabase.storage.from('logos').getPublicUrl('logo.png');
+    logoUrl = logoUrl.data.publicUrl;
+
+    // Convertir logo a base64 para jsPDF
+    const imgBase64 = await getBase64ImageFromURL(logoUrl);
+
+    // --- 2. Agregar logo ---
+    if(imgBase64) {
+        doc.addImage(imgBase64, 'PNG', 15, 10, 40, 40); // x,y,width,height
+    }
+
+    // --- 3. Título y datos del cliente ---
+    doc.setFontSize(18);
+    doc.text("Pedido / Boleta de Compra", 105, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.text(`Cliente: ${pedido.cliente}`, 15, 60);
+    doc.text(`Localidad: ${pedido.localidad_nombre || '-'}`, 15, 70);
+    doc.text(`ID Pedido: ${pedido.id}`, 15, 80);
+
+    // --- 4. Productos ---
+    let y = 95;
+    doc.setFontSize(12);
+    doc.text("Productos:", 15, y);
+    y += 6;
+
+    pedido.productos.forEach(pr => {
+        const line = `${pr.nombre} x ${pr.cantidad}  $${(pr.precio*pr.cantidad).toFixed(2)}`;
+        doc.text(line, 20, y);
+        y += 7;
+        if(y > 270) { // evitar pasar margen inferior
+            doc.addPage();
+            y = 20;
+        }
+    });
+
+    // --- 5. Total ---
+    y += 6;
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total: $${Number(pedido.total).toFixed(2)}`, 15, y);
+
+    // --- 6. Guardar PDF ---
+    doc.save(`Pedido_${pedido.id}_${pedido.cliente}.pdf`);
+}
+
+// --- Helper: convertir imagen a Base64 ---
+async function getBase64ImageFromURL(url) {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+
+
+
+
+// ================= CATEGORÍAS =================
+async function fetchCategorias() {
+    try {
+        const { data: categorias = [], error: catError } = await supabase.from("categorias").select("*").order("id");
+        
+        if (catError) {
+            throw catError; 
+        }
+        
+	const cont = document.getElementById("categoriaList");
+if (!cont) return console.warn("No se encontró el contenedor de categorías");
+
+
+        // 1. Obtener el contenedor
+        const container = document.getElementById('categoriaList');
+        
+        // ✅ VERIFICACIÓN CRÍTICA: Salir si el contenedor es null
+        if (!container) {
+            console.warn("Elemento 'categoriaList' no encontrado. La pestaña no está activa.");
+            return; 
+        }
+        
+        // Línea 1183 (o similar) se ejecuta SÓLO si 'container' existe
+        container.innerHTML = ''; 
+        
+        for (const cat of categorias) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+                <div class="card-info">
+                    <b>${safeText(cat.nombre)}</b>
+                                   </div>
+                <div class="card-actions">
+                    <button class="delete-btn" onclick="deleteCategoria(${cat.id})">🗑️ Eliminar</button>
                 </div>
             `;
             container.appendChild(div);
-
-            // Vincular evento de edición
-            div.querySelector('.edit-btn').addEventListener('click', () => editPromo(promo));
         }
+
+    } catch (err) {
+        console.error('fetchCategorias error', err.message || err);
+        showToast('Error cargando categorías.', 3000);
     }
 }
 
-async function addPromo() {
-    const nombre = document.getElementById("promoNombre").value.trim();
-    const precio = document.getElementById("promoPrecio").value;
-    const precio_anterior = document.getElementById("promoPrecioAnterior").value;
-    const stock = document.getElementById("promoStock").value;
-    const categoria = document.getElementById("promoCategoria").value;
-    const file = document.getElementById("promoImagen").files[0];
-    if (!nombre || !precio) return alert("Nombre y precio requeridos");
-
-    let fileName = null;
-    if (file) {
-        fileName = `${Date.now()}_${file.name}`;
-        await supabase.storage.from("promo_images").upload(fileName, file);
-    }
-
-    const { error } = await supabase.from("promociones").insert([{
-        nombre,
-        precio,
-        precio_anterior: precio_anterior || null,
-        stock: stock || 0,
-        categoria_id: categoria,
-        imagen: fileName
-    }]);
-
-    if (error) return alert(error.message);
-    document.getElementById("promoForm").reset();
-    fetchPromotions();
-}
-
-async function editPromo(promo){
-  let imagenFinalUrl = "";
-  if (promo.imagen) {
-    const { data: signedData } = await supabase
-      .storage.from('promo_images')
-      .createSignedUrl(promo.imagen, 3600);
-    imagenFinalUrl = signedData?.signedUrl || "";
-  }
-
-  openModal(
-    `
-    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
-      ${imagenFinalUrl 
-        ? `<img src="${imagenFinalUrl}" alt="Imagen promoción" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #ccc;margin-bottom:10px;">` 
-        : '<div style="color:#aaa;margin-bottom:10px;">Sin imagen actual</div>'}
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:2em;">✏️</span>
-        <h2 style="margin:0;">${escapeHtml(promo.nombre)}</h2>
-      </div>
-    </div>
-    <div style="background:#f8f8f8;border-radius:12px;padding:20px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-      <div style="margin-bottom:16px;">
-        <label for="editNombre" style="font-weight:500;display:block;margin-bottom:4px;">Nombre de la promoción</label>
-        <input type="text" id="editNombre" value="${escapeHtml(promo.nombre)}" placeholder="Ej: Combo Milanesa">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label for="editPrecio" style="font-weight:500;display:block;margin-bottom:4px;">Precio actual ($)</label>
-        <input type="number" id="editPrecio" value="${promo.precio}" step="0.01" placeholder="Ej: 1200.00">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label for="editPrecioAnterior" style="font-weight:500;display:block;margin-bottom:4px;">Precio anterior ($)</label>
-        <input type="number" id="editPrecioAnterior" value="${promo.precio_anterior||''}" step="0.01" placeholder="Ej: 1350.00">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label for="editStock" style="font-weight:500;display:block;margin-bottom:4px;">Stock disponible</label>
-        <input type="number" id="editStock" value="${promo.stock||0}" placeholder="Ej: 15">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label for="editCategoria" style="font-weight:500;display:block;margin-bottom:4px;">Categoría</label>
-        <select id="editCategoria"></select>
-      </div>
-      <div style="margin-bottom:18px;">
-        <label for="editImagen" style="font-weight:500;display:block;margin-bottom:4px;">Imagen (opcional)</label>
-        <input type="file" id="editImagen">
-      </div>
-      <button onclick="updatePromo(${promo.id})" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:8px;">
-        💾 Guardar cambios
-      </button>
-    </div>
-    `
-  );
-
-  // Llenar categorías
-  supabase.from("categorias").select("id,nombre").then(({data})=>{
-    const sel=document.getElementById("editCategoria");
-    sel.innerHTML="";
-    data.forEach(c=>{
-      sel.innerHTML+=`<option value='${c.id}' ${c.id===promo.categoria_id?'selected':''}>${escapeHtml(c.nombre)}</option>`;
-    });
-  });
-}
-
-
-async function updatePromo(id) {
-    const nombre=document.getElementById("editNombre").value.trim();
-    const precio=document.getElementById("editPrecio").value;
-    const precio_anterior=document.getElementById("editPrecioAnterior").value;
-    const stock=document.getElementById("editStock").value;
-    const categoria=document.getElementById("editCategoria").value;
-    const file=document.getElementById("editImagen").files[0];
-
-    let fileName=null;
-    if(file){ 
-        fileName=`${Date.now()}_${file.name}`; 
-        await supabase.storage.from("promo_images").upload(fileName,file); 
-    }
-
-    const updateObj={nombre,precio,precio_anterior:precio_anterior||null,stock:stock||0,categoria_id:categoria};
-    if(fileName) updateObj.imagen=fileName;
-
-    const {error}=await supabase.from("promociones").update(updateObj).eq("id",id);
-    if(error) return alert(error.message); 
-    closeModal(); 
-    fetchPromotions();
-}
-
-async function deletePromo(id){ 
-    if(!confirm("Eliminar promoción?")) return; 
-    await supabase.from("promociones").delete().eq("id",id); 
-    fetchPromotions(); 
-}
-
-// Convertir imagen a Base64 desde URL firmada
-async function getBase64ImageFromUrl(imageUrl) {
-    if(!imageUrl) return '';
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.src = imageUrl;
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = () => resolve('');
-    });
-}
-
-async function exportPDF() {
-    const selectedPromos = Array.from(document.querySelectorAll(".promo-export-check"))
-        .filter(chk => chk.checked)
-        .map(chk => JSON.parse(chk.dataset.promo));
-
-    if (selectedPromos.length === 0) return alert("Seleccione al menos una promoción");
-
-    // Agrupar promociones por categoría
-    const grouped = selectedPromos.reduce((acc, promo) => {
-        const cat = promo.categoria || 'Sin categoría';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(promo);
-        return acc;
-    }, {});
-
-    const container = document.createElement("div");
-    container.style.width = "800px";
-    container.style.fontFamily = "Arial, sans-serif";
-
-    for (const category of Object.keys(grouped)) {
-        const promos = grouped[category];
-        let pageCount = 0;
-
-        while (pageCount * 6 < promos.length) {
-            const page = document.createElement("div");
-            page.style.pageBreakAfter = "always";
-            page.style.marginBottom = "20px";
-
-            // Título de categoría
-            const catTitle = document.createElement("h2");
-            catTitle.textContent = category;
-            catTitle.style.borderBottom = "2px solid #333";
-            page.appendChild(catTitle);
-
-            const slice = promos.slice(pageCount * 7, pageCount * 7 + 7);
-
-            for (const p of slice) {
-                const promoDiv = document.createElement("div");
-                promoDiv.style.display = "flex";
-                promoDiv.style.alignItems = "center";
-                promoDiv.style.margin = "12px 0";
-                promoDiv.style.padding = "10px";
-                promoDiv.style.border = "1px solid #ddd";
-                promoDiv.style.borderRadius = "8px";
-
-                let imgSrc = '';
-                if (p.imagen) {
-                    const { data: signedData } = await supabase
-                        .storage.from('promo_images')
-                        .createSignedUrl(p.imagen, 3600);
-                    imgSrc = await getBase64ImageFromUrl(signedData?.signedUrl);
-                }
-
-                const img = document.createElement("img");
-                img.style.width = "100px";
-                img.style.height = "100px";
-                img.style.objectFit = "cover";
-                img.style.borderRadius = "8px";
-                img.style.marginRight = "12px";
-                img.src = imgSrc;
-                promoDiv.appendChild(img);
-
-                const info = document.createElement("div");
-                info.innerHTML = `
-                    <b>${escapeHtml(p.nombre)}</b><br>
-                    ${p.precio_anterior && Number(p.precio_anterior) > Number(p.precio)
-                        ? `<del>$${Number(p.precio_anterior).toFixed(2)}</del> <span style="color: red; font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
-                        : `<span style="font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`}<br>
-                    Categoría: ${escapeHtml(category)}
-                `;
-                promoDiv.appendChild(info);
-                page.appendChild(promoDiv);
-            }
-
-            container.appendChild(page);
-            pageCount++;
-        }
-    }
-
-    html2pdf().from(container).set({
-        margin: [20, 20, 20, 20],
-        filename: "promociones_catalogo.pdf",
-        html2canvas: { scale: 2, logging: false, dpi: 300, letterRendering: true },
-        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" }
-    }).save();
-}
-
-// ================= CATEGORÍAS =================
-async function fetchCategorias(){
-  const { data, error } = await supabase.from("categorias").select("*").order("id");
-  if(error) return console.error(error);
-  const container = document.getElementById("categoriaList");
-  container.innerHTML = "";
-  data.forEach(c => {
-    const div = document.createElement("div");
-    div.className = 'item-card';
-    div.style.display = 'flex';
-    div.style.justifyContent = 'space-between';
-    div.style.alignItems = 'center';
-    div.style.background = '#fff';
-    div.style.border = '1px solid #eee';
-    div.style.borderRadius = '10px';
-    div.style.padding = '12px 18px';
-    div.style.marginBottom = '12px';
-    div.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)';
-
-    const nombreDiv = document.createElement('div');
-    nombreDiv.textContent = c.nombre;
-    nombreDiv.style.fontSize = '1.08em';
-    nombreDiv.style.fontWeight = '500';
-
-    const btnsDiv = document.createElement('div');
-    btnsDiv.style.display = 'flex';
-    btnsDiv.style.gap = '14px';
-    btnsDiv.innerHTML = `
-      <button onclick="editCategoria(${c.id},'${escapeHtml(c.nombre)}')" style="background:#3498db;color:#fff;border:none;padding:7px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">✏️ Editar</button>
-      <button onclick="deleteCategoria(${c.id})" style="background:#ff4d4f;color:#fff;border:none;padding:7px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">🗑️ Eliminar</button>
-    `;
-
-    div.appendChild(nombreDiv);
-    div.appendChild(btnsDiv);
-    container.appendChild(div);
-  });
-
-  // Select en formulario de promociones
-  const sel = document.getElementById("promoCategoria");
-  sel.innerHTML = '<option value="">Sin categoría</option>';
-  data.forEach(c => {
-    sel.innerHTML += `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`;
-  });
-}
 
 async function addCategoria(){
   const nombre = document.getElementById("categoriaNombre").value.trim();
@@ -1038,391 +2118,6 @@ async function deleteLocalidad(id){
   if(!confirm("Eliminar localidad?")) return; 
   await supabase.from("localidades").delete().eq("id",id); 
   fetchLocalidades(); 
-}
-
-
-
-
-
-// ================= PEDIDOS =================
-/* ============================
-   PEDIDOS
-   - selección múltiple desde modal tipo tabla
-   - control stock antes de guardar
-   - edición: devuelve stock anterior, aplica nuevo
-   - eliminación: devuelve stock
-   ============================ */
-
-// ================= PEDIDOS =================
-let selectedProducts = [];
-let editingOrderId = null;
-
-/* ========== MODAL DE SELECCIÓN DE PRODUCTOS ========== */
-document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
-  const { data: categoriasData } = await supabase.from('categorias').select('*').order('id');
-  const { data: promos } = await supabase.from('promociones').select('*').order('id');
-  function renderFilteredPromos(categoryId = "") {
-    let filteredPromos = (!categoryId) ? promos : promos.filter(p => String(p.categoria_id) === String(categoryId));
-    let html = `
-      <div style="margin-bottom:14px;display:flex;align-items:center;gap:18px;">
-        <label style="font-weight:bold;" for="filterCategoria">Filtrar por categoría:</label>
-        <select id="filterCategoria" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
-          <option value="">Todas</option>
-          ${categoriasData.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("")}
-        </select>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="table" style="min-width:700px;">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Cantidad</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-    for(const p of filteredPromos){
-      const qty = getSelectedQty(p.id);
-      html += `
-        <tr>
-          <td>${escapeHtml(p.nombre || p.descripcion || '')}</td>
-          <td>$${Number(p.precio).toFixed(2)}</td>
-          <td>${p.stock ?? 0}</td>
-          <td>
-            <input type="number" min="0" max="${p.stock ?? 0}" value="${qty}" id="prod_${p.id}" data-price="${Number(p.precio)}" style="width:80px" oninput="updateSubtotal(${p.id}, ${Number(p.precio)}, ${p.stock ?? 0})">
-          </td>
-          <td id="sub_${p.id}">$${(qty * Number(p.precio)).toFixed(2)}</td>
-        </tr>
-      `;
-    }
-    html += `
-          <tr>
-            <td colspan="3" style="text-align:right"><strong>Total:</strong></td>
-            <td colspan="2" id="totalPedido">$0.00</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:18px;display:flex;justify-content:flex-end;">
-        <button onclick="confirmProducts()" style="background:#3498db;color:#fff;border:none;padding:12px 24px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;">
-          💾 Confirmar selección
-        </button>
-      </div>
-    `;
-    document.getElementById('modalInner').innerHTML = `<h3 style="margin-bottom:18px;">Seleccionar Productos</h3>${html}`;
-    document.getElementById("modalInner").style.maxWidth = "950px";
-    document.getElementById("modalInner").style.width = "95%";
-    document.getElementById("modal").style.display="flex";
-    document.getElementById('filterCategoria').addEventListener('change', function(){
-      renderFilteredPromos(this.value);
-    });
-    setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
-  }
-  renderFilteredPromos();
-});
-
-function getSelectedQty(id){ const it = selectedProducts.find(x => x.id === id); return it ? it.cantidad : 0; }
-function updateSubtotal(id, price, stock){
-  const input = document.getElementById(`prod_${id}`);
-  if(!input) return;
-  let qty = parseInt(input.value,10) || 0;
-  if(qty < 0) qty = 0;
-  if(stock !== undefined && qty > stock) qty = stock;
-  input.value = qty;
-  const sub = document.getElementById(`sub_${id}`);
-  if(sub) sub.textContent = `$${(qty*price).toFixed(2)}`;
-  const tot = document.getElementById('totalPedido');
-  if(tot) tot.textContent = `$${calculateTotal().toFixed(2)}`;
-}
-function calculateTotal(){
-  let total = 0;
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const id = parseInt(inp.id.replace('prod_',''),10);
-    const qty = parseInt(inp.value,10) || 0;
-    const price = parseFloat(inp.getAttribute('data-price')) || 0;
-    total += qty * price;
-  });
-  return total;
-}
-function confirmProducts(){
-  selectedProducts = [];
-  const inputs = document.querySelectorAll('#modalInner input[type=number]');
-  inputs.forEach(inp=>{
-    const qty = parseInt(inp.value,10) || 0;
-    if(qty > 0){
-      const id = parseInt(inp.id.replace('prod_',''),10);
-      const row = inp.closest('tr');
-      const nombre = row.cells[0].textContent;
-      const precio = parseFloat(row.cells[1].textContent.replace('$','')) || 0;
-      selectedProducts.push({ id, nombre, cantidad: qty, precio });
-    }
-  });
-  closeModal(); renderSelectedProducts();
-}
-function renderSelectedProducts(){
-  const c = document.getElementById('selectedProductsContainer');
-  if(!selectedProducts.length){ c.innerHTML = '<span class="small-muted">No hay productos seleccionados</span>'; return; }
-  let html = `<table class="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>`;
-  selectedProducts.forEach(p=>{
-    html += `<tr><td>${escapeHtml(p.nombre)}</td><td>${p.cantidad}</td><td>$${(p.precio*p.cantidad).toFixed(2)}</td></tr>`;
-  });
-  const total = selectedProducts.reduce((s,p)=>s + p.precio * p.cantidad, 0);
-  html += `<tr><td colspan="2" style="text-align:right"><strong>Total:</strong></td><td>$${total.toFixed(2)}</td></tr></tbody></table>`;
-  c.innerHTML = html;
-}
-async function getPromoById(id){
-  const { data } = await supabase.from('promociones').select('*').eq('id', id).single();
-  return data;
-}
-
-/* ================== AGREGAR PEDIDO ================== */
-document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
-  const cliente = document.getElementById('pedidoCliente').value.trim();
-  const localidad_id = document.getElementById('pedidoLocalidad').value || null;
-  if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
-  const promosActuales = await Promise.all(selectedProducts.map(p => getPromoById(p.id)));
-  for (let i = 0; i < selectedProducts.length; i++) {
-      if (selectedProducts[i].cantidad > (promosActuales[i].stock || 0)) {
-          return alert(`Stock insuficiente para ${selectedProducts[i].nombre} (disponible: ${promosActuales[i].stock})`);
-      }
-  }
-  // SOLO DESCONTAR STOCK UNA VEZ
-  await Promise.all(selectedProducts.map((p, i) =>
-      supabase.from('promociones').update({ stock: (promosActuales[i].stock || 0) - p.cantidad }).eq('id', p.id)
-  ));
-  const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-  const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-  const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
-  if(error) return alert(error.message);
-  document.getElementById('pedidoForm').reset();
-  selectedProducts = []; renderSelectedProducts();
-  await fetchOrders();
-  await fetchPromotions();
-  showToast('Pedido agregado');
-});
-
-/* ========== OBTENER LOCALIDAD ========== */
-async function getLocalidadNombre(id) {
-  if (!id) return "";
-  const { data } = await supabase.from('localidades').select('nombre').eq('id', id).single();
-  return (data && data.nombre) ? data.nombre : "";
-}
-
-/* ================== LISTADO DE PEDIDOS ================== */
-async function fetchOrders(){
-  const { data } = await supabase.from('pedidos').select('*').order('id');
-  const container = document.getElementById('pedidoList');
-  container.innerHTML = '';
-  for(const p of data){
-    let localidadNombre = "";
-    if (p.localidad_id) {
-      localidadNombre = await getLocalidadNombre(p.localidad_id);
-    }
-    const div = document.createElement('div'); 
-    div.className = 'item-card';
-    div.style.display = 'flex';
-    div.style.alignItems = 'stretch';
-    div.style.justifyContent = 'space-between';
-    div.style.padding = '18px 14px';
-    div.style.marginBottom = '14px';
-    div.style.borderRadius = '12px';
-    div.style.background = '#fff';
-    div.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)';
-    div.style.border = '1px solid #eee';
-    let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-    p.productos.forEach(pr => prodHTML += `<li>${escapeHtml(pr.nombre)} <span style="color:#888;">x ${pr.cantidad}</span> <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span></li>`);
-    prodHTML += '</ul>';
-    const infoDiv = document.createElement('div');
-    infoDiv.style.flex = '1';
-    infoDiv.innerHTML = `
-      <strong style="font-size:1.18em;">${escapeHtml(p.cliente)}</strong>
-      <div class="small-muted" style="color:#888;margin-bottom:2px;">${localidadNombre ? 'Localidad: ' + escapeHtml(localidadNombre) : ''}</div>
-      ${prodHTML}
-      <div style="margin-top:8px;font-weight:bold;font-size:1.08em;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
-    `;
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.display = 'flex';
-    actionsDiv.style.flexDirection = 'column';
-    actionsDiv.style.justifyContent = 'center';
-    actionsDiv.style.alignItems = 'flex-end';
-    actionsDiv.style.gap = '10px';
-    actionsDiv.innerHTML = `
-      <button onclick='editOrderModal(${JSON.stringify(p)})' style="background:#3498db;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;margin-bottom:2px;">✏️ Editar</button>
-      <button class="delete-btn" onclick="deleteOrder(${p.id})" style="background:#ff4d4f;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">🗑️ Eliminar</button>
-    `;
-    div.appendChild(infoDiv);
-    div.appendChild(actionsDiv);
-    container.appendChild(div);
-  }
-}
-
-/* ========== MODAL DE EDICIÓN DE PEDIDO CON STOCK DIFERENCIAL ========== */
-async function editOrderModal(pedido) {
-  const { data: localidades } = await supabase.from('localidades').select('*').order('id');
-  const { data: productosDB } = await supabase.from('promociones').select('*').order('id');
-  let productosPedido = pedido.productos.map(pr => ({ ...pr }));
-
-  function renderModal(stockMsg = "") {
-    document.getElementById("modalInner").style.maxWidth = "1200px";
-    document.getElementById("modalInner").style.width = "98%";
-    let productosDisponibles = productosDB.filter(pdb => !productosPedido.some(pp => pp.id === pdb.id));
-    let selectHTML = `
-      <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
-          <select id="addProductoSelect" style="margin-bottom:5px;">
-            <option value="">Agregar producto</option>
-            ${productosDisponibles.map(p=>`<option value="${p.id}">${escapeHtml(p.nombre)} ($${Number(p.precio).toFixed(2)}, stock: ${p.stock ?? 0})</option>`).join('')}
-          </select>
-          <input type="number" id="addProductoQty" min="1" value="1" style="width:60px;" placeholder="Cant.">
-        </div>
-        <button type="button" id="addProductoBtn" style="background:#eee;color:#333;border:none;padding:8px 14px;border-radius:6px;font-size:17px;cursor:pointer;height:45px;align-self:flex-start;">➕</button>
-      </div>
-    `;
-    let listaHTML = `<ul id="productosPedidoList" style="margin-bottom:8px;">`;
-    productosPedido.forEach((pr, idx) => {
-      const prodInfo = productosDB.find(pdb => pdb.id === pr.id);
-      const stockDisp = prodInfo ? (prodInfo.stock ?? 0) : 0;
-      listaHTML += `
-        <li style="margin-bottom:6px;">
-          <span style="font-weight:bold;">${escapeHtml(pr.nombre)}</span>
-          <input type="number" min="1" max="${stockDisp}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:45px;margin:0 6px;">
-          <span style="color:#aaa;">(stock: ${stockDisp})</span>
-          <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span>
-          <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f;color:#fff;border:none;padding:2px 7px;border-radius:6px;font-size:14px;cursor:pointer;margin-left:6px;">🗑️</button>
-        </li>
-      `;
-    });
-    listaHTML += `</ul>`;
-    let total = productosPedido.reduce((s,p)=>s + p.precio*p.cantidad, 0);
-
-    openModal(
-      `
-      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
-        <h2 style="margin:0;font-size:1.3em;">Editar Pedido</h2>
-      </div>
-      <div style="background:#f8f8f8;border-radius:12px;padding:20px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-        <div style="margin-bottom:16px;">
-          <label for="editPedidoCliente" style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
-          <input type="text" id="editPedidoCliente" value="${escapeHtml(pedido.cliente)}" placeholder="Nombre del cliente">
-        </div>
-        <div style="margin-bottom:16px;">
-          <label for="editPedidoLocalidad" style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
-          <select id="editPedidoLocalidad">
-            <option value="">Seleccione localidad</option>
-            ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${escapeHtml(l.nombre)}</option>`).join('')}
-          </select>
-        </div>
-        <div style="margin-bottom:16px;">
-          <label style="font-weight:500;display:block;margin-bottom:4px;">Productos</label>
-          ${selectHTML}
-          ${listaHTML}
-          <div style="margin-top:8px;font-weight:bold;">Total: <span id="pedidoTotal" style="color:#ff4d4f;">$${total.toFixed(2)}</span></div>
-          ${stockMsg ? `<div style="color:#ff4d4f;font-weight:bold;margin-top:10px;">${stockMsg}</div>` : ""}
-        </div>
-        <button onclick="saveEditPedido(${pedido.id})" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:8px;">
-          💾 Guardar cambios
-        </button>
-      </div>
-      `
-    );
-    document.getElementById('addProductoBtn').onclick = function() {
-      const prodId = document.getElementById('addProductoSelect').value;
-      let qty = parseInt(document.getElementById('addProductoQty').value, 10) || 1;
-      if(!prodId) return;
-      const prodObj = productosDB.find(p=>String(p.id)===String(prodId));
-      if(prodObj) {
-        if(qty > prodObj.stock) {
-          qty = prodObj.stock;
-          renderModal(`El stock disponible de "${prodObj.nombre}" es ${prodObj.stock}.`);
-          return;
-        }
-        productosPedido.push({
-          id: prodObj.id,
-          nombre: prodObj.nombre,
-          cantidad: qty,
-          precio: prodObj.precio
-        });
-        renderModal();
-      }
-    };
-    document.querySelectorAll('.editQtyInput').forEach(input => {
-      input.onchange = function() {
-        let idx = parseInt(this.getAttribute('data-idx'));
-        let prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
-        let stockDisp = prodInfo ? (prodInfo.stock ?? 0) : 0;
-        let val = Math.max(1, Math.min(parseInt(this.value, 10), stockDisp));
-        if(parseInt(this.value, 10) > stockDisp) {
-          renderModal(`El stock disponible de "${productosPedido[idx].nombre}" es ${stockDisp}.`);
-          return;
-        }
-        productosPedido[idx].cantidad = val;
-        renderModal();
-      };
-    });
-    document.querySelectorAll('.deletePrBtn').forEach(btn => {
-      btn.onclick = function() {
-        let idx = parseInt(this.getAttribute('data-idx'));
-        productosPedido.splice(idx, 1);
-        renderModal();
-      };
-    });
-  }
-
-  renderModal();
-
-  window.saveEditPedido = async function(id) {
-    const cliente = document.getElementById('editPedidoCliente').value.trim();
-    const localidad_id = document.getElementById('editPedidoLocalidad').value || null;
-    if(!cliente || !localidad_id || !productosPedido.length) return alert('Complete todos los campos y agregue productos');
-    const total = productosPedido.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-
-    // --- AJUSTA EL STOCK SOLO POR LA DIFERENCIA ---
-    const { data: pedidoOriginal } = await supabase.from('pedidos').select('*').eq('id', id).single();
-    const productosOriginal = pedidoOriginal.productos || [];
-    const mapOriginal = {};
-    productosOriginal.forEach(p => mapOriginal[p.id] = p.cantidad);
-    const mapNuevo = {};
-    productosPedido.forEach(p => mapNuevo[p.id] = p.cantidad);
-
-    // AJUSTE SOLO POR LA DIFERENCIA
-    const allIds = new Set([...productosOriginal.map(p=>p.id), ...productosPedido.map(p=>p.id)]);
-    for(const prodId of allIds) {
-      const cantOriginal = mapOriginal[prodId] || 0;
-      const cantNueva    = mapNuevo[prodId]    || 0;
-      const dif = cantNueva - cantOriginal;
-      if(dif !== 0) {
-        const promo = await getPromoById(prodId);
-        await supabase.from('promociones').update({ stock: (promo.stock || 0) - dif }).eq('id', prodId);
-      }
-    }
-
-    const { error } = await supabase.from('pedidos').update({ cliente, localidad_id, productos: productosPedido, total }).eq('id', id);
-    if(error) return alert(error.message);
-    closeModal();
-    await fetchOrders();
-    showToast('Pedido actualizado');
-  };
-}
-
-/* ========== ELIMINAR PEDIDO ========== */
-async function deleteOrder(id){
-  if(!confirm('Eliminar pedido?')) return;
-  const { data } = await supabase.from('pedidos').select('*').eq('id', id).single();
-  if(data.productos && data.productos.length){
-    for(const pr of data.productos){
-      const promo = await getPromoById(pr.id);
-      const newStock = (promo.stock || 0) + pr.cantidad;
-      await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
-    }
-  }
-  await supabase.from('pedidos').delete().eq('id', id);
-  await fetchOrders();
-  await fetchPromotions();
-  showToast('Pedido eliminado y stock restaurado');
 }
 
 
@@ -1790,164 +2485,12 @@ async function openEditClienteModal(id) {
 }
 
 
-/* -------------------------
-   Función: toggleEstadoCliente
-   Actualiza el estado (Pendiente / Visitado) y refresca la lista
-   ------------------------- */
-async function toggleEstadoCliente(id, nuevoEstado){
-  try {
-    if (!id) return console.warn('toggleEstadoCliente: id inválido', id);
-    // Confirmación sencilla (opcional)
-    if (!confirm(`¿Marcar este cliente como "${nuevoEstado}"?`)) return;
-
-    const { error } = await supabase
-      .from('clientes')
-      .update({ estado_visita: nuevoEstado })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error actualizando estado:', error);
-      return alert('Error al actualizar estado: ' + error.message);
-    }
-
-    // Refrescar la lista y notificar
-    await fetchClientes();
-    showToast(`Cliente marcado como ${nuevoEstado}`);
-  } catch (err) {
-    console.error('toggleEstadoCliente error', err);
-    alert('Ocurrió un error inesperado al actualizar el estado.');
-  }
-}
-
-/* -------------------------
-   Función: showToast (si no la tenías)
-   Pequeña notificación visual
-   ------------------------- */
-function showToast(text, tiempo = 2200) {
-  let toast = document.getElementById('appToast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'appToast';
-    toast.style.cssText =
-      'position:fixed;right:16px;bottom:20px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:15000;opacity:0;transition:opacity .25s;';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = text;
-  toast.style.opacity = '1';
-  clearTimeout(toast._to);
-  toast._to = setTimeout(() => { toast.style.opacity = '0'; }, tiempo);
-}
 
 /* -------------------------
    Reemplazo recomendado de openEditClienteModal(id)
    (Usa ID para evitar colisiones con versiones que reciben el objeto)
    ------------------------- */
-async function openEditClienteModal(id) {
-  const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
-  if (error || !data) {
-    console.error('Cliente no encontrado', error);
-    return alert('Cliente no encontrado');
-  }
-  const cliente = data;
 
-  // Formateo seguro para input datetime-local (si tiene fecha válida)
-  let fechaVisitaVal = '';
-  if (cliente.hora_visita) {
-    const d = new Date(cliente.hora_visita);
-    if (!isNaN(d)) {
-      fechaVisitaVal = d.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
-    } else {
-      // si no es una fecha válida, lo tratamos como texto (dejar vacío para evitar errores)
-      fechaVisitaVal = '';
-    }
-  }
-
-  openModal(
-    `Editar Cliente: ${escapeHtml(cliente.nombre_completo || '')}`,
-    `
-      <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
-        <label>Nombre completo</label>
-        <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo||'')}" required>
-        <label>Localidad</label>
-        <input type="text" id="editClienteLocalidad" value="${escapeHtml(cliente.localidad||'')}" required>
-        <label>DNI</label>
-        <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni||'')}">
-        <label>Teléfono</label>
-        <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono||'')}">
-        <label>Hora de visita (fecha y hora)</label>
-        <input type="datetime-local" id="editClienteVisita" value="${fechaVisitaVal}">
-        <label>Estado de visita</label>
-        <select id="editClienteEstado">
-          <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
-          <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
-        </select>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button type="button" onclick="updateCliente(${cliente.id})" style="background:#3498db;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">💾 Guardar</button>
-          <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cancelar</button>
-        </div>
-      </form>
-    `
-  );
-}
-
-
-
-/**
- * Abre el modal para editar todos los campos del cliente.
- */
-async function openEditClienteModal(id) {
-    const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
-    if (error || !data) return console.error("Cliente no encontrado", error);
-
-    const cliente = data;
-    // Formatear la fecha para el input datetime-local
-    // --- CORRECCIÓN SEGURA DE hora_visita ---
-let formattedVisita = '';
-if (cliente.hora_visita) {
-    const fecha = new Date(cliente.hora_visita);
-    if (fecha instanceof Date && !isNaN(fecha)) {  // Verifica que sea válida
-        formattedVisita = fecha.toISOString().substring(0,16); // Formato yyyy-MM-ddTHH:mm
-    } else {
-        console.warn('Hora de visita inválida para cliente ID:', cliente.id);
-        formattedVisita = '';
-    }
-}
-
-
-    openModal(
-        `Editar Cliente: ${escapeHtml(cliente.nombre_completo)}`,
-        `
-        <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
-            <label for="editClienteNombre">Nombre Completo:</label>
-            <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo || '')}" required>
-
-            <label for="editClienteLocalidad">Localidad:</label>
-            <input type="text" id="editClienteLocalidad" value="${escapeHtml(cliente.localidad || '')}" required>
-
-            <label for="editClienteDNI">DNI/Identificación:</label>
-            <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni || '')}">
-
-            <label for="editClienteTelefono">Teléfono:</label>
-            <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono || '')}">
-
-            <label for="editClienteVisita">Hora de Visita (Fecha y Hora):</label>
-            <input type="datetime-local" id="editClienteVisita" value="${formattedVisita}">
-
-            <label for="editClienteEstado">Estado de Visita:</label>
-            <select id="editClienteEstado">
-                <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente de Visita</option>
-                <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
-            </select>
-            
-            <button type="button" onclick="updateCliente(${cliente.id})" style="margin-top:15px; background:#3498db; color:#fff; padding:10px;">💾 Guardar Cambios</button>
-        </form>
-        `
-    );
-}
-
-/**
- * Función final para actualizar todos los campos del cliente.
- */
 /* -------------------------
    Actualizar Cliente
 ------------------------- */
@@ -2004,22 +2547,19 @@ async function deleteCliente(id){
 
 
 // ================= DOCUMENTOS =================
-// Subir documento al bucket y guardar referencia
 async function addDocumento() {
   const file = document.getElementById("docArchivo").files[0];
   if (!file) return alert("Seleccione un archivo");
   const fileName = `${Date.now()}_${file.name}`;
+
   const { error: uploadError } = await supabase.storage.from("private-documents").upload(fileName, file);
-  if (uploadError) {
-    alert("Error al subir: " + uploadError.message);
-    return;
-  }
+  if (uploadError) return alert("Error al subir: " + uploadError.message);
+
   await supabase.from("documentos").insert([{ nombre: file.name, archivo: fileName }]);
   document.getElementById("docArchivo").value = "";
   fetchDocumentos();
 }
 
-// Mostrar listado de documentos
 async function fetchDocumentos() {
   const { data, error } = await supabase.from("documentos").select("*").order("created_at", { ascending: false });
   const container = document.getElementById("docList");
@@ -2030,31 +2570,34 @@ async function fetchDocumentos() {
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (!data?.length) {
     container.innerHTML = '<span style="color:#888;">No hay documentos subidos.</span>';
     return;
   }
 
-  for (const doc of data) {
-    let url = "";
-    if (doc.archivo) {
-      const { data: urlData } = await supabase.storage.from("private-documents").createSignedUrl(doc.archivo, 60 * 60);
-      url = urlData?.signedUrl || "#";
-    }
-    const fecha = doc.created_at ? new Date(doc.created_at).toLocaleString() : '';
-    container.innerHTML += `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
-        <div>
-          <a href="${url}" target="_blank">${escapeHtml(doc.nombre)}</a>
-          <span style="color:#888;font-size:0.97em;margin-left:8px;">${fecha}</span>
+  const signedDocs = await Promise.all(
+    data.map(async doc => {
+      let url = "#";
+      if (doc.archivo) {
+        const { data: urlData } = await supabase.storage.from("private-documents").createSignedUrl(doc.archivo, 60 * 60);
+        url = urlData?.signedUrl || "#";
+      }
+      const fecha = doc.created_at ? new Date(doc.created_at).toLocaleString() : '';
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
+          <div>
+            <a href="${url}" target="_blank">${escapeHtml(doc.nombre)}</a>
+            <span style="color:#888;font-size:0.97em;margin-left:8px;">${fecha}</span>
+          </div>
+          <button onclick="deleteDocumento(${doc.id}, '${doc.archivo}')" style="background:#ff4d4f;color:#fff;border:none;padding:7px 12px;border-radius:6px;font-weight:bold;cursor:pointer;">Eliminar</button>
         </div>
-        <button onclick="deleteDocumento(${doc.id}, '${doc.archivo}')" style="background:#ff4d4f;color:#fff;border:none;padding:7px 12px;border-radius:6px;font-weight:bold;cursor:pointer;">Eliminar</button>
-      </div>
-    `;
-  }
+      `;
+    })
+  );
+
+  container.innerHTML = signedDocs.join("");
 }
 
-// Eliminar documento
 async function deleteDocumento(id, archivo) {
   if (!confirm("¿Eliminar documento?")) return;
   await supabase.storage.from("private-documents").remove([archivo]);
@@ -2062,47 +2605,38 @@ async function deleteDocumento(id, archivo) {
   fetchDocumentos();
 }
 
-// Mostrar documentos al entrar en la pestaña
-document.querySelector("button[data-tab='documentos']").addEventListener("click", fetchDocumentos);
-
 // --- INICIALIZACIÓN ---
-fetchCategorias(); fetchLocalidades(); fetchPromotions(); fetchOrders(); fetchDocumentos(); fetchClientes(); loadLocalidadesFilter();
-
-
 document.addEventListener('DOMContentLoaded', async () => {
-  await cargarLocalidadesEnSelect();
-  await fetchClientes();
-});
+  fetchCategorias();
+  fetchLocalidades();
+  fetchPromos();
+  fetchOrders();
+  fetchDocumentos();
+  fetchClientes();
+  loadLocalidadesFilter();
+  loadPromoSubMenu();
 
+  const btnDocs = document.querySelector("button[data-tab='documentos']");
+  if (btnDocs) btnDocs.addEventListener("click", fetchDocumentos);
 
-/* ========== FUNCIÓN PARA DESLIZAR SIDEBAR EN MÓVIL ========== */
-function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const backdrop = document.getElementById('backdrop');
-    
-    sidebar.classList.toggle('open');
-    backdrop.classList.toggle('show');
-}
+  const menuBtn = document.getElementById('menuBtn');
+  if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
 
-// 💥 Asignar la función al nuevo botón de menú 💥
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('menuBtn').addEventListener('click', toggleSidebar);
-    
-    // Asignar el cierre de la sidebar también al hacer clic en un botón de pestaña
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Cierra la sidebar si está abierta y estamos en móvil
-            if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
-                toggleSidebar();
-            }
-        });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
+        toggleSidebar();
+      }
     });
+  });
 });
+
 
 
 </script>
-
 </body>
 </html>
+
+
 
 
