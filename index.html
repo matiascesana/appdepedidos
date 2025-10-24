@@ -18,8 +18,10 @@
         .sidebar button { background: none; border: none; color: white; text-align: left; padding: 12px 20px; cursor: pointer; font-size: 16px; width: 100%; transition: 0.2s; }
         .sidebar button:hover, .sidebar button.active { background: var(--sidebar-hover); }
         .content { flex: 1; padding: 20px; overflow-y: auto; }
-        .section { display: none; }
-        .section.active { display: block; }
+        .section {
+  	display: none !important;}
+	.section.active {
+  	display: block !important;}
         h1 { margin-top: 0; margin-bottom: 15px; }
         .card { display: flex; align-items: center; gap: 15px; background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #ddd; transition: 0.3s; }
         .card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); }
@@ -196,6 +198,79 @@
     margin-left: 10px;
 }
 
+/* --------------------
+   AJUSTE DE ALINEACIÓN (Vertical)
+   -------------------- */
+.button-group {
+    display: flex; 
+    /* 💡 Clave: Cambia la dirección del flexbox a columna (vertical) */
+    flex-direction: column; 
+    
+    /* Centra ambos botones en el eje horizontal (opcional) */
+    align-items: center; 
+    
+    /* Esto alinea el grupo completo a la derecha, si el contenedor es ancho (opcional) */
+    justify-content: flex-end; 
+    
+    /* Espacio vertical entre los botones */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* --------------------
+   RESTO DE ESTILOS (Mantenidos)
+   -------------------- */
+/* --------------------
+   AJUSTE DE ALINEACIÓN (Vertical y a la Izquierda) 👈
+   -------------------- */
+.button-group {
+    display: flex; 
+    /* Direccion vertical (uno debajo del otro) */
+    flex-direction: column; 
+    
+    /* 💡 Clave: Esto alinea los elementos (botones) a la izquierda */
+    align-items: flex-start; 
+    
+    /* Si tienes un contenedor grande, asegúrate que el grupo esté a la izquierda */
+    justify-content: flex-start; /* Esto alinea el grupo completo a la izquierda */
+    
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* --------------------
+   ESTILOS BASE DEL BOTÓN
+   -------------------- */
+.button {
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    /* Asegura que los botones no se estiren más de un ancho razonable */
+    width: 100%; 
+    max-width: 250px; 
+}
+
+/* Botón AGREGAR (Primario) */
+.button-primary {
+    background-color: #007bff; 
+    color: white; 
+    border: 2px solid #007bff; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+}
+.button-primary:hover { background-color: #0056b3; border-color: #0056b3; }
+/* ... (otros estilos de hover/active) */
+
+/* Botón EXPORTAR (Secundario) */
+.button-secondary {
+    background-color: transparent; 
+    color: #333; 
+    border: 2px solid #ccc; 
+}
+.button-secondary:hover { background-color: #f0f0f0; border-color: #b3b3b3; }
+.button-secondary:active { transform: translateY(1px); }
 .cancel-btn {
     background-color: #6c757d;
     color: white;
@@ -305,91 +380,38 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-    <button id="menuBtn">
-    </button>
     <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
-    <div class="sidebar">
+    <nav class="sidebar">
     <h2>MENU</h2>
+    <ul>
+        <li><button class="tab-btn" data-tab="promos">Promos</button></li>
+        <li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
+	<li><button class="tab-btn" data-tab="categorias">Categorías</button></li>        
+	<li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
+	<li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
+  	<li><button class="tab-btn" data-tab="clientes">Clientes</button></li>
+</ul>
+</nav>
     
-    <div class="dropdown-container">
-        <button class="tab-btn dropdown-toggle active" data-tab="promos_menu">
-            Promociones (Menú) ▼
-        </button>
-        <div id="promoSubMenu" class="dropdown-menu">
-            </div>
-    </div>
     
-    <button class="tab-btn" data-tab="pedidos">Pedidos</button>
-    <button class="tab-btn" data-tab="categorias">Categorías</button>
-    <button class="tab-btn" data-tab="localidades">Localidades</button>
-    <button class="tab-btn" data-tab="documentos">Documentos</button>
-    <button class="tab-btn" data-tab="clientes">Clientes</button>
-</div>
-    <div class="content">
+    
+    
+<div class="content">
         <div id="promos" class="section active">
-            <div style="margin-bottom:20px;">
-<div id="promoCategoriaFilter" style="margin-bottom: 50px;">
-    </div>
-     
-    </select>
-
-                    <option value="">Todas las categorías</option>
-                </select>
-                <button id="exportPromoPDF" style="margin-left:10px;padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;">Exportar seleccionados</button>
-            </div>
-            <div id="promoList" style="display:grid; grid-template-rows: repeat(auto-fill,minmax(250px,1fr)); gap:16px;"></div>
+        <div style="margin-bottom:20px;">
+	<div id="promoCategoriaFilter" style="margin-bottom: 50px;">
+    	</div>
+        </select>
+        <option value="">Todas las categorías</option>
+        </select>
+        <button id="exportPromoPDF" style="margin-left:10px;padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;">Exportar 	seleccionados</button>
         </div>
-
-
-
-        <div id="pedidos" class="section">
-            <h2>Pedidos</h2>
-            <form id="pedidoForm" onsubmit="return false;" 
-      style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
-
-    <!-- Cliente: más largo -->
-    <div style="flex:2; min-width:300px; display:flex; flex-direction:column;">
-        <label>Cliente</label>
-        <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:100%;" />
-    </div>
-
-    <!-- Localidad -->
-    <div style="flex:1; min-width:180px; display:flex; flex-direction:column;">
-        <label>Localidad</label>
-        <select id="pedidoLocalidad" style="width:100%;"></select>
-    </div>
-
-    <!-- Seleccionar Productos -->
-    <div style="flex:1; min-width:180px; display:flex; flex-direction:column; justify-content:flex-start;">
-        <label>Productos</label>
-        <button type="button" id="selectProductsBtn" 
-                style="width:100%; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
-            Seleccionar Productos
-        </button>
-    </div>
-
-    <!-- Productos seleccionados debajo -->
-    <div style="width:100%; margin-top:6px;">
-        <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
-    </div>
-
-    <!-- Botones agregar/exportar -->
-    <div style="display:flex;gap:8px; width:100%; margin-top:6px;">
-        <button type="button" id="addOrderBtn">Agregar Pedido</button>
-	</div>
-	<button type="button" id="exportPedidosPDFBtn">Exportar Pedidos (PDF)</button>
-	</div>
-</form>
-            <h3>Lista de Pedidos</h3>
-            <div id="pedidoList"></div>
+        <div id="promoList" style="display:grid; grid-template-rows: repeat(auto-fill,minmax(250px,1fr)); gap:16px;"></div>
         </div>
-
-<div id="editPromoModal" class="modal">
-    <div class="modal-content">
+	<div id="editPromoModal" class="modal">
+    	<div class="modal-content">
         <span class="close-button" onclick="document.getElementById('editPromoModal').style.display = 'none'">&times;</span>
-        
         <h3>Editar Promoción</h3>
-        
         <input type="hidden" id="modalPromoId">
         <input type="hidden" id="modalOldImageName">
         
@@ -415,27 +437,74 @@
 
 
 
-        <div id="categorias" class="section">
-  <h1>Gestión de Categorías</h1>
-  <input type="text" id="categoriaNombre" placeholder="Nueva categoría" />
-  <button id="addCategoriaBtn">Agregar</button>
-  <div id="categoriaList"></div>
-</div>
 
-        <!-- LOCALIDADES -->
-    <div id="localidades" class="section">
+
+        <div id="pedidos" class="section">
+            <h2>Pedidos</h2>
+            <form id="pedidoForm" onsubmit="return false;" 
+      style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
+<!-- Cliente: más largo -->
+    <div style=""width:40%; min-width:50px; display:flex; flex-direction:column;">
+        <label>Cliente</label>
+        <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:100%;" /> <div>
+	</div>
+<!-- Localidad -->
+    	<div style=""width:60%; min-width:180px; display:flex; flex-direction:column;">
+        <label>Localidad</label>
+        <select id="pedidoLocalidad" style="width:70%;"></select> <div>
+	</div>
+<!-- Seleccionar Productos -->
+    	<div style="flex:1; min-width:180px; display:flex; flex-direction:column; justify-content:flex-start;">
+        <label>Productos</label>
+        <button type="button" id="selectProductsBtn" 
+        style="width:30%; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
+        Seleccionar Productos
+        </button> <div>
+	<div class="button-group">
+	<button type="button" id="addOrderBtn" class="button button-primary">
+        + Agregar Pedido
+    	</button>
+    	<button type="button" id="exportPedidosPDFBtn" class="button button-secondary">
+        Exportar Pedidos (PDF)
+    	</button>
+	</div>
+<!-- Productos seleccionados debajo -->
+	<div style="width:100%; margin-top:6px;">
+        <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
+    	</div>
+	</div>	
+	<h2>Lista de Pedidos</h2>
+	<div id="pedidoList"></div>
+	</div>
+	</div>
+
+<div id="categorias" class="section">
+	<h1>Gestión de Categorías</h1>
+ 	<input type="text" id="categoriaNombre" placeholder="Nueva categoría" />
+  	<button id="addCategoriaBtn">Agregar</button>
+  	<div id="categoriaList"></div>
+	</div>
+
+
+<!-- LOCALIDADES -->
+      <div id="localidades" class="section">
       <h1>Gestión de Localidades</h1>
       <input type="text" id="localidadNombre" placeholder="Nueva localidad" />
       <button onclick="addLocalidad()">Agregar</button>
       <div id="localidadList"></div>
-    </div>
-        <div id="documentos" class="section">
-            <h1>Gestión de Documentos</h1>
-            <input type="file" id="docArchivo" />
-            <button id="addDocumentoBtn">Agregar Documento</button>
-            <button id="fetchDocumentosBtn">Actualizar Documentos</button>
-            <div id="docList" style="margin-top:18px;"></div>
-        </div>
+      </div>
+
+
+<div id="documentos" class="section">
+      <h1>Gestión de Documentos</h1>
+      <input type="file" id="docArchivo" />
+      <button id="addDocumentoBtn">Agregar Documento</button>
+      <button id="fetchDocumentosBtn">Actualizar Documentos</button>
+      <div id="docList" style="margin-top:18px;"></div>
+      </div>
+
+
+
         <div id="clientes" class="section">
             <h1>Gestión de Clientes</h1>
             <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
@@ -456,27 +525,102 @@
             <div id="clienteList"></div>
         </div>
     </div>
-    <div id="modal"><div id="modalInner"></div></div>
+    <div id="modal" style="display:none;">
+  <div id="modalInner"></div>
+</div>
     <div id="appToast"></div>
 
 
+
+<!-- === MODAL GENÉRICO === -->
+<div id="modal" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+">
+  <div id="modalInner" style="
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  ">
+    <!-- contenido dinámico -->
+  </div>
+  <button onclick="closeModal()" style="
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: #ff4d4f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: bold;
+  ">✖</button>
+</div>
+
+
+
 <script>
+
+// Función para mostrar la sección deseada y ocultar todas las demás
+function navigateTo(tabName) {
+    // 1. Oculta todas las secciones
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    // 2. Muestra la sección deseada
+    const targetSection = document.getElementById(tabName);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        // ... (resto de lógica del sidebar)
+    }
+
+    // 3. Actualiza el estado 'active' de los botones
+    document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // El botón de la pestaña seleccionada se activa
+    const targetButton = document.querySelector(`.sidebar .tab-btn[data-tab="${tabName}"]`);
+    if (targetButton) {
+        targetButton.classList.add('active');
+    }
+
+    // 4. LÓGICA CLAVE: Cerrar el desplegable de Promociones si navegamos a otra sección
+    const promoSubMenu = document.getElementById('promoSubMenu');
+    const promoToggleBtn = document.querySelector('.dropdown-toggle');
+    
+
+}
 
 
 /* =========================================================
    Configuración Supabase (cliente)
    ========================================================= */
 
+/* =========================================================
+   Configuración Supabase (cliente)
+   ========================================================= */
 const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ===========================
-   Utilidades
-   =========================== */
-
+/* =========================================================
+   Utilidades generales
+   ========================================================= */
 function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
-function safeText(t){ return escapeHtml(t); } // Alias para mayor claridad en el código
+function safeText(t){ return escapeHtml(t); }
 function showToast(text, tiempo = 2200) {
     let toast = document.getElementById('appToast');
     if (!toast) {
@@ -492,58 +636,57 @@ function showToast(text, tiempo = 2200) {
 }
 function openModal(innerHtml) {
     const inner = document.getElementById('modalInner');
-    inner.innerHTML = innerHtml; // Simplificamos openModal
+    inner.innerHTML = innerHtml;
     document.getElementById('modal').style.display = 'flex';
 }
 function closeModal(){ document.getElementById('modal').style.display = 'none'; }
 
-/* ===========================
-   Sidebar & Tabs
-   =========================== */
-
+/* =========================================================
+   Sidebar & Navegación entre secciones
+   ========================================================= */
 function toggleSidebar(){
-    const sidebar = document.querySelector('.sidebar');
-    const backdrop = document.getElementById('backdrop');
-    sidebar.classList.toggle('open');
-    backdrop.classList.toggle('show');
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('backdrop');
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show');
 }
 
-document.querySelector('.dropdown-toggle').addEventListener('click', function() {
-    const menu = document.getElementById('promoSubMenu');
-    menu.classList.toggle('open');
-    
-    // Asegura que se carguen las categorías si no están ahí
-    if (menu.children.length === 0) {
-        // Llamar a la nueva función que solo llena el submenú
-        loadPromoSubMenu(); 
+document.getElementById('menuBtn')?.addEventListener('click', toggleSidebar);
+
+function activateSection(tab) {
+  // 1. Ocultar todas las secciones
+  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+
+  // 2. Mostrar la seleccionada
+  const target = document.getElementById(tab);
+  if (target) target.classList.add('active');
+
+  // 3. Marcar botón activo
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  const button = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  if (button) button.classList.add('active');
+
+}
+
+// 5. Escucha los clics de los botones del menú
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    activateSection(tab);
+    if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
+      toggleSidebar();
     }
+  });
 });
 
-document.getElementById('menuBtn')?.addEventListener('click', toggleSidebar);
-document.querySelectorAll('.tab-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-        const tab = button.getAttribute('data-tab');
-        document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.remove('active'));
-        button.classList.add('active');
-        document.querySelectorAll('.section').forEach((section) => section.classList.remove('active'));
-        const activeSection = document.getElementById(tab);
-        if (activeSection) activeSection.classList.add('active');
-        if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) toggleSidebar();
-        if (tab === 'promos') fetchPromos(); 
-        if (tab === 'pedidos') fetchOrders(); 
-        if (tab === 'categorias') fetchCategorias(); // <--- ¡Asegúrate de tener esta línea!
-        if (tab === 'localidades') fetchLocalidades();
-        if (tab === 'clientes') fetchClientes();
-    });
-});
+// Mostrar Promos por defecto
+activateSection('promos');
 
 /* =========================================================
-   Variables globales y caches
+   Variables globales
    ========================================================= */
-
 let selectedProducts = [];
 let editingOrderId = null;
-
 
 
 /**
@@ -2457,7 +2600,7 @@ async function openEditClienteModal(id) {
 
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button type="button" onclick="updateCliente(${cliente.id})" style="background:#3498db;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">💾 Guardar</button>
-          <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cancelar</button>
+          <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cerrar</button>
         </div>
       </form>
     `
@@ -2605,8 +2748,26 @@ async function deleteDocumento(id, archivo) {
   fetchDocumentos();
 }
 
-// --- INICIALIZACIÓN ---
-document.addEventListener('DOMContentLoaded', async () => {
+
+// === INICIALIZACIÓN DE EVENTOS ===
+document.addEventListener('DOMContentLoaded', () => {
+    // Conectar todos los botones de la barra lateral
+    document.querySelectorAll('.sidebar .tab-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+
+            if (tabName === 'promos_menu') {
+                // Lógica especial para el desplegable
+                const subMenu = document.getElementById('promoSubMenu');
+                subMenu.classList.toggle('open');
+                this.classList.toggle('active', subMenu.classList.contains('open'));
+            } else {
+                // Navegación normal
+                navigateTo(tabName);
+            }
+        });
+    });  
+  
   fetchCategorias();
   fetchLocalidades();
   fetchPromos();
@@ -2631,12 +2792,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
+// Función única para manejar el cambio de secciones
+function activateSection(tab) {
+  // 1. Quita 'active' de todas las secciones
+  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
 
+  // 2. Activa la sección seleccionada
+  const section = document.getElementById(tab);
+  if (section) section.classList.add('active');
+
+  // 3. Actualiza el menú lateral
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+
+  // 4. Carga los datos específicos según la pestaña
+  if (tab === 'promos') fetchPromos();
+  else if (tab === 'pedidos') fetchOrders();
+  else if (tab === 'categorias') fetchCategorias();
+  else if (tab === 'localidades') fetchLocalidades();
+  else if (tab === 'clientes') fetchClientes();
+  else if (tab === 'documentos') fetchDocumentos();
+
+}
+
+// Asigna los eventos de clic
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.getAttribute('data-tab');
+    activateSection(tab);
+    if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
+      toggleSidebar();
+    }
+  });
+});
+
+// Mostrar 'Promos' por defecto al iniciar
+activateSection('promos');
 
 </script>
 </body>
 </html>
-
 
 
 
