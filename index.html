@@ -379,21 +379,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
+
+
 <body>
-    <div id="backdrop" class="backdrop" onclick="toggleSidebar()"></div>
-    <nav class="sidebar">
-    <h2>MENU</h2>
-    <ul>
-        <li><button class="tab-btn" data-tab="promos">Promos</button></li>
-        <li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
-	<li><button class="tab-btn" data-tab="categorias">Categorías</button></li>        
-	<li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
-	<li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
-  	<li><button class="tab-btn" data-tab="clientes">Clientes</button></li>
-</ul>
+
+
+ <nav class="sidebar">
+  <h2>MENU</h2>
+  <ul style="list-style:none; padding:0; margin:0;">
+    <li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
+    <li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
+    <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
+    <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
+    <li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
+    <li><button class="tab-btn" data-tab="clientes">Clientes</button></li>
+  </ul>
 </nav>
-    
-    
+   
     
     
 <div class="content">
@@ -457,20 +459,20 @@
     	<div style="flex:1; min-width:180px; display:flex; flex-direction:column; justify-content:flex-start;">
         <label>Productos</label>
         <button type="button" id="selectProductsBtn" 
-        style="width:30%; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
+        style="width:80%; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
         Seleccionar Productos
         </button> <div>
-	<div class="button-group">
-	<button type="button" id="addOrderBtn" class="button button-primary">
-        + Agregar Pedido
-    	</button>
-    	<button type="button" id="exportPedidosPDFBtn" class="button button-secondary">
-        Exportar Pedidos (PDF)
-    	</button>
-	</div>
 <!-- Productos seleccionados debajo -->
 	<div style="width:100%; margin-top:6px;">
         <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
+</div>
+    	</div>
+
+	<div class="button-group">
+	<button type="button" id="addOrderBtn" class="button button-primary">
+        + Confirmar Pedido
+    	</button>
+    	</div>
     	</div>
 	</div>	
 	<h2>Lista de Pedidos</h2>
@@ -508,11 +510,17 @@
         <div id="clientes" class="section">
             <h1>Gestión de Clientes</h1>
             <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
-                <input type="text" id="clienteNombre" placeholder="Nombre y Apellido" required style="flex: 2; min-width: 150px;" />
-                <select id="clienteLocalidad" required style="flex: 1; min-width: 120px; padding:8px; border:1px solid #ccc; border-radius:6px;">
-                    <option value="">Seleccionar Localidad...</option>
-                </select>
-                <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
+                <input 
+  type="text" 
+  id="clienteNombre" 
+  name="clienteNombre" 
+  placeholder="Nombre y Apellido" required style="flex:2; min-width:150px;"/>
+
+<select id="clienteLocalidad" name="clienteLocalidad" required style="flex:1; min-width:120px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+  <option value="">Seleccionar Localidad...</option>
+</select>
+
+               <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
                 <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
             </form>
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
@@ -1297,8 +1305,8 @@ async function exportSelectedPromos() {
 
         try {
             const { data: logoSignedData } = await supabase.storage
-                .from('promo_images') // Asumo que el logo está en el bucket 'promo_images'
-                .createSignedUrl(LOGO_PATH, 3600);
+    .from('promo_images')  // ✅ bucket correcto
+    .createSignedUrl('logodistribuidora.png', 3600);
                 
             if (logoSignedData?.signedUrl) {
                 // Cargar y convertir el logo a Base64 para jsPDF
@@ -1789,71 +1797,97 @@ async function getLocalidadNombre(id) {
     return (data && data.nombre) ? data.nombre : "";
 }
 
-/* ================== LISTADO DE PEDIDOS ================== */
-async function fetchOrders(){
-    const { data } = await supabase.from('pedidos').select('*').order('id');
-    const container = document.getElementById('pedidoList');
-    container.innerHTML = '';
-    
-    // Cargar localidades una sola vez para mejorar rendimiento
-    const { data: localidadesData } = await supabase.from('localidades').select('id, nombre');
-    const localidadMap = localidadesData.reduce((map, loc) => {
-        map[loc.id] = loc.nombre;
-        return map;
-    }, {});
 
-    // Llenar select de localidad en el formulario
-    const locSelect = document.getElementById('pedidoLocalidad');
-    locSelect.innerHTML = '<option value="">Seleccionar Localidad...</option>';
-    localidadesData.forEach(l => {
-        const option = document.createElement('option');
-        option.value = l.id;
-        option.textContent = safeText(l.nombre);
-        locSelect.appendChild(option);
-    });
 
-    for(const p of data){
-        let localidadNombre = p.localidad_id ? localidadMap[p.localidad_id] || "" : "";
-        const div = document.createElement('div'); 
-        div.className = 'item-card';
-        div.style.display = 'flex';
-        div.style.alignItems = 'stretch';
-        div.style.justifyContent = 'space-between';
-        div.style.padding = '18px 14px';
-        div.style.marginBottom = '14px';
-        div.style.borderRadius = '12px';
-        div.style.background = '#fff';
-        div.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)';
-        div.style.border = '1px solid #eee';
-        
-        let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-        p.productos.forEach(pr => prodHTML += `<li>${safeText(pr.nombre)} <span style="color:#888;">x ${pr.cantidad}</span> <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span></li>`);
-        prodHTML += '</ul>';
-        
-        const infoDiv = document.createElement('div');
-        infoDiv.style.flex = '1';
-        infoDiv.innerHTML = `
-            <strong style="font-size:1.18em;">${safeText(p.cliente)}</strong>
-            <div class="small-muted" style="color:#888;margin-bottom:2px;">${localidadNombre ? 'Localidad: ' + safeText(localidadNombre) : ''}</div>
-            ${prodHTML}
-            <div style="margin-top:8px;font-weight:bold;font-size:1.08em;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
-        `;
-        
-        const actionsDiv = document.createElement('div');
-        actionsDiv.style.display = 'flex';
-        actionsDiv.style.flexDirection = 'column';
-        actionsDiv.style.justifyContent = 'center';
-        actionsDiv.style.alignItems = 'flex-end';
-        actionsDiv.style.gap = '10px';
-        actionsDiv.innerHTML = `
-            <button onclick='editOrderModal(${JSON.stringify(p)})' style="background:#3498db;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;margin-bottom:2px;">✏️ Editar</button>
-            <button class="delete-btn" onclick="deleteOrder(${p.id})" style="background:#ff4d4f;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">🗑️ Eliminar</button>
-        `;
-        div.appendChild(infoDiv);
-        div.appendChild(actionsDiv);
-        container.appendChild(div);
+
+/* ================== LISTADO DE PEDIDOS OPTIMIZADO ================== */
+let isFetchingOrders = false;
+
+async function fetchOrders() {
+    if(isFetchingOrders) return; // evita llamadas concurrentes
+    isFetchingOrders = true;
+
+    try {
+        const { data: pedidos } = await supabase.from('pedidos').select('*').order('id');
+        const container = document.getElementById("pedidoList");
+        container.innerHTML = ""; // limpia el contenedor antes de agregar
+
+        if (!pedidos || !pedidos.length) return;
+
+        // Cargar localidades
+        const { data: localidadesData } = await supabase.from('localidades').select('id,nombre');
+        const localidadMap = {};
+        localidadesData.forEach(l => { localidadMap[l.id] = l.nombre; });
+
+        for (const p of pedidos) {
+            const localidadNombre = p.localidad_id ? localidadMap[p.localidad_id] || "" : "";
+
+            // Contenedor del pedido
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            Object.assign(div.style, {
+                display: 'flex',
+                alignItems: 'stretch',
+                justifyContent: 'space-between',
+                padding: '18px 14px',
+                marginBottom: '14px',
+                borderRadius: '12px',
+                background: '#fff',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                border: '1px solid #eee',
+            });
+
+            // Información del pedido
+            const infoDiv = document.createElement('div');
+            infoDiv.style.flex = '1';
+            let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+            p.productos.forEach(pr => {
+                prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span></li>`;
+            });
+            prodHTML += '</ul>';
+
+            infoDiv.innerHTML = `
+                <strong>${safeText(p.cliente)}</strong>
+                <div style="color:#888;margin-bottom:2px;">${localidadNombre ? 'Localidad: ' + safeText(localidadNombre) : ''}</div>
+                ${prodHTML}
+                <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+            `;
+
+            // Botones
+            const actionsDiv = document.createElement('div');
+            Object.assign(actionsDiv.style, { display:'flex', flexDirection:'column', gap:'10px', alignItems:'flex-end' });
+
+            const pdfBtn = document.createElement('button');
+            pdfBtn.textContent = '📄 Exportar PDF';
+            Object.assign(pdfBtn.style, { background:'#2ecc71', color:'#fff', border:'none', padding:'8px 18px', borderRadius:'7px', fontWeight:'bold', cursor:'pointer' });
+            pdfBtn.onclick = () => exportPedidoPDF({...p, localidad_nombre: localidadNombre});
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '✏️ Editar';
+            Object.assign(editBtn.style, { background:'#3498db', color:'#fff', border:'none', padding:'8px 18px', borderRadius:'7px', fontWeight:'bold', cursor:'pointer' });
+            editBtn.onclick = () => editOrderModal(p);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '🗑️ Eliminar';
+            Object.assign(deleteBtn.style, { background:'#ff4d4f', color:'#fff', border:'none', padding:'8px 18px', borderRadius:'7px', fontWeight:'bold', cursor:'pointer' });
+            deleteBtn.onclick = () => deleteOrder(p.id);
+
+            actionsDiv.appendChild(pdfBtn);
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(deleteBtn);
+
+            div.appendChild(infoDiv);
+            div.appendChild(actionsDiv);
+            container.appendChild(div);
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Error al cargar pedidos');
+    } finally {
+        isFetchingOrders = false; // desbloquear flag
     }
 }
+
 
 /* ========== MODAL DE EDICIÓN DE PEDIDO CON STOCK DIFERENCIAL (Mantenido el código original) ========== */
 async function editOrderModal(pedido) {
@@ -1907,16 +1941,16 @@ async function editOrderModal(pedido) {
             </div>
             <div style="background:#f8f8f8;border-radius:12px;padding:20px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
                 <div style="margin-bottom:16px;">
-                    <label for="editPedidoCliente" style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
-                    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente">
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label for="editPedidoLocalidad" style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
-                    <select id="editPedidoLocalidad">
-                        <option value="">Seleccione localidad</option>
-                        ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${safeText(l.nombre)}</option>`).join('')}
-                    </select>
-                </div>
+    <label for="editPedidoCliente" style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
+    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente">
+</div>
+<div style="margin-bottom:16px;">
+    <label for="editPedidoLocalidad" style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
+    <select id="editPedidoLocalidad">
+        <option value="">Seleccione localidad</option>
+        ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${safeText(l.nombre)}</option>`).join('')}
+    </select>
+</div>
                 <div style="margin-bottom:16px;">
                     <label style="font-weight:500;display:block;margin-bottom:4px;">Productos</label>
                     ${selectHTML}
@@ -1985,10 +2019,12 @@ async function editOrderModal(pedido) {
     renderModal();
 
     window.saveEditPedido = async function(id) {
-        const cliente = document.getElementById('editPedidoCliente').value.trim();
-        const localidad_id = document.getElementById('editPedidoLocalidad').value || null;
-        if(!cliente || !localidad_id || !productosPedido.length) return alert('Complete todos los campos y agregue productos');
-        const total = productosPedido.reduce((s,x)=>s + x.precio * x.cantidad, 0);
+       const cliente = document.getElementById('editPedidoCliente').value.trim();
+const localidad_id = document.getElementById('editPedidoLocalidad').value;
+if(!cliente) return alert("Ingrese el nombre del cliente");
+if(!localidad_id) return alert("Seleccione la localidad");
+if(!productosPedido.length) return alert("Agregue productos");
+
 
         // --- AJUSTA EL STOCK SOLO POR LA DIFERENCIA ---
         const { data: pedidoOriginal } = await supabase.from('pedidos').select('*').eq('id', id).single();
@@ -2022,6 +2058,21 @@ async function editOrderModal(pedido) {
 }
 
 
+async function agregarPedido(pedido) {
+  const { error } = await supabase.from('pedidos').insert([pedido]);
+  if (error) return alert('Error al guardar pedido: ' + error.message);
+
+  // Refrescar listado de pedidos
+  fetchPedidos();
+
+  // Refrescar listado de clientes con pedidos
+  fetchClientes();
+
+  showToast('✅ Pedido agregado');
+}
+
+
+
 /* ========== ELIMINAR PEDIDO ========== */
 async function deleteOrder(id){
     if(!confirm('Eliminar pedido?')) return;
@@ -2040,68 +2091,135 @@ async function deleteOrder(id){
 }
 
 
+// =========================================================
+// 🧾 EXPORTAR PEDIDO A PDF (Corregido y mejorado)
+// =========================================================
+
 async function exportPedidoPDF(pedido) {
+  try {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4'); // hoja A4 vertical
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 40;
+    const logoHeight = 70;
+    const logoWidth = 180;
+    const lineY = margin + logoHeight + 10;
 
-    // --- 1. Obtener logo desde Supabase Storage ---
-    // Suponiendo que está en bucket "logos" con nombre "logo.png"
-    let logoUrl = await supabase.storage.from('logos').getPublicUrl('logo.png');
-    logoUrl = logoUrl.data.publicUrl;
+    // 1️⃣ Obtener logo desde Supabase Storage
+    const BUCKET_NAME = 'promo_images'; // ✅ CAMBIÁ si tu bucket se llama distinto
+    const LOGO_PATH = 'logodistribuidora.png'; // ✅ nombre exacto del archivo en Supabase
+    let logoImgData = null;
 
-    // Convertir logo a base64 para jsPDF
-    const imgBase64 = await getBase64ImageFromURL(logoUrl);
+    try {
+      const { data: logoSignedData, error: logoErr } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(LOGO_PATH, 3600);
 
-    // --- 2. Agregar logo ---
-    if(imgBase64) {
-        doc.addImage(imgBase64, 'PNG', 15, 10, 40, 40); // x,y,width,height
+      if (logoErr) throw logoErr;
+      if (logoSignedData?.signedUrl) {
+        // Convertir logo a Base64
+        const response = await fetch(logoSignedData.signedUrl);
+        if (!response.ok) throw new Error("Error al descargar el logo (status " + response.status + ")");
+        const blob = await response.blob();
+
+        logoImgData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        console.warn("No se pudo generar la URL firmada del logo");
+      }
+    } catch (err) {
+      console.warn("⚠️ No se pudo cargar el logo de la empresa:", err.message);
+      logoImgData = null;
     }
 
-    // --- 3. Título y datos del cliente ---
-    doc.setFontSize(18);
-    doc.text("Pedido / Boleta de Compra", 105, 20, { align: 'center' });
-    
-    doc.setFontSize(14);
-    doc.text(`Cliente: ${pedido.cliente}`, 15, 60);
-    doc.text(`Localidad: ${pedido.localidad_nombre || '-'}`, 15, 70);
-    doc.text(`ID Pedido: ${pedido.id}`, 15, 80);
+    // 2️⃣ Dibujar logo y encabezado
+    if (logoImgData) {
+      pdf.addImage(logoImgData, 'PNG', margin, margin, logoWidth, logoHeight);
+    }
 
-    // --- 4. Productos ---
-    let y = 95;
-    doc.setFontSize(12);
-    doc.text("Productos:", 15, y);
-    y += 6;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.text("Pedido de Cliente", pageWidth - margin, margin + 30, { align: 'right' });
 
-    pedido.productos.forEach(pr => {
-        const line = `${pr.nombre} x ${pr.cantidad}  $${(pr.precio*pr.cantidad).toFixed(2)}`;
-        doc.text(line, 20, y);
-        y += 7;
-        if(y > 270) { // evitar pasar margen inferior
-            doc.addPage();
-            y = 20;
-        }
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, lineY, pageWidth - margin, lineY);
+
+    // 3️⃣ Datos del cliente y del pedido
+    pdf.setFont('helvetica', 'normal');
+pdf.setFontSize(12);
+
+let y = lineY + 30;
+
+// Cliente
+const clienteText = `Cliente: ${pedido.cliente || ''}`;
+const splitCliente = pdf.splitTextToSize(clienteText, pageWidth - margin * 2);
+pdf.text(splitCliente, margin, y);
+y += splitCliente.length * 15; // altura de las líneas del cliente
+
+// Localidad
+const localidadText = `Localidad: ${pedido.localidad || pedido.localidad_nombre || ''}`;
+const splitLocalidad = pdf.splitTextToSize(localidadText, pageWidth - margin * 2);
+pdf.text(splitLocalidad, margin, y);
+y += splitLocalidad.length * 15; // altura de las líneas de localidad
+
+// Fecha del sistema
+const fechaSistema = new Date().toLocaleString();
+y += 5; // 🔹 pequeño margen extra antes de la fecha
+pdf.text(`Fecha: ${fechaSistema}`, margin, y);
+y += 25; // espacio antes de la tabla de productos
+
+    // 4️⃣ Tabla de productos
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Tu Compra", margin, y);
+    y += 15;
+    pdf.setFont('helvetica', 'normal');
+
+    const headers = ["Producto", "Cantidad", "Precio", "Subtotal"];
+    const colWidths = [220, 80, 80, 80];
+    let x = margin;
+
+    // Dibujar encabezados de la tabla
+    headers.forEach((h, i) => {
+      pdf.text(h, x, y);
+      x += colWidths[i];
     });
+    y += 10;
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 15;
 
-    // --- 5. Total ---
-    y += 6;
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text(`Total: $${Number(pedido.total).toFixed(2)}`, 15, y);
+    let total = 0;
+   pedido.productos.forEach(prod => {
+  const sub = prod.cantidad * prod.precio;
+  total += sub;
 
-    // --- 6. Guardar PDF ---
-    doc.save(`Pedido_${pedido.id}_${pedido.cliente}.pdf`);
-}
+  const nombreWrap = pdf.splitTextToSize(String(prod.nombre), colWidths[0] - 10);
 
-// --- Helper: convertir imagen a Base64 ---
-async function getBase64ImageFromURL(url) {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
+  pdf.text(nombreWrap, margin, y);
+  pdf.text(String(prod.cantidad), margin + colWidths[0], y);
+  pdf.text(`$${prod.precio.toFixed(2)}`, margin + colWidths[0] + colWidths[1], y);
+  pdf.text(`$${sub.toFixed(2)}`, margin + colWidths[0] + colWidths[1] + colWidths[2], y);
+
+  y += nombreWrap.length * 15 + 8; // 🔥 suma espacio proporcional
+});
+
+    // 5️⃣ Total final
+    pdf.setFont('helvetica', 'bold');
+    y += 10;
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 25;
+    pdf.text(`TOTAL: $${total.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
+
+    // 6️⃣ Guardar PDF
+    const safeName = pedido.cliente.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    pdf.save(`Pedido_${safeName}_${pedido.id || ''}.pdf`);
+  } catch (err) {
+    console.error("❌ Error al exportar pedido:", err);
+    alert("Error al generar el PDF: " + err.message);
+  }
 }
 
 
@@ -2331,122 +2449,117 @@ async function loadLocalidadesFilter() {
 }
 
 
-/**
- * Obtiene, filtra, ordena y agrupa la lista de clientes.
- */
+
 async function fetchClientes() {
   const searchTerm = document.getElementById('clienteSearch')?.value.toLowerCase() || '';
   const localidadFilter = document.getElementById('clienteLocalidadFilter')?.value || '';
 
-  const { data: allClientes, error } = await supabase
+  // 1️⃣ Obtener clientes
+  const { data: allClientes, error: clientesError } = await supabase
     .from('clientes')
     .select('*')
     .order('localidad', { ascending: true })
     .order('estado_visita', { ascending: true })
     .order('id', { ascending: false });
+  if (clientesError) return console.error(clientesError);
 
-  if (error) return console.error(error);
+  // 2️⃣ Obtener pedidos
+  const { data: allPedidos, error: pedidosError } = await supabase
+    .from('pedidos')
+    .select('*')
+    .order('id', { ascending: false });
+  if (pedidosError) return console.error(pedidosError);
 
+  // 3️⃣ Filtrado por localidad y búsqueda
   let filteredClientes = allClientes;
 
-  // Filtrar por localidad primero
   if (localidadFilter) {
-    filteredClientes = filteredClientes.filter(cliente =>
-      cliente.localidad === localidadFilter
-    );
+    filteredClientes = filteredClientes.filter(c => c.localidad === localidadFilter);
   }
 
-  // Filtrar por nombre solo si se está escribiendo algo
   if (searchTerm) {
-    filteredClientes = filteredClientes.filter(cliente =>
-      cliente.nombre_completo.toLowerCase().includes(searchTerm)
-    );
+    const normalize = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    filteredClientes = filteredClientes.filter(c => normalize(c.nombre_completo).includes(normalize(searchTerm)));
   }
 
+  // 4️⃣ Agregar pedidos a cada cliente **después de filtrar**
+  filteredClientes = filteredClientes.map(cliente => {
+    const pedidosCliente = allPedidos.filter(p => p.cliente_id === cliente.id);
+    return { ...cliente, pedidos: pedidosCliente };
+  });
+
+  // 5️⃣ Renderizado (igual que antes)
   const container = document.getElementById('clienteList');
   container.innerHTML = '';
 
-  if (filteredClientes.length === 0) {
+  if (!filteredClientes.length) {
     container.innerHTML = `<span style="color:#888; display:block; padding: 20px;">
-      ${localidadFilter 
-        ? `No se encontraron clientes en la localidad: "${escapeHtml(localidadFilter)}".` 
-        : 'No hay clientes cargados.'}
+      ${localidadFilter ? `No se encontraron clientes en la localidad: "${escapeHtml(localidadFilter)}".` : 'No hay clientes cargados.'}
     </span>`;
     return;
   }
 
-  // Agrupar clientes por localidad y estado
   const groupedClients = filteredClientes.reduce((acc, cliente) => {
     const localidad = cliente.localidad.trim() || 'Sin Localidad';
     const estado = cliente.estado_visita;
 
-    if (!acc[localidad]) {
-      acc[localidad] = { Pendiente: [], Visitado: [] };
-    }
+    if (!acc[localidad]) acc[localidad] = { Pendiente: [], Visitado: [] };
     acc[localidad][estado].push(cliente);
     return acc;
   }, {});
 
-  const orderedLocalidades = Object.keys(groupedClients).sort();
-
-  orderedLocalidades.forEach(localidad => {
+  Object.keys(groupedClients).sort().forEach(localidad => {
     const clientesByStatus = groupedClients[localidad];
 
     const localidadTitle = document.createElement('h2');
     localidadTitle.textContent = escapeHtml(localidad);
-    localidadTitle.style.cssText = `
-      margin: 25px 0 10px 0; 
-      padding: 8px 15px; 
-      background: #3498db; 
-      color: #fff; 
-      border-radius: 8px; 
-      font-size: 1.3em;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    `;
+    localidadTitle.style.cssText = `margin:25px 0 10px 0; padding:8px 15px; background:#3498db; color:#fff; border-radius:8px; font-size:1.3em; box-shadow:0 2px 5px rgba(0,0,0,0.2);`;
     container.appendChild(localidadTitle);
 
     const renderStatusGroup = (status, list) => {
-      if (list.length === 0) return;
-
-      const statusSection = document.createElement('div');
-      statusSection.style.marginBottom = '20px';
-
+      if (!list.length) return;
       const isVisitado = status === 'Visitado';
       const statusColor = isVisitado ? '#27ae60' : '#e74c3c';
       const statusText = isVisitado ? '✅ VISITADOS' : '⏳ PENDIENTES';
 
+      const statusSection = document.createElement('div');
+      statusSection.style.marginBottom = '20px';
+
       const statusSubtitle = document.createElement('h3');
       statusSubtitle.textContent = `${statusText} (${list.length})`;
-      statusSubtitle.style.cssText = `
-        border-bottom: 2px solid ${statusColor}; 
-        padding-bottom: 5px; 
-        color: ${statusColor}; 
-        margin-bottom: 15px;
-      `;
+      statusSubtitle.style.cssText = `border-bottom:2px solid ${statusColor}; padding-bottom:5px; color:${statusColor}; margin-bottom:15px;`;
       statusSection.appendChild(statusSubtitle);
 
       list.forEach(cliente => {
         const bgColor = isVisitado ? '#e6f7e6' : '#fff0f0';
         const horaVisitaText = cliente.hora_visita
-          ? (isNaN(new Date(cliente.hora_visita))
-            ? `Hora: ${escapeHtml(cliente.hora_visita)}`
-            : new Date(cliente.hora_visita).toLocaleString())
+          ? (isNaN(new Date(cliente.hora_visita)) ? `Hora: ${escapeHtml(cliente.hora_visita)}` : new Date(cliente.hora_visita).toLocaleString())
           : 'No Agendada';
 
         const div = document.createElement('div');
         div.className = 'card';
         div.style.background = bgColor;
         div.style.borderLeft = `5px solid ${statusColor}`;
+        div.style.padding = '10px';
+        div.style.marginBottom = '8px';
+
+        // Lista de pedidos
+        const pedidosHTML = cliente.pedidos && cliente.pedidos.length
+          ? `<ul style="margin:4px 0 0 15px; font-size:0.85em; color:#333;">
+              ${cliente.pedidos.map(p => `<li>Pedido #${p.id} - ${escapeHtml(p.descripcion || '')} (${p.estado || 'Sin Estado'})</li>`).join('')}
+            </ul>`
+          : '<div style="font-size:0.85em; color:#888;">No tiene pedidos</div>';
 
         div.innerHTML = `
           <div class="card-info" style="flex:1; gap:4px;">
             <b>${escapeHtml(cliente.nombre_completo)}</b>
-            <div style="font-size: 0.9em; color: #555;">
+            <div style="font-size:0.9em; color:#555;">
               DNI: ${cliente.dni || 'N/A'} · Teléfono: ${cliente.telefono || 'N/A'}<br>
               Visita: ${horaVisitaText}
             </div>
+            ${pedidosHTML}
           </div>
-          <div class="card-actions" style="min-width: 170px;">
+          <div class="card-actions" style="min-width:170px;">
             <button class="edit-btn" onclick="openEditClienteModal(${cliente.id})">✏️ Editar Datos</button>
             <button class="${isVisitado ? 'edit-btn' : 'delete-btn'}" 
                     style="background:${statusColor};"
@@ -2456,8 +2569,10 @@ async function fetchClientes() {
             <button class="delete-btn" onclick="deleteCliente(${cliente.id})" style="background:#95a5a6;">🗑️ Eliminar</button>
           </div>
         `;
+
         statusSection.appendChild(div);
       });
+
       container.appendChild(statusSection);
     };
 
@@ -2466,10 +2581,9 @@ async function fetchClientes() {
   });
 }
 
-
-
 document.getElementById('clienteSearch').addEventListener('input', fetchClientes);
 document.getElementById('clienteLocalidadFilter').addEventListener('change', fetchClientes);
+
 
 
 /* -------------------------
@@ -2774,7 +2888,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchOrders();
   fetchDocumentos();
   fetchClientes();
-  loadLocalidadesFilter();
+  cargarLocalidadesEnSelect();
   loadPromoSubMenu();
 
   const btnDocs = document.querySelector("button[data-tab='documentos']");
