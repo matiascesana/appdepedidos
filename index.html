@@ -198,6 +198,92 @@
     margin-left: 10px;
 }
 
+
+
+<div id="tiendaCliente">
+    <h2>Tienda</h2>
+    <div id="productosContainer" class="productos-container"></div>
+    <div class="pedido-footer">
+    <button id="confirmarPedidoBtn" class="btn-confirmar">Confirmar Pedido</button>
+    </div>
+</div>
+
+/* Contenedor general */
+#tiendaCliente {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+/* Categorías */
+.categoria {
+    margin-bottom: 30px;
+}
+
+/* Tarjetas de productos/promociones */
+.producto {
+    display: inline-block;
+    width: 200px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px;
+    text-align: center;
+    vertical-align: top;
+}
+
+/* Botones + / - */
+.qty-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.qty-container button {
+    width: 25px;
+    height: 25px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Input cantidad */
+.cantidad {
+    width: 40px;
+    text-align: center;
+}
+
+/* Footer de pedido */
+.pedido-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Botón confirmar */
+.btn-confirmar {
+    background-color: #ff4d4f;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+
+.promo-img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+
+
+
+
 /* --------------------
    AJUSTE DE ALINEACIÓN (Vertical)
    -------------------- */
@@ -392,7 +478,7 @@
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
     <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
     <li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
-    <li><button class="tab-btn" data-tab="clientes">Clientes</button></li>
+    <li><button class="tab-btn" data-tab="clienteTienda">Tienda Cliente</a></li>
   </ul>
 </nav>
    
@@ -448,18 +534,18 @@
 <!-- Cliente: más largo -->
     <div style=""width:40%; min-width:50px; display:flex; flex-direction:column;">
         <label>Cliente</label>
-        <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:100%;" /> <div>
+        <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:500px;" /> <div>
 	</div>
 <!-- Localidad -->
-    	<div style=""width:60%; min-width:180px; display:flex; flex-direction:column;">
+    	<div style=""width:30%; min-width:180px; display:flex; flex-direction:column;">
         <label>Localidad</label>
-        <select id="pedidoLocalidad" style="width:70%;"></select> <div>
+        <select id="pedidoLocalidad" style="width:500px;"></select> <div>
 	</div>
 <!-- Seleccionar Productos -->
     	<div style="flex:1; min-width:180px; display:flex; flex-direction:column; justify-content:flex-start;">
         <label>Productos</label>
         <button type="button" id="selectProductsBtn" 
-        style="width:80%; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
+        style="width:300px; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
         Seleccionar Productos
         </button> <div>
 <!-- Productos seleccionados debajo -->
@@ -507,36 +593,40 @@
 
 
 
-        <div id="clientes" class="section">
-            <h1>Gestión de Clientes</h1>
-            <form id="clienteForm" onsubmit="event.preventDefault(); addClienteRapido();" style="display:flex; gap:10px; margin-bottom: 20px; align-items:center; flex-wrap:wrap; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
-                <input 
-  type="text" 
-  id="clienteNombre" 
-  name="clienteNombre" 
-  placeholder="Nombre y Apellido" required style="flex:2; min-width:150px;"/>
+       <div id="clienteTienda" class="section" style="display:none;">
+    <h2>Tienda</h2>
+        <div id="totalCarrito">Total: $0.00</div>
+    <div id="pedidoResumen">
+     <button id="confirmarPedidoBtn">Confirmar Pedido</button>
 
-<select id="clienteLocalidad" name="clienteLocalidad" required style="flex:1; min-width:120px; padding:8px; border:1px solid #ccc; border-radius:6px;">
-  <option value="">Seleccionar Localidad...</option>
-</select>
+<!-- Contenedor de categorías y promociones -->
+<div id="categoriasContainer"></div>
+<div id="productosContainer"></div>
 
-               <input type="text" id="clienteHora" placeholder="Hora (Ej: 14:30)" style="flex: 1; min-width: 90px;" />
-                <button type="submit" style="background: #27ae60; color:#fff; border:none; padding:8px 15px; flex-shrink: 0;">➕ Carga Rápida</button>
-            </form>
-            <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-                <input type="text" id="clienteSearch" placeholder="Buscar por cliente..." style="flex:1;padding:6px 10px;border-radius:5px;border:1px solid #ccc;">
-                <select id="clienteLocalidadFilter" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
-                    <option value="">Todas las localidades</option>
-                </select>
-            </div>
-            <h3>Lista de Clientes y Seguimiento</h3>
-            <div id="clienteList"></div>
+    <div id="productosContainer"></div> <!-- Aquí van las categorías y productos -->
+    </div>
+</div>
+
+
+<!-- Modal de pedido (igual al anterior) -->
+<div id="pedidoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+    background: rgba(0,0,0,0.5); justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:20px; border-radius:8px; width:300px; text-align:center;">
+        <h3>Confirmar Pedido</h3>
+        <p>Nombre:</p>
+        <input type="text" id="modalClienteNombre" placeholder="Nombre completo">
+
+        <p>Localidad:</p>
+        <select id="modalLocalidadSelect">
+            <option value="">Seleccionar localidad...</option>
+        </select>
+
+        <div style="margin-top:15px;">
+            <button id="modalConfirmarBtn">Confirmar</button>
+            <button id="modalCancelarBtn">Cancelar</button>
         </div>
     </div>
-    <div id="modal" style="display:none;">
-  <div id="modalInner"></div>
 </div>
-    <div id="appToast"></div>
 
 
 
@@ -695,6 +785,10 @@ activateSection('promos');
    ========================================================= */
 let selectedProducts = [];
 let editingOrderId = null;
+let carritoCliente = [];
+let promociones = [];
+let categorias = [];
+let categoriaSeleccionada = null;
 
 
 /**
@@ -1662,83 +1756,183 @@ document.getElementById('selectProductsBtn').addEventListener('click', async ()=
     const { data: promos } = await supabase.from('promociones').select('*').order('id'); // Consulta directa
     
     function renderFilteredPromos(categoryId = "") {
-        
-        // ⚠️ PASO CRÍTICO: Guardar el estado actual ANTES de redibujar la tabla.
-        if (document.getElementById('modalInner').querySelector('table')) {
-            updateSelectedProductsFromModal();
-        }
-
-        let filteredPromos = (!categoryId) ? promos : promos.filter(p => String(p.categoria_id) === String(categoryId));
-        let html = `
-            <div style="margin-bottom:14px;display:flex;align-items:center;gap:18px;">
-                <label style="font-weight:bold;" for="filterCategoria">Filtrar por categoría:</label>
-                <select id="filterCategoria" style="padding:6px 12px;border-radius:5px;border:1px solid #ccc;">
-                    <option value="">Todas</option>
-                    ${categoriasData.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join("")}
-                </select>
-            </div>
-            <div style="overflow-x:auto;">
-                <table class="table" style="min-width:700px;">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Precio</th>
-                            <th>Stock</th>
-                            <th>Cantidad</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        for(const p of filteredPromos){
-            const qty = getSelectedQty(p.id); // Lee de la selección global
-            const stockMax = p.stock ?? 0;
-            const price = Number(p.precio);
-
-            html += `
-                <tr>
-                    <td>${safeText(p.nombre || p.descripcion || '')}</td>
-                    <td>$${price.toFixed(2)}</td>
-                    <td>${stockMax}</td>
-                    <td>
-                        ${renderQuantityControls(p.id, qty, price, stockMax)}
-                    </td>
-                    <td id="sub_${p.id}">$${(qty * price).toFixed(2)}</td>
-                </tr>
-            `;
-        }
-        html += `
-                        <tr>
-                            <td colspan="3" style="text-align:right"><strong>Total:</strong></td>
-                            <td colspan="2" id="totalPedido">$0.00</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div style="margin-top:18px;display:flex;justify-content:flex-end;">
-                <button onclick="confirmProducts()" style="background:#3498db;color:#fff;border:none;padding:12px 24px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;">
-                    💾 Confirmar selección
-                </button>
-            </div>
-        `;
-        document.getElementById('modalInner').innerHTML = `<h3 style="margin-bottom:18px;">Seleccionar Productos</h3>${html}`;
-        document.getElementById("modalInner").style.maxWidth = "950px";
-        document.getElementById("modalInner").style.width = "95%";
-        document.getElementById("modal").style.display="flex";
-        
-        const filterEl = document.getElementById('filterCategoria');
-        if (filterEl) {
-            filterEl.value = categoryId; // Mantiene la categoría seleccionada
-            filterEl.addEventListener('change', function(){
-                renderFilteredPromos(this.value);
-            });
-        }
-
-        // Agrega listeners a los nuevos botones
-        addQuantityControlListeners(); 
-        
-        setTimeout(()=>{ const tEl = document.getElementById('totalPedido'); if(tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}` }, 40);
+    // Guarda el estado actual antes de redibujar
+    const modalInner = document.getElementById('modalInner');
+    if (modalInner.querySelector('table')) {
+        updateSelectedProductsFromModal();
     }
+
+    let filteredPromos = (!categoryId)
+        ? promos
+        : promos.filter(p => String(p.categoria_id) === String(categoryId));
+
+    let html = `
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            background:#f9fafb;
+            padding:16px 22px;
+            border-bottom:1px solid #ddd;
+            border-radius:12px 12px 0 0;
+        ">
+            <button id="closeModalBtn" 
+                style="
+                    background:none;
+                    border:none;
+                    color:#555;
+                    font-size:18px;
+                    font-weight:bold;
+                    cursor:pointer;
+                    transition:0.2s;
+                "
+                onmouseover="this.style.color='#000'"
+                onmouseout="this.style.color='#555'"
+            >
+                ❌ Cerrar
+            </button>
+
+            <h3 style="margin:0;font-size:20px;font-weight:600;color:#2c3e50;text-align:center;flex:1;">
+                🛍️ Seleccionar Productos
+            </h3>
+
+            <button onclick="confirmProducts()" 
+                style="
+                    background:#3498db;
+                    color:#fff;
+                    border:none;
+                    padding:10px 22px;
+                    border-radius:8px;
+                    font-size:15px;
+                    font-weight:600;
+                    cursor:pointer;
+                    transition:0.2s;
+                "
+                onmouseover="this.style.background='#2980b9'"
+                onmouseout="this.style.background='#3498db'"
+            >
+                💾 Confirmar selección
+            </button>
+        </div>
+
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:14px;
+            margin:18px 0;
+            flex-wrap:wrap;
+        ">
+            <label style="font-weight:600;color:#333;">Filtrar por categoría:</label>
+            <select id="filterCategoria" 
+                style="
+                    padding:8px 14px;
+                    border-radius:8px;
+                    border:1px solid #ccc;
+                    min-width:200px;
+                    background:#fff;
+                ">
+                <option value="">Todas</option>
+                ${categoriasData.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join("")}
+            </select>
+        </div>
+
+        <div style="
+            overflow-y:auto;
+            max-height:70vh;
+            border:1px solid #ddd;
+            border-radius:10px;
+            background:#fff;
+        ">
+            <table style="
+                width:100%;
+                border-collapse:collapse;
+                font-size:15px;
+            ">
+                <thead style="background:#ecf0f1;">
+                    <tr>
+                        <th style="padding:10px;text-align:left;">Producto</th>
+                        <th style="padding:10px;text-align:right;">Precio</th>
+                        <th style="padding:10px;text-align:center;">Stock</th>
+                        <th style="padding:10px;text-align:center;">Cantidad</th>
+                        <th style="padding:10px;text-align:right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    for (const p of filteredPromos) {
+        const qty = getSelectedQty(p.id);
+        const stockMax = p.stock ?? 0;
+        const price = Number(p.precio);
+
+        html += `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px;">${safeText(p.nombre || p.descripcion || '')}</td>
+                <td style="padding:10px;text-align:right;">$${price.toFixed(2)}</td>
+                <td style="padding:10px;text-align:center;">${stockMax}</td>
+                <td style="padding:10px;text-align:center;">
+                    ${renderQuantityControls(p.id, qty, price, stockMax)}
+                </td>
+                <td id="sub_${p.id}" style="padding:10px;text-align:right;">
+                    $${(qty * price).toFixed(2)}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+                <tr style="background:#fafafa;">
+                    <td colspan="4" style="text-align:right;padding:12px 10px;font-weight:600;">Total:</td>
+                    <td id="totalPedido" style="text-align:right;padding:12px 10px;font-weight:700;color:#27ae60;">$0.00</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    `;
+
+    // Aplicar al modal
+    modalInner.innerHTML = html;
+    modalInner.style.maxWidth = "1100px";
+    modalInner.style.width = "95%";
+    modalInner.style.background = "#fdfdfd";
+    modalInner.style.borderRadius = "12px";
+    modalInner.style.boxShadow = "0 6px 20px rgba(0,0,0,0.15)";
+    modalInner.style.padding = "20px";
+    modalInner.style.position = "relative";
+
+    const modal = document.getElementById("modal");
+    modal.style.display = "flex";
+    modal.style.justifyContent = "center";
+    modal.style.alignItems = "center";
+    modal.style.background = "rgba(0,0,0,0.45)";
+    modal.style.zIndex = "9999";
+
+    // Filtro por categoría
+    const filterEl = document.getElementById('filterCategoria');
+    if (filterEl) {
+        filterEl.value = categoryId;
+        filterEl.addEventListener('change', function(){
+            renderFilteredPromos(this.value);
+        });
+    }
+
+    // Botón para cerrar el modal (sin confirmar)
+    const closeBtn = document.getElementById('closeModalBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = "none";
+        });
+    }
+
+    // Listeners de cantidad y total
+    addQuantityControlListeners();
+    setTimeout(() => {
+        const tEl = document.getElementById('totalPedido');
+        if (tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}`;
+    }, 40);
+}
+
+
     renderFilteredPromos();
 });
 
@@ -1800,277 +1994,449 @@ async function getLocalidadNombre(id) {
 
 
 
-/* ================== LISTADO DE PEDIDOS OPTIMIZADO ================== */
+/* ================== LISTADO DE PEDIDOS OPTIMIZADO CON ESTADO ================== */
 let isFetchingOrders = false;
 
 async function fetchOrders() {
-    if(isFetchingOrders) return; // evita llamadas concurrentes
-    isFetchingOrders = true;
+  if (isFetchingOrders) return; // evita llamadas concurrentes
+  isFetchingOrders = true;
 
-    try {
-        const { data: pedidos } = await supabase.from('pedidos').select('*').order('id');
-        const container = document.getElementById("pedidoList");
-        container.innerHTML = ""; // limpia el contenedor antes de agregar
+  try {
+    const container = document.getElementById("pedidoList");
+    container.innerHTML = ""; // limpia el contenedor antes de agregar
 
-        if (!pedidos || !pedidos.length) return;
+    // 1️⃣ Obtener pedidos
+    const { data: pedidos, error: pedidosError } = await supabase
+      .from("pedidos")
+      .select("*")
+      .order("id", { ascending: true });
 
-        // Cargar localidades
-        const { data: localidadesData } = await supabase.from('localidades').select('id,nombre');
-        const localidadMap = {};
-        localidadesData.forEach(l => { localidadMap[l.id] = l.nombre; });
-
-        for (const p of pedidos) {
-            const localidadNombre = p.localidad_id ? localidadMap[p.localidad_id] || "" : "";
-
-            // Contenedor del pedido
-            const div = document.createElement('div');
-            div.className = 'item-card';
-            Object.assign(div.style, {
-                display: 'flex',
-                alignItems: 'stretch',
-                justifyContent: 'space-between',
-                padding: '18px 14px',
-                marginBottom: '14px',
-                borderRadius: '12px',
-                background: '#fff',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                border: '1px solid #eee',
-            });
-
-            // Información del pedido
-            const infoDiv = document.createElement('div');
-            infoDiv.style.flex = '1';
-            let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-            p.productos.forEach(pr => {
-                prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span></li>`;
-            });
-            prodHTML += '</ul>';
-
-            infoDiv.innerHTML = `
-                <strong>${safeText(p.cliente)}</strong>
-                <div style="color:#888;margin-bottom:2px;">${localidadNombre ? 'Localidad: ' + safeText(localidadNombre) : ''}</div>
-                ${prodHTML}
-                <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
-            `;
-
-            // Botones
-            const actionsDiv = document.createElement('div');
-            Object.assign(actionsDiv.style, { display:'flex', flexDirection:'column', gap:'10px', alignItems:'flex-end' });
-
-            const pdfBtn = document.createElement('button');
-            pdfBtn.textContent = '📄 Exportar PDF';
-            Object.assign(pdfBtn.style, { background:'#2ecc71', color:'#fff', border:'none', padding:'8px 18px', borderRadius:'7px', fontWeight:'bold', cursor:'pointer' });
-            pdfBtn.onclick = () => exportPedidoPDF({...p, localidad_nombre: localidadNombre});
-
-            const editBtn = document.createElement('button');
-            editBtn.textContent = '✏️ Editar';
-            Object.assign(editBtn.style, { background:'#3498db', color:'#fff', border:'none', padding:'8px 18px', borderRadius:'7px', fontWeight:'bold', cursor:'pointer' });
-            editBtn.onclick = () => editOrderModal(p);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '🗑️ Eliminar';
-            Object.assign(deleteBtn.style, { background:'#ff4d4f', color:'#fff', border:'none', padding:'8px 18px', borderRadius:'7px', fontWeight:'bold', cursor:'pointer' });
-            deleteBtn.onclick = () => deleteOrder(p.id);
-
-            actionsDiv.appendChild(pdfBtn);
-            actionsDiv.appendChild(editBtn);
-            actionsDiv.appendChild(deleteBtn);
-
-            div.appendChild(infoDiv);
-            div.appendChild(actionsDiv);
-            container.appendChild(div);
-        }
-    } catch (err) {
-        console.error(err);
-        showToast('Error al cargar pedidos');
-    } finally {
-        isFetchingOrders = false; // desbloquear flag
+    if (pedidosError) throw pedidosError;
+    if (!pedidos || !pedidos.length) {
+      container.innerHTML = `<p style="color:#888;">No hay pedidos cargados.</p>`;
+      return;
     }
+
+    // 2️⃣ Cargar localidades
+    const { data: localidadesData, error: locError } = await supabase
+      .from("localidades")
+      .select("id, nombre");
+
+    if (locError) throw locError;
+
+    const localidadMap = {};
+    localidadesData.forEach(l => {
+      localidadMap[l.id] = l.nombre;
+    });
+
+    // 3️⃣ Agrupar pedidos por localidad
+    const pedidosPorLocalidad = {};
+    pedidos.forEach(p => {
+      const nombreLocalidad = p.localidad_id
+        ? localidadMap[p.localidad_id] || "Sin Localidad"
+        : "Sin Localidad";
+
+      // Inicializar estado si no existe
+      if (!p.estado) p.estado = "pendiente";
+
+      if (!pedidosPorLocalidad[nombreLocalidad]) pedidosPorLocalidad[nombreLocalidad] = [];
+      pedidosPorLocalidad[nombreLocalidad].push(p);
+    });
+
+    // 4️⃣ Ordenar las localidades alfabéticamente
+    const localidadesOrdenadas = Object.keys(pedidosPorLocalidad).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
+
+    // 5️⃣ Renderizar cada grupo de localidad
+    for (const localidad of localidadesOrdenadas) {
+      const pedidosDeLocalidad = pedidosPorLocalidad[localidad];
+
+      // Ordenar pedidos por estado (pendientes arriba) y nombre de cliente
+      pedidosDeLocalidad.sort((a, b) => {
+        if (a.estado !== b.estado) return a.estado === "pendiente" ? -1 : 1;
+        return (a.cliente || "").localeCompare(b.cliente || "", "es", { sensitivity: "base" });
+      });
+
+      // Título de localidad
+      const titulo = document.createElement("h2");
+      titulo.textContent = `📍 ${localidad}`;
+      Object.assign(titulo.style, {
+        marginTop: "25px",
+        marginBottom: "10px",
+        padding: "8px 14px",
+        background: "#3498db",
+        color: "#fff",
+        borderRadius: "8px",
+        fontSize: "1.2em",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+      });
+      container.appendChild(titulo);
+
+      // Renderizar pedidos dentro de esa localidad
+      for (const p of pedidosDeLocalidad) {
+        const localidadNombre = localidad;
+
+        const div = document.createElement("div");
+        div.className = "item-card";
+        Object.assign(div.style, {
+          display: "flex",
+          alignItems: "stretch",
+          justifyContent: "space-between",
+          padding: "18px 14px",
+          marginBottom: "14px",
+          borderRadius: "12px",
+          background: "#fff",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+          border: "1px solid #eee",
+        });
+
+        // Información del pedido
+        const infoDiv = document.createElement("div");
+        infoDiv.style.flex = "1";
+        let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+        p.productos.forEach(pr => {
+          prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
+        });
+        prodHTML += "</ul>";
+
+        infoDiv.innerHTML = `
+          <strong>${safeText(p.cliente)}</strong>
+          <div style="color:#888;margin-bottom:2px;">${localidadNombre ? "Localidad: " + safeText(localidadNombre) : ""}</div>
+          ${prodHTML}
+          <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+        `;
+
+        // Botones
+        const actionsDiv = document.createElement("div");
+        Object.assign(actionsDiv.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          alignItems: "flex-end",
+        });
+
+        const pdfBtn = document.createElement("button");
+        pdfBtn.textContent = "📄 Exportar PDF";
+        Object.assign(pdfBtn.style, {
+          background: "#2ecc71",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+        });
+        pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidadNombre });
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✏️ Editar";
+        Object.assign(editBtn.style, {
+          background: "#3498db",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+        });
+        editBtn.onclick = () => editOrderModal(p);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "🗑️ Eliminar";
+        Object.assign(deleteBtn.style, {
+          background: "#ff4d4f",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+        });
+        deleteBtn.onclick = () => deleteOrder(p.id);
+
+        // 🔹 Botón de estado Entregado / Pendiente
+        const estadoBtn = document.createElement("button");
+        estadoBtn.textContent = p.estado === "entregado" ? "Entregado" : "Pendiente";
+        Object.assign(estadoBtn.style, {
+          background: p.estado === "entregado" ? "#ff4d4f" : "#2ecc71",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+ width: "900px",           // 🔹 ocupa todo el ancho
+  textAlign: "center",     // 🔹 centra el texto
+  marginTop: "10px"        // 🔹 un pequeño margen arriba
+});
+        estadoBtn.onclick = async () => {
+          // Alternar estado
+          p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
+
+          // Actualizar en DB
+          const { error } = await supabase.from('pedidos')
+            .update({ estado: p.estado })
+            .eq('id', p.id);
+          if (error) return alert(error.message);
+
+          // Re-renderizar toda la lista para mantener orden
+          fetchOrders();
+        };
+
+        actionsDiv.appendChild(pdfBtn);
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(deleteBtn);
+        actionsDiv.appendChild(estadoBtn); // agregar al final
+
+        div.appendChild(infoDiv);
+        div.appendChild(actionsDiv);
+        container.appendChild(div);
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Error al cargar pedidos");
+  } finally {
+    isFetchingOrders = false; // desbloquear flag
+  }
 }
 
 
-/* ========== MODAL DE EDICIÓN DE PEDIDO CON STOCK DIFERENCIAL (Mantenido el código original) ========== */
+
+
+/* ========== MODAL DE EDICIÓN DE PEDIDO CON VALIDACIÓN MANUAL ========== */
 async function editOrderModal(pedido) {
     const { data: localidades } = await supabase.from('localidades').select('*').order('id');
     const { data: productosDB } = await supabase.from('promociones').select('*').order('id');
+    const { data: categorias } = await supabase.from('categorias').select('*').order('id');
+
     let productosPedido = pedido.productos.map(pr => ({ ...pr }));
 
     function renderModal(stockMsg = "") {
-        document.getElementById("modalInner").style.maxWidth = "1200px";
+        document.getElementById("modalInner").style.maxWidth = "1300px";
         document.getElementById("modalInner").style.width = "98%";
-        let productosDisponibles = productosDB.filter(pdb => !productosPedido.some(pp => pp.id === pdb.id));
-        let selectHTML = `
-            <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
-                    <select id="addProductoSelect" style="margin-bottom:5px;">
-                        <option value="">Agregar producto</option>
-                        ${productosDisponibles.map(p=>`<option value="${p.id}">${safeText(p.nombre)} ($${Number(p.precio).toFixed(2)}, stock: ${p.stock ?? 0})</option>`).join('')}
-                    </select>
-                    <input type="number" id="addProductoQty" min="1" value="1" style="width:60px;" placeholder="Cant.">
-                </div>
-                <button type="button" id="addProductoBtn" style="background:#eee;color:#333;border:none;padding:8px 14px;border-radius:6px;font-size:17px;cursor:pointer;height:45px;align-self:flex-start;">➕</button>
-            </div>
-        `;
+
         let listaHTML = `<ul id="productosPedidoList" style="margin-bottom:8px;">`;
         productosPedido.forEach((pr, idx) => {
             const prodInfo = productosDB.find(pdb => pdb.id === pr.id);
-            // Stock disponible: stock actual en DB + cantidad que tiene este pedido (para que el cliente pueda aumentar)
-            // Ya que el stock se devolverá al guardar. Aquí solo queremos mostrar el stock base + la cantidad original para no bloquear aumentos si hay poco stock
-            // CORRECCIÓN: El stock disponible para *agregar* es el stock actual en DB. Si el cliente tiene 5 y el stock es 10, puede subir hasta 10+5=15.
             const stockActualDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-            const stockOriginalEnPedido = pedido.productos.find(op => op.id === pr.id)?.cantidad || 0;
-            const stockBase = stockActualDB + stockOriginalEnPedido;
+            const stockOriginal = pedido.productos.find(op => op.id === pr.id)?.cantidad || 0;
+            const stockBase = stockActualDB + stockOriginal;
 
             listaHTML += `
-                <li style="margin-bottom:6px;">
-                    <span style="font-weight:bold;">${safeText(pr.nombre)}</span>
-                    <input type="number" min="1" max="${stockBase}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:45px;margin:0 6px;">
-                    <span style="color:#aaa;">(stock max: ${stockBase})</span>
-                    <span style="color:#3498db;">$${(pr.precio*pr.cantidad).toFixed(2)}</span>
-                    <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f;color:#fff;border:none;padding:2px 7px;border-radius:6px;font-size:14px;cursor:pointer;margin-left:6px;">🗑️</button>
+                <li style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fafafa;padding:6px 10px;border-radius:8px;">
+                    <span style="font-weight:bold;flex:1;">${safeText(pr.nombre)}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button class="qtyMinus" data-idx="${idx}" style="background:#ddd;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;">−</button>
+                        <input type="number" min="1" max="${stockBase}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:50px;text-align:center;">
+                        <button class="qtyPlus" data-idx="${idx}" style="background:#ddd;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;">+</button>
+                    </div>
+                    <span style="color:#888;">(stock: ${stockBase})</span>
+                    <span style="color:#3498db;font-weight:bold;">$${(pr.precio*pr.cantidad).toFixed(2)}</span>
+                    <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;">🗑️</button>
                 </li>
             `;
         });
         listaHTML += `</ul>`;
-        let total = productosPedido.reduce((s,p)=>s + p.precio*p.cantidad, 0);
 
-        openModal(
-            `
+        const total = productosPedido.reduce((s,p)=>s + p.precio*p.cantidad, 0);
+
+        openModal(`
             <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
                 <h2 style="margin:0;font-size:1.3em;">Editar Pedido</h2>
             </div>
-            <div style="background:#f8f8f8;border-radius:12px;padding:20px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+            <div style="background:#f8f8f8;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);max-height:85vh;overflow-y:auto;">
                 <div style="margin-bottom:16px;">
-    <label for="editPedidoCliente" style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
-    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente">
-</div>
-<div style="margin-bottom:16px;">
-    <label for="editPedidoLocalidad" style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
-    <select id="editPedidoLocalidad">
-        <option value="">Seleccione localidad</option>
-        ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${safeText(l.nombre)}</option>`).join('')}
-    </select>
-</div>
+                    <label style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
+                    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
+                    <select id="editPedidoLocalidad" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                        <option value="">Seleccione localidad</option>
+                        ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${safeText(l.nombre)}</option>`).join('')}
+                    </select>
+                </div>
                 <div style="margin-bottom:16px;">
                     <label style="font-weight:500;display:block;margin-bottom:4px;">Productos</label>
-                    ${selectHTML}
+                    <button type="button" id="openProductSelector" style="background:#eee;color:#333;border:none;padding:10px 14px;border-radius:6px;font-size:16px;cursor:pointer;margin-bottom:10px;">
+                        ➕ Agregar productos
+                    </button>
                     ${listaHTML}
                     <div style="margin-top:8px;font-weight:bold;">Total: <span id="pedidoTotal" style="color:#ff4d4f;">$${total.toFixed(2)}</span></div>
                     ${stockMsg ? `<div style="color:#ff4d4f;font-weight:bold;margin-top:10px;">${stockMsg}</div>` : ""}
                 </div>
-                <button onclick="saveEditPedido(${pedido.id})" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                <button id="saveEditPedidoBtn" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;">
                     💾 Guardar cambios
                 </button>
             </div>
-            `
-        );
-        document.getElementById('addProductoBtn').onclick = function() {
-            const prodId = document.getElementById('addProductoSelect').value;
-            let qty = parseInt(document.getElementById('addProductoQty').value, 10) || 1;
-            if(!prodId) return;
-            const prodObj = productosDB.find(p=>String(p.id)===String(prodId));
-            
-            if(prodObj) {
-                const stockDisp = prodObj.stock ?? 0;
-                if(qty > stockDisp) {
-                    qty = stockDisp;
-                    renderModal(`El stock disponible de "${prodObj.nombre}" es ${stockDisp}.`);
-                    return;
-                }
-                productosPedido.push({
-                    id: prodObj.id,
-                    nombre: prodObj.nombre,
-                    cantidad: qty,
-                    precio: prodObj.precio
-                });
-                renderModal();
-            }
-        };
-        document.querySelectorAll('.editQtyInput').forEach(input => {
-            input.onchange = function() {
-                let idx = parseInt(this.getAttribute('data-idx'));
-                let prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
-                
-                // Stock base: stock actual + cantidad original en este pedido
-                const stockActualDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-                const stockOriginalEnPedido = pedido.productos.find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
-                const stockBase = stockActualDB + stockOriginalEnPedido;
+        `);
 
-                let val = Math.max(1, parseInt(this.value, 10));
-                
-                if(val > stockBase) {
-                    val = stockBase;
-                    renderModal(`El stock máximo disponible para "${productosPedido[idx].nombre}" (incluyendo el stock que está en este pedido) es ${stockBase}.`);
+        // Botón abrir submodal de selección de productos
+        document.getElementById("openProductSelector").onclick = () => openSubModal();
+
+        // Botones + y −
+        document.querySelectorAll('.qtyPlus').forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.dataset.idx);
+                const prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
+                const stockDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
+                const stockOriginal = pedido.productos.find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const stockBase = stockDB + stockOriginal;
+                if (productosPedido[idx].cantidad < stockBase) {
+                    productosPedido[idx].cantidad++;
+                    renderModal();
+                } else {
+                    renderModal(`Stock máximo para "${productosPedido[idx].nombre}" es ${stockBase}.`);
                 }
-                
+            };
+        });
+        document.querySelectorAll('.qtyMinus').forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.dataset.idx);
+                if (productosPedido[idx].cantidad > 1) {
+                    productosPedido[idx].cantidad--;
+                    renderModal();
+                }
+            };
+        });
+        document.querySelectorAll('.editQtyInput').forEach(input => {
+            input.onchange = () => {
+                const idx = parseInt(input.dataset.idx);
+                const prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
+                const stockDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
+                const stockOriginal = pedido.productos.find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const stockBase = stockDB + stockOriginal;
+                let val = Math.max(1, parseInt(input.value, 10));
+                if (val > stockBase) val = stockBase;
                 productosPedido[idx].cantidad = val;
                 renderModal();
             };
         });
         document.querySelectorAll('.deletePrBtn').forEach(btn => {
-            btn.onclick = function() {
-                let idx = parseInt(this.getAttribute('data-idx'));
+            btn.onclick = () => {
+                const idx = parseInt(btn.dataset.idx);
                 productosPedido.splice(idx, 1);
                 renderModal();
             };
         });
+
+        // Guardar cambios con validación manual
+        document.getElementById('saveEditPedidoBtn').onclick = () => {
+            const cliente = document.getElementById('editPedidoCliente').value.trim();
+            const localidad_id = document.getElementById('editPedidoLocalidad').value;
+            if (!cliente) return alert("Ingrese el nombre del cliente");
+            if (!localidad_id) return alert("Seleccione la localidad");
+            if (!productosPedido.length) return alert("Agregue productos");
+            saveEditPedido(pedido.id, productosPedido);
+        };
     }
 
-    renderModal();
+    // Submodal de selección de productos (igual que antes)
+    async function openSubModal() {
+        let html = `
+            <div style="display:flex;flex-direction:column;gap:12px;max-height:80vh;overflow:auto;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <select id="filtroCategoria" style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                        <option value="">Todas las categorías</option>
+                        ${categorias.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join('')}
+                    </select>
+                    <input type="text" id="buscadorProducto" placeholder="Buscar producto..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                </div>
+                <div id="listaProductosSubModal"></div>
+            </div>
+        `;
+        openModal(html);
 
-    window.saveEditPedido = async function(id) {
-       const cliente = document.getElementById('editPedidoCliente').value.trim();
-const localidad_id = document.getElementById('editPedidoLocalidad').value;
-if(!cliente) return alert("Ingrese el nombre del cliente");
-if(!localidad_id) return alert("Seleccione la localidad");
-if(!productosPedido.length) return alert("Agregue productos");
+        const lista = document.getElementById('listaProductosSubModal');
+        function renderProductos(filtro = "", cat = "") {
+            let filtrados = productosDB.filter(p => 
+                (!cat || p.categoria_id == cat) &&
+                (p.nombre.toLowerCase().includes(filtro.toLowerCase()))
+            );
+            lista.innerHTML = filtrados.map(p => `
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:6px 0;">
+                    <span>${safeText(p.nombre)} ($${p.precio}, stock: ${p.stock ?? 0})</span>
+                    <button class="addProdBtn" data-id="${p.id}" style="background:#eee;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Agregar</button>
+                </div>
+            `).join('');
+            document.querySelectorAll('.addProdBtn').forEach(btn => {
+                btn.onclick = () => {
+                    const prod = productosDB.find(p => p.id == btn.dataset.id);
+                    if (!productosPedido.some(pp => pp.id == prod.id)) {
+                        productosPedido.push({ id: prod.id, nombre: prod.nombre, cantidad: 1, precio: prod.precio });
+                        closeModal();
+                        renderModal();
+                    }
+                };
+            });
+        }
+        renderProductos();
+
+        document.getElementById('buscadorProducto').oninput = e => renderProductos(e.target.value, document.getElementById('filtroCategoria').value);
+        document.getElementById('filtroCategoria').onchange = e => renderProductos(document.getElementById('buscadorProducto').value, e.target.value);
+    }
+
+    // Guardado con ajuste de stock (igual que antes)
+    window.saveEditPedido = async function(id, nuevosProductos) {
+        const cliente = document.getElementById('editPedidoCliente').value.trim();
+        const localidad_id = document.getElementById('editPedidoLocalidad').value;
 
 
-        // --- AJUSTA EL STOCK SOLO POR LA DIFERENCIA ---
         const { data: pedidoOriginal } = await supabase.from('pedidos').select('*').eq('id', id).single();
         const productosOriginal = pedidoOriginal.productos || [];
         const mapOriginal = {};
         productosOriginal.forEach(p => mapOriginal[p.id] = p.cantidad);
         const mapNuevo = {};
-        productosPedido.forEach(p => mapNuevo[p.id] = p.cantidad);
+        nuevosProductos.forEach(p => mapNuevo[p.id] = p.cantidad);
+        const allIds = new Set([...productosOriginal.map(p=>p.id), ...nuevosProductos.map(p=>p.id)]);
 
-        // AJUSTE SOLO POR LA DIFERENCIA
-        const allIds = new Set([...productosOriginal.map(p=>p.id), ...productosPedido.map(p=>p.id)]);
         for(const prodId of allIds) {
             const cantOriginal = mapOriginal[prodId] || 0;
             const cantNueva    = mapNuevo[prodId]    || 0;
             const dif = cantNueva - cantOriginal;
             if(dif !== 0) {
-                const promo = await getPromoById(prodId);
-                // Si dif > 0 (más pedidos), el stock disminuye.
-                // Si dif < 0 (menos pedidos), el stock aumenta.
+                const { data: promo } = await supabase.from('promociones').select('*').eq('id', prodId).single();
                 await supabase.from('promociones').update({ stock: (promo.stock || 0) - dif }).eq('id', prodId);
             }
         }
 
-        const { error } = await supabase.from('pedidos').update({ cliente, localidad_id, productos: productosPedido, total }).eq('id', id);
+        const total = nuevosProductos.reduce((s,p)=>s + p.precio*p.cantidad, 0);
+        const { error } = await supabase.from('pedidos').update({ cliente, localidad_id, productos: nuevosProductos, total }).eq('id', id);
         if(error) return alert(error.message);
+
         closeModal();
         await fetchOrders();
-        await fetchPromos(); // Actualizar lista de promociones para reflejar stock
-        showToast('Pedido actualizado');
+        await fetchPromos();
+        showToast('Pedido actualizado correctamente');
     };
+
+    renderModal();
 }
 
 
+
+
+
+
+
 async function agregarPedido(pedido) {
+  pedido.estado = "pendiente"; // nuevo pedido siempre pendiente
   const { error } = await supabase.from('pedidos').insert([pedido]);
   if (error) return alert('Error al guardar pedido: ' + error.message);
 
   // Refrescar listado de pedidos
-  fetchPedidos();
+  fetchOrders();
 
   // Refrescar listado de clientes con pedidos
   fetchClientes();
 
   showToast('✅ Pedido agregado');
-}
 
+  // 🔹 Reiniciar lista de productos para el próximo pedido
+  productosPedido = [];
+}
 
 
 /* ========== ELIMINAR PEDIDO ========== */
@@ -2221,6 +2587,252 @@ y += 25; // espacio antes de la tabla de productos
     alert("Error al generar el PDF: " + err.message);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+// ==================== FUNCIONES DE CARRITO ====================
+function actualizarTotalCarrito() {
+    const total = carritoCliente.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
+    const totalElem = document.getElementById('totalCarrito');
+    if(totalElem) totalElem.textContent = `Total: $${total.toFixed(2)}`;
+}
+
+function conectarEventosTienda() {
+    document.querySelectorAll('.plusBtn').forEach(btn => {
+        btn.onclick = () => {
+            const id = parseInt(btn.dataset.id);
+            const nombre = btn.dataset.nombre;
+            const precio = parseFloat(btn.dataset.precio);
+            let producto = carritoCliente.find(p => p.id === id);
+            if(producto) producto.cantidad++;
+            else carritoCliente.push({id, nombre, precio, cantidad: 1});
+            actualizarTotalCarrito();
+
+            const input = btn.parentElement.querySelector('.cantidad');
+            if(input) input.value = carritoCliente.find(p => p.id === id).cantidad;
+        };
+    });
+
+    document.querySelectorAll('.minusBtn').forEach(btn => {
+        btn.onclick = () => {
+            const id = parseInt(btn.dataset.id);
+            let producto = carritoCliente.find(p => p.id === id);
+            if(producto) {
+                producto.cantidad = Math.max(0, producto.cantidad -1);
+                if(producto.cantidad === 0) carritoCliente = carritoCliente.filter(p => p.id !== id);
+            }
+            actualizarTotalCarrito();
+
+            const input = btn.parentElement.querySelector('.cantidad');
+            if(input) input.value = carritoCliente.find(p => p.id === id)?.cantidad || 0;
+        };
+    });
+
+    document.querySelectorAll('.cantidad').forEach(input => {
+        input.oninput = () => {
+            const id = parseInt(input.dataset.id);
+            const valor = parseInt(input.value) || 0;
+            let producto = carritoCliente.find(p => p.id === id);
+            if(valor === 0) carritoCliente = carritoCliente.filter(p => p.id !== id);
+            else if(producto) producto.cantidad = valor;
+            else {
+                const nombre = input.dataset.nombre;
+                const precio = parseFloat(input.dataset.precio);
+                carritoCliente.push({id, nombre, precio, cantidad: valor});
+            }
+            actualizarTotalCarrito();
+        };
+    });
+}
+
+
+
+// ==================== CARGAR CATEGORIAS Y PROMOCIONES ====================
+async function cargarCategoriasYPromos() {
+    const catResult = await supabase
+    .from('categorias')
+    .select('*')
+    .order('nombre', { ascending: true });
+    if(catResult.error) return console.error(catResult.error);
+    categorias = catResult.data;
+
+    const promoResult = await supabase.from('promociones').select('*');
+    if(promoResult.error) return console.error(promoResult.error);
+    promociones = promoResult.data;
+
+    renderCategorias();
+
+    // No asignamos ninguna categoría por defecto
+}
+
+
+// ==================== RENDERIZAR CATEGORIAS ====================
+function renderCategorias() {
+    const cont = document.getElementById('categoriasContainer');
+    cont.innerHTML = '';
+    categorias.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.textContent = cat.nombre;
+        btn.style.margin = '5px';
+        btn.onclick = () => {
+            categoriaSeleccionada = cat.id;
+            renderPromociones(categoriaSeleccionada); // Solo ahora se muestran los productos
+        };
+        cont.appendChild(btn);
+    });
+}
+
+
+// ==================== RENDERIZAR PROMOCIONES ====================
+async function renderPromociones(catId) {
+    const container = document.getElementById('productosContainer');
+    container.innerHTML = '';
+
+    const promosCat = promociones.filter(p => p.categoria_id === catId);
+
+    for(const promo of promosCat) {
+        let imageUrl = '';
+        if(promo.imagen) {
+            const { data, error } = await supabase
+                .storage
+                .from('promo_images')
+                .createSignedUrl(promo.imagen, 3600);
+            if(!error) imageUrl = data.signedUrl;
+        }
+
+        // Revisar si ya hay cantidad en carrito
+        const itemEnCarrito = carritoCliente.find(p => p.id === promo.id);
+        const cantidad = itemEnCarrito ? itemEnCarrito.cantidad : 0;
+
+        const div = document.createElement('div');
+        div.className = 'producto';
+        div.style.border = '1px solid #ccc';
+        div.style.padding = '5px';
+        div.style.borderRadius = '6px';
+        div.style.margin = '5px';
+        div.innerHTML = `
+            ${imageUrl ? `<img src="${imageUrl}" style="width:100%; border-radius:4px;">` : ''}
+            <p><strong>${promo.nombre}</strong></p>
+            <p>$${promo.precio.toFixed(2)}</p>
+            <div>
+                <button class="minusBtn">-</button>
+                <input type="number" min="0" value="${cantidad}" style="width:40px;">
+                <button class="plusBtn">+</button>
+            </div>
+        `;
+        container.appendChild(div);
+
+        const minusBtn = div.querySelector('.minusBtn');
+        const plusBtn = div.querySelector('.plusBtn');
+        const input = div.querySelector('input');
+
+        minusBtn.onclick = () => {
+            let item = carritoCliente.find(p => p.id === promo.id);
+            if(item) {
+                item.cantidad = Math.max(0, item.cantidad -1);
+                if(item.cantidad === 0) carritoCliente = carritoCliente.filter(p => p.id !== promo.id);
+            }
+            input.value = carritoCliente.find(p => p.id === promo.id)?.cantidad || 0;
+            actualizarTotalCarrito();
+        };
+
+        plusBtn.onclick = () => {
+            let item = carritoCliente.find(p => p.id === promo.id);
+            if(item) item.cantidad++;
+            else carritoCliente.push({id: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1});
+            input.value = carritoCliente.find(p => p.id === promo.id).cantidad;
+            actualizarTotalCarrito();
+        };
+
+        input.oninput = () => {
+            const valor = parseInt(input.value) || 0;
+            let item = carritoCliente.find(p => p.id === promo.id);
+            if(valor === 0) carritoCliente = carritoCliente.filter(p => p.id !== promo.id);
+            else if(item) item.cantidad = valor;
+            else carritoCliente.push({id: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: valor});
+            actualizarTotalCarrito();
+        };
+    }
+
+    actualizarTotalCarrito();
+}
+
+// ==================== TOTAL CARRITO ====================
+function actualizarTotalCarrito() {
+    const total = carritoCliente.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
+    document.getElementById('totalCarrito').textContent = `Total: $${total.toFixed(2)}`;
+}
+
+// ==================== MODAL PEDIDO ====================
+async function abrirModalPedido() {
+    if(carritoCliente.length === 0) return alert("Debe seleccionar al menos un producto");
+
+    const modal = document.getElementById('pedidoModal');
+    const selectLocalidad = document.getElementById('modalLocalidadSelect');
+    const nombreInput = document.getElementById('modalClienteNombre');
+
+    // Limpiar campos
+    nombreInput.value = '';
+    selectLocalidad.innerHTML = '<option value="">Seleccionar localidad...</option>';
+
+    const { data: localidades, error } = await supabase.from('localidades').select('*').order('nombre', { ascending: true });
+    if(error) return alert("Error al cargar localidades: " + error.message);
+
+    localidades.forEach(loc => {
+        const option = document.createElement('option');
+        option.value = loc.id;
+        option.textContent = loc.nombre;
+        selectLocalidad.appendChild(option);
+    });
+
+    modal.style.display = 'flex';
+}
+
+document.getElementById('confirmarPedidoBtn').onclick = abrirModalPedido;
+
+document.getElementById('modalConfirmarBtn').onclick = async () => {
+    const nombre = document.getElementById('modalClienteNombre').value.trim();
+    const selectLocalidad = document.getElementById('modalLocalidadSelect');
+    const localidad_id = selectLocalidad.value;
+
+    if(!nombre) return alert("Ingrese su nombre");
+    if(!localidad_id) return alert("Seleccione una localidad");
+
+    const pedido = {
+        cliente: nombre,
+        localidad_id: parseInt(localidad_id),
+        productos: carritoCliente.map(p => ({id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio})),
+        total: carritoCliente.reduce((sum, p) => sum + p.precio*p.cantidad, 0),
+        estado: 'pendiente'
+    };
+
+    const { error } = await supabase.from('pedidos').insert([pedido]);
+    if(error) return alert("Error al generar pedido: " + error.message);
+
+    alert("Pedido enviado ✅");
+    carritoCliente = []; // Reiniciar solo después de confirmar pedido
+    renderPromociones(categoriaSeleccionada);
+    document.getElementById('pedidoModal').style.display = 'none';
+};
+
+// Cancelar modal
+document.getElementById('modalCancelarBtn').onclick = () => {
+    document.getElementById('pedidoModal').style.display = 'none';
+};
+
+// ==================== INICIALIZAR ====================
+cargarCategoriasYPromos();
+
+
+
 
 
 
@@ -2384,424 +2996,6 @@ async function deleteLocalidad(id){
 
 
 
-// ================= CLIENTES =================
-
-/**
- * Inserta un nuevo cliente con la carga rápida.
- * El DNI, Teléfono y Hora de Visita quedan vacíos.
- * El estado se establece en 'Pendiente'.
- */
-/* -------------------------
-   Agregar Cliente Rápido
-------------------------- */
-async function addClienteRapido() {
-  const nombre = document.getElementById("clienteNombre").value.trim();
-  const localidad = document.getElementById("clienteLocalidad").value;
-  const hora = document.getElementById("clienteHora").value.trim();
-
-  if (!nombre || !localidad) {
-    showToast("⚠️ Complete los campos obligatorios");
-    return;
-  }
-
-  try {
-    const nuevoCliente = {
-      nombre_completo: nombre,
-      localidad,
-      hora_visita: hora || null,
-      estado_visita: 'Pendiente'
-    };
-
-    const { error } = await supabase.from('clientes').insert([nuevoCliente]);
-    if (error) throw error;
-
-    document.getElementById("clienteForm").reset();
-    await fetchClientes();
-    showToast("✅ Cliente agregado correctamente");
-  } catch (err) {
-    console.error("Error al agregar cliente:", err);
-    showToast("❌ Error al agregar cliente");
-  }
-}
-
-
-async function loadLocalidadesFilter() {
-    const select = document.getElementById("clienteLocalidadFilter");
-    if (!select) return;
-
-    const { data, error } = await supabase
-        .from("localidades")
-        .select("nombre")
-        .order("nombre", { ascending: true });
-
-    if (error) {
-        console.error("Error al cargar localidades para filtro:", error);
-        return;
-    }
-
-    select.innerHTML = `<option value="">Todas las localidades</option>`;
-    data.forEach(loc => {
-        const opt = document.createElement("option");
-        opt.value = loc.nombre;
-        opt.textContent = loc.nombre;
-        select.appendChild(opt);
-    });
-}
-
-
-
-async function fetchClientes() {
-  const searchTerm = document.getElementById('clienteSearch')?.value.toLowerCase() || '';
-  const localidadFilter = document.getElementById('clienteLocalidadFilter')?.value || '';
-
-  // 1️⃣ Obtener clientes
-  const { data: allClientes, error: clientesError } = await supabase
-    .from('clientes')
-    .select('*')
-    .order('localidad', { ascending: true })
-    .order('estado_visita', { ascending: true })
-    .order('id', { ascending: false });
-  if (clientesError) return console.error(clientesError);
-
-  // 2️⃣ Obtener pedidos
-  const { data: allPedidos, error: pedidosError } = await supabase
-    .from('pedidos')
-    .select('*')
-    .order('id', { ascending: false });
-  if (pedidosError) return console.error(pedidosError);
-
-  // 3️⃣ Filtrado por localidad y búsqueda
-  let filteredClientes = allClientes;
-
-  if (localidadFilter) {
-    filteredClientes = filteredClientes.filter(c => c.localidad === localidadFilter);
-  }
-
-  if (searchTerm) {
-    const normalize = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    filteredClientes = filteredClientes.filter(c => normalize(c.nombre_completo).includes(normalize(searchTerm)));
-  }
-
-  // 4️⃣ Agregar pedidos a cada cliente **después de filtrar**
-  filteredClientes = filteredClientes.map(cliente => {
-    const pedidosCliente = allPedidos.filter(p => p.cliente_id === cliente.id);
-    return { ...cliente, pedidos: pedidosCliente };
-  });
-
-  // 5️⃣ Renderizado (igual que antes)
-  const container = document.getElementById('clienteList');
-  container.innerHTML = '';
-
-  if (!filteredClientes.length) {
-    container.innerHTML = `<span style="color:#888; display:block; padding: 20px;">
-      ${localidadFilter ? `No se encontraron clientes en la localidad: "${escapeHtml(localidadFilter)}".` : 'No hay clientes cargados.'}
-    </span>`;
-    return;
-  }
-
-  const groupedClients = filteredClientes.reduce((acc, cliente) => {
-    const localidad = cliente.localidad.trim() || 'Sin Localidad';
-    const estado = cliente.estado_visita;
-
-    if (!acc[localidad]) acc[localidad] = { Pendiente: [], Visitado: [] };
-    acc[localidad][estado].push(cliente);
-    return acc;
-  }, {});
-
-  Object.keys(groupedClients).sort().forEach(localidad => {
-    const clientesByStatus = groupedClients[localidad];
-
-    const localidadTitle = document.createElement('h2');
-    localidadTitle.textContent = escapeHtml(localidad);
-    localidadTitle.style.cssText = `margin:25px 0 10px 0; padding:8px 15px; background:#3498db; color:#fff; border-radius:8px; font-size:1.3em; box-shadow:0 2px 5px rgba(0,0,0,0.2);`;
-    container.appendChild(localidadTitle);
-
-    const renderStatusGroup = (status, list) => {
-      if (!list.length) return;
-      const isVisitado = status === 'Visitado';
-      const statusColor = isVisitado ? '#27ae60' : '#e74c3c';
-      const statusText = isVisitado ? '✅ VISITADOS' : '⏳ PENDIENTES';
-
-      const statusSection = document.createElement('div');
-      statusSection.style.marginBottom = '20px';
-
-      const statusSubtitle = document.createElement('h3');
-      statusSubtitle.textContent = `${statusText} (${list.length})`;
-      statusSubtitle.style.cssText = `border-bottom:2px solid ${statusColor}; padding-bottom:5px; color:${statusColor}; margin-bottom:15px;`;
-      statusSection.appendChild(statusSubtitle);
-
-      list.forEach(cliente => {
-        const bgColor = isVisitado ? '#e6f7e6' : '#fff0f0';
-        const horaVisitaText = cliente.hora_visita
-          ? (isNaN(new Date(cliente.hora_visita)) ? `Hora: ${escapeHtml(cliente.hora_visita)}` : new Date(cliente.hora_visita).toLocaleString())
-          : 'No Agendada';
-
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.style.background = bgColor;
-        div.style.borderLeft = `5px solid ${statusColor}`;
-        div.style.padding = '10px';
-        div.style.marginBottom = '8px';
-
-        // Lista de pedidos
-        const pedidosHTML = cliente.pedidos && cliente.pedidos.length
-          ? `<ul style="margin:4px 0 0 15px; font-size:0.85em; color:#333;">
-              ${cliente.pedidos.map(p => `<li>Pedido #${p.id} - ${escapeHtml(p.descripcion || '')} (${p.estado || 'Sin Estado'})</li>`).join('')}
-            </ul>`
-          : '<div style="font-size:0.85em; color:#888;">No tiene pedidos</div>';
-
-        div.innerHTML = `
-          <div class="card-info" style="flex:1; gap:4px;">
-            <b>${escapeHtml(cliente.nombre_completo)}</b>
-            <div style="font-size:0.9em; color:#555;">
-              DNI: ${cliente.dni || 'N/A'} · Teléfono: ${cliente.telefono || 'N/A'}<br>
-              Visita: ${horaVisitaText}
-            </div>
-            ${pedidosHTML}
-          </div>
-          <div class="card-actions" style="min-width:170px;">
-            <button class="edit-btn" onclick="openEditClienteModal(${cliente.id})">✏️ Editar Datos</button>
-            <button class="${isVisitado ? 'edit-btn' : 'delete-btn'}" 
-                    style="background:${statusColor};"
-                    onclick="toggleEstadoCliente(${cliente.id}, '${isVisitado ? 'Pendiente' : 'Visitado'}')">
-              ${isVisitado ? 'Marcar como Pendiente' : 'Marcar como Visitado'}
-            </button>
-            <button class="delete-btn" onclick="deleteCliente(${cliente.id})" style="background:#95a5a6;">🗑️ Eliminar</button>
-          </div>
-        `;
-
-        statusSection.appendChild(div);
-      });
-
-      container.appendChild(statusSection);
-    };
-
-    renderStatusGroup('Pendiente', clientesByStatus.Pendiente);
-    renderStatusGroup('Visitado', clientesByStatus.Visitado);
-  });
-}
-
-document.getElementById('clienteSearch').addEventListener('input', fetchClientes);
-document.getElementById('clienteLocalidadFilter').addEventListener('change', fetchClientes);
-
-
-
-/* -------------------------
-   Cargar Localidades en el menú desplegable de Clientes
-------------------------- */
-async function cargarLocalidadesEnSelect() {
-  try {
-    const { data, error } = await supabase.from('localidades').select('*').order('nombre', { ascending: true });
-    if (error) throw error;
-
-    const select = document.getElementById('clienteLocalidad');
-    select.innerHTML = '<option value="">Seleccionar Localidad...</option>';
-    data.forEach(loc => {
-      const option = document.createElement('option');
-      option.value = loc.nombre;
-      option.textContent = loc.nombre;
-      select.appendChild(option);
-    });
-  } catch (err) {
-    console.error('Error cargando localidades:', err);
-  }
-}
-
-
-
-/* -------------------------
-   Función: toggleEstadoCliente
-   Actualiza el estado (Pendiente / Visitado) y refresca la lista
-   ------------------------- */
-async function toggleEstadoCliente(id, nuevoEstado){
-  try {
-    if (!id) return console.warn('toggleEstadoCliente: id inválido', id);
-    // Confirmación sencilla (opcional)
-    if (!confirm(`¿Marcar este cliente como "${nuevoEstado}"?`)) return;
-
-    const { error } = await supabase
-      .from('clientes')
-      .update({ estado_visita: nuevoEstado })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error actualizando estado:', error);
-      return alert('Error al actualizar estado: ' + error.message);
-    }
-
-    // Refrescar la lista y notificar
-    await fetchClientes();
-    showToast(`Cliente marcado como ${nuevoEstado}`);
-  } catch (err) {
-    console.error('toggleEstadoCliente error', err);
-    alert('Ocurrió un error inesperado al actualizar el estado.');
-  }
-}
-
-/* -------------------------
-   Función: showToast (si no la tenías)
-   Pequeña notificación visual
-   ------------------------- */
-function showToast(text, tiempo = 2200) {
-  let toast = document.getElementById('appToast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'appToast';
-    toast.style.cssText =
-      'position:fixed;right:16px;bottom:20px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:15000;opacity:0;transition:opacity .25s;';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = text;
-  toast.style.opacity = '1';
-  clearTimeout(toast._to);
-  toast._to = setTimeout(() => { toast.style.opacity = '0'; }, tiempo);
-}
-
-/* -------------------------
-   Reemplazo recomendado de openEditClienteModal(id)
-   (Usa ID para evitar colisiones con versiones que reciben el objeto)
-   ------------------------- */
-/* -------------------------
-   Editar Cliente (Modal con Select de Localidades)
-------------------------- */
-async function openEditClienteModal(id) {
-  const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single();
-  if (error || !data) {
-    console.error('Cliente no encontrado', error);
-    return alert('Cliente no encontrado');
-  }
-
-  const cliente = data;
-
-  // --- CORRECCIÓN SEGURA DE hora_visita ---
-  let formattedVisita = '';
-  if (cliente.hora_visita) {
-    const fecha = new Date(cliente.hora_visita);
-    if (!isNaN(fecha.getTime())) { // Verifica que la fecha sea válida
-      formattedVisita = fecha.toISOString().substring(0, 16);
-    } else {
-      console.warn('Hora de visita inválida para cliente ID:', cliente.id);
-      formattedVisita = '';
-    }
-  }
-
-  openModal(
-    `Editar Cliente: ${escapeHtml(cliente.nombre_completo || '')}`,
-    `
-      <form id="editClienteForm" style="display:flex; flex-direction:column; gap:8px;">
-        <label>Nombre completo</label>
-        <input type="text" id="editClienteNombre" value="${escapeHtml(cliente.nombre_completo || '')}" required>
-
-        <label>Localidad</label>
-        <select id="editClienteLocalidad">
-          <option value="">Cargando localidades...</option>
-        </select>
-
-        <label>DNI</label>
-        <input type="text" id="editClienteDNI" value="${escapeHtml(cliente.dni || '')}">
-
-        <label>Teléfono</label>
-        <input type="text" id="editClienteTelefono" value="${escapeHtml(cliente.telefono || '')}">
-
-        <label>Hora de visita (fecha y hora)</label>
-        <input type="datetime-local" id="editClienteVisita" value="${formattedVisita}">
-
-        <label>Estado de visita</label>
-        <select id="editClienteEstado">
-          <option value="Pendiente" ${cliente.estado_visita === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
-          <option value="Visitado" ${cliente.estado_visita === 'Visitado' ? 'selected' : ''}>✅ Visitado</option>
-        </select>
-
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button type="button" onclick="updateCliente(${cliente.id})" style="background:#3498db;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">💾 Guardar</button>
-          <button type="button" onclick="closeModal()" style="background:#95a5a6;color:#fff;padding:10px;border:none;border-radius:6px;cursor:pointer;">✖️ Cerrar</button>
-        </div>
-      </form>
-    `
-  );
-
-  // --- CARGA DE LOCALIDADES EN EL SELECT ---
-  const select = document.getElementById("editClienteLocalidad");
-  if (!select) return;
-
-  const { data: localidades, error: locError } = await supabase.from("localidades").select("nombre").order("nombre", { ascending: true });
-  if (locError) {
-    console.error("Error al cargar localidades:", locError);
-    select.innerHTML = `<option value="">Error al cargar</option>`;
-    return;
-  }
-
-  select.innerHTML = `<option value="">Seleccionar localidad...</option>`;
-  localidades.forEach(loc => {
-    const opt = document.createElement("option");
-    opt.value = loc.nombre;
-    opt.textContent = loc.nombre;
-    if (loc.nombre === cliente.localidad) opt.selected = true;
-    select.appendChild(opt);
-  });
-}
-
-
-
-/* -------------------------
-   Reemplazo recomendado de openEditClienteModal(id)
-   (Usa ID para evitar colisiones con versiones que reciben el objeto)
-   ------------------------- */
-
-/* -------------------------
-   Actualizar Cliente
-------------------------- */
-async function updateCliente(id) {
-  const nombre = document.getElementById("editClienteNombre").value.trim();
-  const localidad = document.getElementById("editClienteLocalidad").value.trim();
-  const dni = document.getElementById("editClienteDNI").value.trim() || null;
-  const telefono = document.getElementById("editClienteTelefono").value.trim() || null;
-  const visita = document.getElementById("editClienteVisita").value;
-  const estado = document.getElementById("editClienteEstado").value;
-
-  if (!nombre || !localidad) {
-    return alert("El Nombre/Apellido y la Localidad son campos requeridos.");
-  }
-
-  const hora_visita = visita ? new Date(visita).toISOString() : null;
-
-  const { error } = await supabase.from("clientes").update({
-    nombre_completo: nombre,
-    localidad,
-    dni,
-    telefono,
-    hora_visita,
-    estado_visita: estado
-  }).eq("id", id);
-
-  if (error) {
-    console.error("Error al actualizar cliente:", error);
-    return alert("Error al actualizar cliente: " + error.message);
-  }
-
-  closeModal();
-  fetchClientes();
-  showToast("✅ Cliente actualizado con éxito");
-}
-
-
-
-/**
- * Elimina un cliente.
- */
-async function deleteCliente(id){
-    if(!confirm("¿Desea eliminar este cliente permanentemente?")) return;
-    
-    const { error } = await supabase.from("clientes").delete().eq("id", id);
-    
-    if(error) {
-        console.error(error);
-        return alert("Error al eliminar cliente.");
-    }
-    fetchClientes();
-    showToast('Cliente eliminado');
-}
-
 
 // ================= DOCUMENTOS =================
 async function addDocumento() {
@@ -2848,6 +3042,7 @@ async function fetchDocumentos() {
           </div>
           <button onclick="deleteDocumento(${doc.id}, '${doc.archivo}')" style="background:#ff4d4f;color:#fff;border:none;padding:7px 12px;border-radius:6px;font-weight:bold;cursor:pointer;">Eliminar</button>
         </div>
+
       `;
     })
   );
@@ -2861,6 +3056,10 @@ async function deleteDocumento(id, archivo) {
   await supabase.from("documentos").delete().eq("id", id);
   fetchDocumentos();
 }
+
+
+
+
 
 
 // === INICIALIZACIÓN DE EVENTOS ===
@@ -2887,9 +3086,8 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchPromos();
   fetchOrders();
   fetchDocumentos();
-  fetchClientes();
-  cargarLocalidadesEnSelect();
-  loadPromoSubMenu();
+   loadPromoSubMenu();
+ cargarCategoriasYPromos();
 
   const btnDocs = document.querySelector("button[data-tab='documentos']");
   if (btnDocs) btnDocs.addEventListener("click", fetchDocumentos);
@@ -2916,19 +3114,21 @@ function activateSection(tab) {
   if (section) section.classList.add('active');
 
   // 3. Actualiza el menú lateral
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-  if (btn) btn.classList.add('active');
+  // ... (código existente)
 
   // 4. Carga los datos específicos según la pestaña
   if (tab === 'promos') fetchPromos();
   else if (tab === 'pedidos') fetchOrders();
   else if (tab === 'categorias') fetchCategorias();
   else if (tab === 'localidades') fetchLocalidades();
-  else if (tab === 'clientes') fetchClientes();
+  else if (tab === 'clientes') fetchClientes(); // Si existe
   else if (tab === 'documentos') fetchDocumentos();
-
+  
+  // 💥 AÑADE ESTO: CARGAR LA TIENDA AL ACTIVAR LA PESTAÑA 💥
+  else if (tab === 'clienteTienda') cargarCategoriasYPromos(); 
 }
+
+
 
 // Asigna los eventos de clic
 document.querySelectorAll('.tab-btn').forEach(btn => {
