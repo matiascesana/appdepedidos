@@ -204,71 +204,204 @@
     <h2>Tienda</h2>
     <div id="productosContainer" class="productos-container"></div>
     <div class="pedido-footer">
-    <button id="confirmarPedidoBtn" class="btn-confirmar">Confirmar Pedido</button>
+    <button onclick="confirmarPedido()">Confirmar Pedido</button>
     </div>
 </div>
 
-/* Contenedor general */
-#tiendaCliente {
+
+<div id="resumenCarrito" style="padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
+    
+    <h4>🛒 Mi Pedido (<span id="carritoCount">0</span>)</h4>
+    
+    <div id="carritoLista" style="margin-bottom: 10px;">
+        <span class="text-muted">No hay productos seleccionados</span>
+    </div>
+
+    <hr style="border: none; border-top: 1px dashed #ddd;">
+
+    <p style="margin-top:8px; font-weight:bold;">
+        Total: 
+        <span id="carritoTotal" style="float: right;">$0.00</span>
+    </p>
+
+    <button onclick="abrirModalPedido()" style="width: 100%; margin-top: 15px;">
+        Confirmar y Enviar Pedido
+    </button>
+</div>
+
+
+
+<!-- CATEGORÍAS -->
+<div id="categoriasContainer" class="categorias-container"></div>
+
+
+<div id="carritoModal">
+    <h3>Mi Pedido</h3>
+    
+   
+    <div class="modal-content">
+    <h3>Confirmar Pedido</h3>
+    <label>Nombre:</label>
+    <input id="modalClienteNombre" type="text" placeholder="Nombre completo">
+    
+    <label>Localidad:</label>
+    <select id="modalLocalidadSelect"></select>
+    
+    <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+      <button id="cancelarPedidoBtn" onclick="document.getElementById('pedidoModal').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+.categorias-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.categoria-btn {
+  padding: 8px 14px;
+  border: none;
+  background: #3498db;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.categoria-btn:hover {
+  background: #2980b9;
+}
+
+#productosContainer {
+    /* 1. Activa Flexbox para colocar los hijos uno al lado del otro */
+    display: flex; 
+    
+    /* 2. Permite que las tarjetas salten a una nueva línea si no hay espacio */
+    flex-wrap: wrap;
+    
+    /* 3. Distribuye el espacio entre las tarjetas */
+    justify-content: flex-start; /* O usa 'space-around' o 'space-between' */
+    
+    /* 4. Opcional: añade un poco de separación entre los elementos */
+    gap: 20px; /* Espacio horizontal y vertical entre las tarjetas */
+    
+    /* 5. Opcional: padding interno para que no queden pegadas al borde del contenedor */
     padding: 20px;
-    font-family: Arial, sans-serif;
 }
 
-/* Categorías */
-.categoria {
-    margin-bottom: 30px;
+/* Regla para la tarjeta individual, asegurando que tiene un ancho mínimo */
+.promo-card {
+    /* Asegura que la tarjeta no sea más ancha que su contenedor (por ejemplo, 200px) */
+    width: 200px; 
+    
+    /* Permite que la tarjeta se encoja si es necesario (cuando no hay espacio) */
+    flex-shrink: 1; 
+    
+    /* Mínimo ancho para evitar que se aplaste demasiado */
+    min-width: 180px; 
+    
+    /* ... (resto de tus estilos de promo-card) */
 }
 
-/* Tarjetas de productos/promociones */
-.producto {
-    display: inline-block;
-    width: 200px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    margin: 5px;
-    text-align: center;
-    vertical-align: top;
+
+.promo-card img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 8px;
 }
 
-/* Botones + / - */
-.qty-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-    margin-top: 5px;
+.qty-control {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.qty-btn {
+  padding: 4px 10px;
+  font-size: 18px;
+  background: #eee;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.qty-btn:hover {
+  background: #ccc;
 }
 
-.qty-container button {
-    width: 25px;
-    height: 25px;
-    font-size: 16px;
-    cursor: pointer;
+.carrito-resumen {
+  margin-top: 24px;
+  background: #f8f8f8;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Input cantidad */
-.cantidad {
-    width: 40px;
-    text-align: center;
+.carrito-lista table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.carrito-lista td, .carrito-lista th {
+  padding: 6px;
+  border-bottom: 1px solid #ddd;
+}
+.carrito-total {
+  font-weight: bold;
+  margin-top: 8px;
+  text-align: right;
 }
 
-/* Footer de pedido */
-.pedido-footer {
-    margin-top: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* Botón confirmar */
 .btn-confirmar {
-    background-color: #ff4d4f;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
+  width: 100%;
+  padding: 10px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.btn-confirmar:hover {
+  background: #219150;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+}
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 320px;
+  margin: 100px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn {
+  background: #3498db;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-cancel {
+  background: #e74c3c;
+  color: #fff;
 }
 
 
@@ -595,9 +728,25 @@
 
        <div id="clienteTienda" class="section" style="display:none;">
     <h2>Tienda</h2>
-        <div id="totalCarrito">Total: $0.00</div>
-    <div id="pedidoResumen">
-     <button id="confirmarPedidoBtn">Confirmar Pedido</button>
+
+
+       <!-- === CARRITO VISIBLE EN TIEMPO REAL === -->
+<div id="carritoResumen" style="
+    margin-top: 15px; 
+    background: #f9f9f9; 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    padding: 10px;
+">
+    <h4>🛒 Productos seleccionados</h4>
+    <div id="carritoLista" style="max-height: 300px; overflow-y: auto;">
+        <span class="text-muted">No hay productos seleccionados</span>
+    </div>
+</div> 
+ <p>Total del Pedido: <span id="carritoTotal">$0.00</span></p>
+  <button onclick="abrirModalPedido()" style="margin-top:12px; padding:8px 16px;">Confirmar Pedido</button>
+</div>
+
 
 <!-- Contenedor de categorías y promociones -->
 <div id="categoriasContainer"></div>
@@ -608,26 +757,21 @@
 </div>
 
 
-<!-- Modal de pedido (igual al anterior) -->
-<div id="pedidoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-    background: rgba(0,0,0,0.5); justify-content:center; align-items:center;">
-    <div style="background:#fff; padding:20px; border-radius:8px; width:300px; text-align:center;">
-        <h3>Confirmar Pedido</h3>
-        <p>Nombre:</p>
-        <input type="text" id="modalClienteNombre" placeholder="Nombre completo">
-
-        <p>Localidad:</p>
-        <select id="modalLocalidadSelect">
-            <option value="">Seleccionar localidad...</option>
-        </select>
-
-        <div style="margin-top:15px;">
-            <button id="modalConfirmarBtn">Confirmar</button>
-            <button id="modalCancelarBtn">Cancelar</button>
-        </div>
+<div id="pedidoModal" class="modal">
+  <div class="modal-content">
+    <h3>Confirmar Pedido</h3>
+    <label>Nombre:</label>
+    <input id="modalClienteNombre" type="text" placeholder="Nombre completo">
+    
+    <label>Localidad:</label>
+    <select id="modalLocalidadSelect"></select>
+    
+    <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+      <button onclick="cerrarModalPedido()">Cancelar</button>
+<button onclick="confirmarPedido()">Confirmar Pedido</button>
     </div>
+  </div>
 </div>
-
 
 
 <!-- === MODAL GENÉRICO === -->
@@ -703,9 +847,6 @@ function navigateTo(tabName) {
 }
 
 
-/* =========================================================
-   Configuración Supabase (cliente)
-   ========================================================= */
 
 /* =========================================================
    Configuración Supabase (cliente)
@@ -751,20 +892,38 @@ function toggleSidebar(){
 
 document.getElementById('menuBtn')?.addEventListener('click', toggleSidebar);
 
+
+// La función de limpieza que debes haber definido:
+function limpiarContenedoresTienda() {
+    const categoriasCont = document.getElementById('categoriasContainer');
+    const productosCont = document.getElementById('productosContainer');
+
+    if (categoriasCont) categoriasCont.innerHTML = ''; 
+    if (productosCont) productosCont.innerHTML = ''; 
+}
+
+
+// Función única para manejar el cambio de secciones
 function activateSection(tab) {
-  // 1. Ocultar todas las secciones
+  
+  // 💥 PASO 1: Si no vamos a la tienda, limpiamos sus elementos inyectados 💥
+  if (tab !== 'clienteTienda') {
+      limpiarContenedoresTienda();
+  }
+    
+  // 2. Quita 'active' de todas las secciones
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
 
-  // 2. Mostrar la seleccionada
-  const target = document.getElementById(tab);
-  if (target) target.classList.add('active');
+  // 3. Activa la sección seleccionada
+  const section = document.getElementById(tab);
+  if (section) section.classList.add('active');
 
-  // 3. Marcar botón activo
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  const button = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-  if (button) button.classList.add('active');
-
+  // 4. Carga los datos específicos
+  if (tab === 'promos') fetchPromos();  else if (tab === 'pedidos') fetchOrders();
+  // ... (resto de las cargas de datos)
+  else if (tab === 'clienteTienda') cargarTiendaCliente(); 
 }
+
 
 // 5. Escucha los clics de los botones del menú
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -785,10 +944,18 @@ activateSection('promos');
    ========================================================= */
 let selectedProducts = [];
 let editingOrderId = null;
-let carritoCliente = [];
 let promociones = [];
 let categorias = [];
-let categoriaSeleccionada = null;
+let localidadSeleccionada = null; // Para la confirmación del pedido
+// Variables específicas de la tienda cliente
+let carritoCliente = [];
+let promocionesGlobal = []; // Contiene todas las promos de la categoría actual
+let categoriaTiendaActual = null;
+
+// 💥 NUEVA VARIABLE GLOBAL PARA CANTIDAD TEMPORAL EN TARJETA 💥
+let cantidadesLocales = {};
+
+
 
 
 /**
@@ -2598,242 +2765,336 @@ y += 25; // espacio antes de la tabla de productos
 
 
 
-// ==================== FUNCIONES DE CARRITO ====================
-function actualizarTotalCarrito() {
-    const total = carritoCliente.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
-    const totalElem = document.getElementById('totalCarrito');
-    if(totalElem) totalElem.textContent = `Total: $${total.toFixed(2)}`;
+/* ========================================================= Utilidades Faltantes ========================================================= */
+
+// 💥 FUNCIONES FALTANTES AÑADIDAS 💥
+
+// 1. Placeholder para showToast (Puedes personalizarla con un div modal si lo deseas)
+function showToast(message, duration = 3000) {
+    console.log("TOAST:", message);
+    alert(message); // Usamos alert temporalmente para evitar el error
+}
+
+// 2. Placeholder para safeText (Simplemente devuelve el texto para evitar el error)
+function safeText(text) {
+    return String(text);
+}
+
+// 3. Placeholder de función de navegación (Para evitar errores en la estructura)
+function navigateTo(section) {
+    console.log("Navegando a:", section);
+    // document.getElementById(section).classList.add('active'); // Lógica real de activación
+}
+
+
+/* ========================================================= Lógica del Carrito y Total ========================================================= */
+
+function renderCarritoCliente() {
+    // 💥 NOTA: Asumiendo que has corregido el ID del total a 'carritoTotal' 💥
+    const lista = document.getElementById('carritoLista');
+    const totalElement = document.getElementById('carritoTotal');
+    const countSpan = document.getElementById('carritoCount'); // Asumiendo que existe
+
+    if (!lista || !totalElement) {
+        // Esto permite que el resto del código se ejecute si la lista o total no están cargados.
+        return console.error("Error: Elemento 'carritoLista' o 'carritoTotal' no encontrado en el DOM.");
+    }
+
+    let html = ``;
+    let total = 0;
+    let totalItems = 0;
+
+    if (carritoCliente.length === 0) {
+        lista.innerHTML = `<span class="text-muted">No hay productos seleccionados</span>`;
+        totalElement.textContent = `$0.00`;
+        if (countSpan) countSpan.textContent = '0';
+        return;
+    }
+
+    html += `<table style="width:100%; border-collapse: collapse;">`;
+    html += `<tr style="border-bottom:1px solid #ccc;">
+                <th style="text-align:left;">Producto</th>
+                <th style="text-align:center;">Cant.</th>
+                <th style="text-align:right;">Subtotal</th>
+                <th></th>
+             </tr>`;
+
+    carritoCliente.forEach(p => {
+        const subtotal = p.precio * p.cantidad;
+        total += subtotal;
+        totalItems += p.cantidad;
+
+        html += `
+            <tr>
+                <td>${p.nombre}</td>
+                <td style="text-align:center;">
+                    <input type="number" min="1" value="${p.cantidad}" 
+                        style="width:60px; padding:3px;" 
+                        onchange="actualizarCantidadCarrito(${p.id}, this.value)">
+                </td>
+                <td style="text-align:right;">$${subtotal.toFixed(2)}</td>
+                <td><button onclick="eliminarDelCarrito(${p.id})" style="background:none; border:none; color:#ff4d4f; cursor:pointer; font-weight:bold;">❌</button></td>
+            </tr>
+        `;
+    });
+
+    html += `</table>`;
+    lista.innerHTML = html;
+    totalElement.textContent = `$${total.toFixed(2)}`;
+    if (countSpan) countSpan.textContent = totalItems;
+}
+
+function actualizarCantidadCarrito(id, nuevaCantidad) {
+    const numericId = parseInt(id);
+    const cantidad = parseInt(nuevaCantidad) || 0;
+    
+    if (cantidad <= 0) {
+        eliminarDelCarrito(numericId);
+        return;
+    }
+
+    const producto = carritoCliente.find(p => parseInt(p.id) === numericId);
+    if (producto) {
+        producto.cantidad = cantidad;
+    }
+    
+    renderCarritoCliente();
+}
+
+function eliminarDelCarrito(id) {
+    const numericId = parseInt(id);
+    carritoCliente = carritoCliente.filter(p => parseInt(p.id) !== numericId);
+    renderCarritoCliente();
+}
+
+/* ========================================================= Lógica de Cantidad Local ========================================================= */
+
+function actualizarCantidadLocal(id) {
+    const numericId = parseInt(id);
+    const cantidad = cantidadesLocales[numericId] || 0; 
+    const span = document.getElementById(`qty-local-${numericId}`);
+    if (span) {
+        span.textContent = cantidad;
+    }
+}
+
+function cambiarCantidadLocal(id, delta) {
+    const numericId = parseInt(id);
+    let cantidadActual = cantidadesLocales[numericId] || 0;
+    
+    cantidadActual += delta;
+    
+    if (cantidadActual < 0) cantidadActual = 0; 
+
+    cantidadesLocales[numericId] = cantidadActual; 
+    actualizarCantidadLocal(numericId);
+}
+
+function agregarAlCarrito(id) {
+    const numericId = parseInt(id);
+    const cantidad = cantidadesLocales[numericId] || 0;
+    
+    if (cantidad <= 0) {
+        showToast("Selecciona una cantidad mayor a cero.", 2500);
+        return;
+    }
+
+    const promo = promocionesGlobal.find(p => parseInt(p.id) === numericId);
+    if (!promo) return;
+
+    let item = carritoCliente.find(p => parseInt(p.id) === numericId);
+
+    if (item) {
+        item.cantidad += cantidad;
+    } else {
+        const { id: promoId, nombre, precio } = promo;
+        carritoCliente.push({ id: promoId, nombre, precio, cantidad: cantidad });
+    }
+
+    cantidadesLocales[numericId] = 0;
+    actualizarCantidadLocal(numericId);
+    
+    showToast(`¡${cantidad} ${promo.nombre} añadido al pedido!`);
+    
+    renderCarritoCliente();
+}
+
+/* ========================================================= Renderizado de Promociones y Eventos ========================================================= */
+
+function renderPromocionesList(promos) {
+    const cont = document.getElementById('productosContainer');
+    if (!cont) return;
+
+    if (promos.length === 0) {
+        cont.innerHTML = `<p style="color:#777; text-align:center;">No se encontraron promociones en esta categoría.</p>`;
+        return;
+    }
+
+    cont.innerHTML = promos.map(p => {
+        const { data } = supabase.storage.from('promo_images').getPublicUrl(p.imagen);
+        const imgUrl = data?.publicUrl || 'https://via.placeholder.com/200';
+        const cantidadLocal = cantidadesLocales[p.id] || 0;
+        
+        return `
+            <div class="promo-card">
+                <img src="${imgUrl}" alt="${p.nombre}">
+                <h4>${p.nombre}</h4>
+                <p>$${p.precio.toFixed(2)}</p>
+                <div class="qty-control">
+                    <button class="qty-btn-local minus" data-id="${p.id}">−</button>
+                    <span id="qty-local-${p.id}">${cantidadLocal}</span> 
+                    <button class="qty-btn-local plus" data-id="${p.id}">+</button>
+                </div>
+                <button class="btn-add-to-cart" data-id="${p.id}" 
+                    style="margin-top: 10px; padding: 10px; background-color: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+                    Añadir al Carrito
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    conectarEventosTienda();
 }
 
 function conectarEventosTienda() {
-    document.querySelectorAll('.plusBtn').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            const nombre = btn.dataset.nombre;
-            const precio = parseFloat(btn.dataset.precio);
-            let producto = carritoCliente.find(p => p.id === id);
-            if(producto) producto.cantidad++;
-            else carritoCliente.push({id, nombre, precio, cantidad: 1});
-            actualizarTotalCarrito();
-
-            const input = btn.parentElement.querySelector('.cantidad');
-            if(input) input.value = carritoCliente.find(p => p.id === id).cantidad;
-        };
+    document.querySelectorAll('.qty-btn-local.plus').forEach(btn => {
+        btn.onclick = () => cambiarCantidadLocal(btn.dataset.id, 1);
+    });
+    document.querySelectorAll('.qty-btn-local.minus').forEach(btn => {
+        btn.onclick = () => cambiarCantidadLocal(btn.dataset.id, -1);
     });
 
-    document.querySelectorAll('.minusBtn').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            let producto = carritoCliente.find(p => p.id === id);
-            if(producto) {
-                producto.cantidad = Math.max(0, producto.cantidad -1);
-                if(producto.cantidad === 0) carritoCliente = carritoCliente.filter(p => p.id !== id);
-            }
-            actualizarTotalCarrito();
-
-            const input = btn.parentElement.querySelector('.cantidad');
-            if(input) input.value = carritoCliente.find(p => p.id === id)?.cantidad || 0;
-        };
-    });
-
-    document.querySelectorAll('.cantidad').forEach(input => {
-        input.oninput = () => {
-            const id = parseInt(input.dataset.id);
-            const valor = parseInt(input.value) || 0;
-            let producto = carritoCliente.find(p => p.id === id);
-            if(valor === 0) carritoCliente = carritoCliente.filter(p => p.id !== id);
-            else if(producto) producto.cantidad = valor;
-            else {
-                const nombre = input.dataset.nombre;
-                const precio = parseFloat(input.dataset.precio);
-                carritoCliente.push({id, nombre, precio, cantidad: valor});
-            }
-            actualizarTotalCarrito();
-        };
+    document.querySelectorAll('.btn-add-to-cart').forEach(btn => {
+        btn.onclick = () => agregarAlCarrito(btn.dataset.id);
     });
 }
 
+async function cargarPromocionesPorCategoria(categoriaId) {
+    // 💥 CORRECCIÓN: Se elimina el filtro 'visible' no existente 💥
+    let query = supabase.from("promociones").select("*").order("nombre");
 
-
-// ==================== CARGAR CATEGORIAS Y PROMOCIONES ====================
-async function cargarCategoriasYPromos() {
-    const catResult = await supabase
-    .from('categorias')
-    .select('*')
-    .order('nombre', { ascending: true });
-    if(catResult.error) return console.error(catResult.error);
-    categorias = catResult.data;
-
-    const promoResult = await supabase.from('promociones').select('*');
-    if(promoResult.error) return console.error(promoResult.error);
-    promociones = promoResult.data;
-
-    renderCategorias();
-
-    // No asignamos ninguna categoría por defecto
-}
-
-
-// ==================== RENDERIZAR CATEGORIAS ====================
-function renderCategorias() {
-    const cont = document.getElementById('categoriasContainer');
-    cont.innerHTML = '';
-    categorias.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.textContent = cat.nombre;
-        btn.style.margin = '5px';
-        btn.onclick = () => {
-            categoriaSeleccionada = cat.id;
-            renderPromociones(categoriaSeleccionada); // Solo ahora se muestran los productos
-        };
-        cont.appendChild(btn);
-    });
-}
-
-
-// ==================== RENDERIZAR PROMOCIONES ====================
-async function renderPromociones(catId) {
-    const container = document.getElementById('productosContainer');
-    container.innerHTML = '';
-
-    const promosCat = promociones.filter(p => p.categoria_id === catId);
-
-    for(const promo of promosCat) {
-        let imageUrl = '';
-        if(promo.imagen) {
-            const { data, error } = await supabase
-                .storage
-                .from('promo_images')
-                .createSignedUrl(promo.imagen, 3600);
-            if(!error) imageUrl = data.signedUrl;
-        }
-
-        // Revisar si ya hay cantidad en carrito
-        const itemEnCarrito = carritoCliente.find(p => p.id === promo.id);
-        const cantidad = itemEnCarrito ? itemEnCarrito.cantidad : 0;
-
-        const div = document.createElement('div');
-        div.className = 'producto';
-        div.style.border = '1px solid #ccc';
-        div.style.padding = '5px';
-        div.style.borderRadius = '6px';
-        div.style.margin = '5px';
-        div.innerHTML = `
-            ${imageUrl ? `<img src="${imageUrl}" style="width:100%; border-radius:4px;">` : ''}
-            <p><strong>${promo.nombre}</strong></p>
-            <p>$${promo.precio.toFixed(2)}</p>
-            <div>
-                <button class="minusBtn">-</button>
-                <input type="number" min="0" value="${cantidad}" style="width:40px;">
-                <button class="plusBtn">+</button>
-            </div>
-        `;
-        container.appendChild(div);
-
-        const minusBtn = div.querySelector('.minusBtn');
-        const plusBtn = div.querySelector('.plusBtn');
-        const input = div.querySelector('input');
-
-        minusBtn.onclick = () => {
-            let item = carritoCliente.find(p => p.id === promo.id);
-            if(item) {
-                item.cantidad = Math.max(0, item.cantidad -1);
-                if(item.cantidad === 0) carritoCliente = carritoCliente.filter(p => p.id !== promo.id);
-            }
-            input.value = carritoCliente.find(p => p.id === promo.id)?.cantidad || 0;
-            actualizarTotalCarrito();
-        };
-
-        plusBtn.onclick = () => {
-            let item = carritoCliente.find(p => p.id === promo.id);
-            if(item) item.cantidad++;
-            else carritoCliente.push({id: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1});
-            input.value = carritoCliente.find(p => p.id === promo.id).cantidad;
-            actualizarTotalCarrito();
-        };
-
-        input.oninput = () => {
-            const valor = parseInt(input.value) || 0;
-            let item = carritoCliente.find(p => p.id === promo.id);
-            if(valor === 0) carritoCliente = carritoCliente.filter(p => p.id !== promo.id);
-            else if(item) item.cantidad = valor;
-            else carritoCliente.push({id: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: valor});
-            actualizarTotalCarrito();
-        };
+    if (categoriaId) {
+        query = query.eq("categoria_id", categoriaId);
     }
 
-    actualizarTotalCarrito();
+    const { data: promos, error } = await query;
+    if (error) return console.error("Error al cargar promociones:", error);
+    
+    promocionesGlobal = promos; 
+    renderPromocionesList(promos); 
 }
 
-// ==================== TOTAL CARRITO ====================
-function actualizarTotalCarrito() {
-    const total = carritoCliente.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
-    document.getElementById('totalCarrito').textContent = `Total: $${total.toFixed(2)}`;
+/* ========================================================= Lógica de Inicialización ========================================================= */
+
+async function cargarTiendaCliente() {
+    // 1. Cargar Categorías (Botones)
+    const { data: cats, error } = await supabase.from("categorias").select("id,nombre").order("nombre");
+    if (error) return console.error("Error cargando categorías:", error);
+
+    const container = document.getElementById('categoriasContainer');
+    if (!container) return;
+
+    let html = ``;
+    // Botón para todas las categorías
+    html += `<button class="categoria-btn active" data-id="" onclick="cargarPromocionesPorCategoria('')">Todas</button>`;
+
+    cats.forEach(c => {
+        html += `<button class="categoria-btn" data-id="${c.id}" onclick="cargarPromocionesPorCategoria(${c.id})">${safeText(c.nombre)}</button>`;
+    });
+    
+    container.innerHTML = html;
+
+    // 2. Texto inicial (NO cargar promociones automáticamente, sino al hacer clic)
+    document.getElementById('productosContainer').innerHTML = `
+        <p style="color:#777;">Seleccioná una categoría para ver las promociones.</p>
+    `;
+    
+    // 3. Renderizar Carrito (DEBE IR DESPUÉS DE LA DEFINICIÓN DE renderCarritoCliente)
+    renderCarritoCliente();
 }
 
-// ==================== MODAL PEDIDO ====================
-async function abrirModalPedido() {
-    if(carritoCliente.length === 0) return alert("Debe seleccionar al menos un producto");
 
-    const modal = document.getElementById('pedidoModal');
-    const selectLocalidad = document.getElementById('modalLocalidadSelect');
-    const nombreInput = document.getElementById('modalClienteNombre');
+/* === MODAL === */
+function abrirModalPedido() {
+  document.getElementById('pedidoModal').style.display = 'block';
+  // 💥 Llamada a la nueva función de carga 💥
+  cargarLocalidadesModal(); 
+}
 
-    // Limpiar campos
-    nombreInput.value = '';
-    selectLocalidad.innerHTML = '<option value="">Seleccionar localidad...</option>';
+function cerrarModalPedido() {
+  document.getElementById('pedidoModal').style.display = 'none';
 
-    const { data: localidades, error } = await supabase.from('localidades').select('*').order('nombre', { ascending: true });
-    if(error) return alert("Error al cargar localidades: " + error.message);
+}
 
+
+async function cargarLocalidadesModal() {
+    const select = document.getElementById('modalLocalidadSelect');
+    if (!select) {
+        return console.error("Error: Elemento 'modalLocalidadSelect' no encontrado.");
+    }
+
+    // 1. Obtener datos de Supabase
+    const { data: localidades, error } = await supabase
+        .from('localidades')
+        .select('id, nombre')
+        .order('nombre', { ascending: true });
+
+    if (error) {
+        console.error("Error al cargar localidades:", error);
+        return;
+    }
+
+    // 2. Generar las opciones
+    let options = '<option value="">Seleccione su localidad</option>';
     localidades.forEach(loc => {
-        const option = document.createElement('option');
-        option.value = loc.id;
-        option.textContent = loc.nombre;
-        selectLocalidad.appendChild(option);
+        options += `<option value="${loc.id}">${loc.nombre}</option>`;
     });
 
-    modal.style.display = 'flex';
+    // 3. Insertar en el DOM
+    select.innerHTML = options;
 }
 
-document.getElementById('confirmarPedidoBtn').onclick = abrirModalPedido;
-
-document.getElementById('modalConfirmarBtn').onclick = async () => {
-    const nombre = document.getElementById('modalClienteNombre').value.trim();
-    const selectLocalidad = document.getElementById('modalLocalidadSelect');
-    const localidad_id = selectLocalidad.value;
-
-    if(!nombre) return alert("Ingrese su nombre");
-    if(!localidad_id) return alert("Seleccione una localidad");
-
-    const pedido = {
-        cliente: nombre,
-        localidad_id: parseInt(localidad_id),
-        productos: carritoCliente.map(p => ({id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio})),
-        total: carritoCliente.reduce((sum, p) => sum + p.precio*p.cantidad, 0),
-        estado: 'pendiente'
-    };
-
-    const { error } = await supabase.from('pedidos').insert([pedido]);
-    if(error) return alert("Error al generar pedido: " + error.message);
-
-    alert("Pedido enviado ✅");
-    carritoCliente = []; // Reiniciar solo después de confirmar pedido
-    renderPromociones(categoriaSeleccionada);
-    document.getElementById('pedidoModal').style.display = 'none';
-};
-
-// Cancelar modal
-document.getElementById('modalCancelarBtn').onclick = () => {
-    document.getElementById('pedidoModal').style.display = 'none';
-};
-
-// ==================== INICIALIZAR ====================
-cargarCategoriasYPromos();
 
 
+async function confirmarPedido() {
+  const nombre = document.getElementById('modalClienteNombre').value.trim();
+  const localidad = document.getElementById('modalLocalidadSelect').value;
+  if (!nombre || !localidad || !carritoCliente.length) {
+    alert("Completa los datos y selecciona productos antes de confirmar.");
+    return;
+  }
+
+// Actualizar indicador número de productos
+const countSpan = document.getElementById('carritoCount');
+if (countSpan) {
+  const totalItems = carritoCliente.reduce((s,p) => s + p.cantidad, 0);
+  countSpan.textContent = totalItems;
+}
 
 
+  const pedido = {
+    cliente: nombre,
+    localidad_id: localidad,
+    productos: carritoCliente,
+    total: carritoCliente.reduce((s, p) => s + p.precio * p.cantidad, 0),
+    created_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase.from('pedidos').insert(pedido);
+  if (error) {
+    alert("Error al enviar pedido.");
+    console.error(error);
+    return;
+  }
+
+  alert("✅ Pedido enviado correctamente");
+  carritoCliente = [];
+  renderCarritoCliente();
+  cerrarModalPedido();
+
+}
+
+document.addEventListener('DOMContentLoaded', cargarTiendaCliente);
 
 
 
@@ -3063,31 +3324,45 @@ async function deleteDocumento(id, archivo) {
 
 
 // === INICIALIZACIÓN DE EVENTOS ===
-document.addEventListener('DOMContentLoaded', () => {
-    // Conectar todos los botones de la barra lateral
+document.addEventListener('DOMContentLoaded', async () => {
+    // Conexiones de botones (Esto está bien y se mantiene)
     document.querySelectorAll('.sidebar .tab-btn').forEach(button => {
         button.addEventListener('click', function() {
             const tabName = this.getAttribute('data-tab');
 
             if (tabName === 'promos_menu') {
-                // Lógica especial para el desplegable
                 const subMenu = document.getElementById('promoSubMenu');
                 subMenu.classList.toggle('open');
                 this.classList.toggle('active', subMenu.classList.contains('open'));
             } else {
-                // Navegación normal
-                navigateTo(tabName);
+                // Navegación normal: Llama a activateSection, que también limpia
+                activateSection(tabName); 
             }
         });
-    });  
+    });
+
+    // 1. Carga los datos esenciales de la tienda al inicio
+    //    Usamos await para asegurarnos de que las categorías se inyectan en el DOM.
+    await cargarTiendaCliente();
+
+    // 2. 💥 SOLUCIÓN: Forzar la activación de la sección por defecto ('promos') 💥
+    //    Esto dispara:
+    //    a) El CSS para ocultar la sección 'clienteTienda'.
+    //    b) La llamada a limpiarContenedoresTienda() dentro de activateSection.
+    activateSection('promos'); 
+    
+    // 3. Cargar el resto de los datos (estos fetch ya NO deberían estar en el DCL, 
+    //    sino solo en la función activateSection para cada pestaña, pero se mantienen 
+    //    aquí para evitar otros errores de "not defined" si los usas al inicio)
+    fetchCategorias();
+    fetchLocalidades();
+    fetchPromos(); 
+    fetchOrders(); 
+    fetchDocumentos();
+    loadPromoSubMenu();
   
-  fetchCategorias();
-  fetchLocalidades();
-  fetchPromos();
-  fetchOrders();
-  fetchDocumentos();
-   loadPromoSubMenu();
- cargarCategoriasYPromos();
+
+
 
   const btnDocs = document.querySelector("button[data-tab='documentos']");
   if (btnDocs) btnDocs.addEventListener("click", fetchDocumentos);
@@ -3104,29 +3379,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Función única para manejar el cambio de secciones
-function activateSection(tab) {
-  // 1. Quita 'active' de todas las secciones
-  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-
-  // 2. Activa la sección seleccionada
-  const section = document.getElementById(tab);
-  if (section) section.classList.add('active');
-
-  // 3. Actualiza el menú lateral
-  // ... (código existente)
-
-  // 4. Carga los datos específicos según la pestaña
-  if (tab === 'promos') fetchPromos();
-  else if (tab === 'pedidos') fetchOrders();
-  else if (tab === 'categorias') fetchCategorias();
-  else if (tab === 'localidades') fetchLocalidades();
-  else if (tab === 'clientes') fetchClientes(); // Si existe
-  else if (tab === 'documentos') fetchDocumentos();
-  
-  // 💥 AÑADE ESTO: CARGAR LA TIENDA AL ACTIVAR LA PESTAÑA 💥
-  else if (tab === 'clienteTienda') cargarCategoriasYPromos(); 
-}
 
 
 
@@ -3134,15 +3386,14 @@ function activateSection(tab) {
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const tab = btn.getAttribute('data-tab');
-    activateSection(tab);
+    activateSection('promos');
     if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
       toggleSidebar();
     }
   });
 });
 
-// Mostrar 'Promos' por defecto al iniciar
-activateSection('promos');
+
 
 </script>
 </body>
