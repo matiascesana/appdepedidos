@@ -606,18 +606,25 @@
  <nav class="sidebar">
   <h2>MENU</h2>
   <ul style="list-style:none; padding:0; margin:0;">
-    <li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
-    <li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
+<li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>    
+<li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
+    
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
     <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
     <li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
-    <li><button class="tab-btn" data-tab="clienteTienda">Tienda Cliente</a></li>
-  </ul>
+    </ul>
 </nav>
    
     
     
 <div class="content">
+<!-- 🔹 Agregar este botón junto al de Exportar -->
+<div>
+<button id="addPromoBtn" 
+  style="margin-left:10px;padding:6px 12px;background:#2ecc71;color:#fff;
+  border:none;border-radius:6px;cursor:pointer;">
+  ➕ Nueva Promoción
+</div>
         <div id="promos" class="section active">
         <div style="margin-bottom:20px;">
 	<div id="promoCategoriaFilter" style="margin-bottom: 50px;">
@@ -669,6 +676,11 @@
         <label>Cliente</label>
         <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:500px;" /> <div>
 	</div>
+<!-- DNI -->
+	<div style="width:30%; min-width:180px; display:flex; flex-direction:column;">
+  <label>DNI</label>
+  <input id="pedidoDni" type="text" placeholder="Documento del cliente" style="width:500px;" />
+</div>
 <!-- Localidad -->
     	<div style=""width:30%; min-width:180px; display:flex; flex-direction:column;">
         <label>Localidad</label>
@@ -699,9 +711,26 @@
 	</div>
 	</div>
 
+
+
+
+<!-- 🔹 Modal de imagen ampliada -->
+<div id="imageModal" 
+     style="display:none; position:fixed; z-index:9999; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.85); justify-content:center; align-items:center;">
+  <img id="modalImage" 
+       src="" 
+       alt="Imagen de promoción" 
+       style="max-width:90%; max-height:90%; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.5);">
+</div>
+
+
+
+
+
 <div id="categorias" class="section">
 	<h1>Gestión de Categorías</h1>
- 	<input type="text" id="categoriaNombre" placeholder="Nueva categoría" />
+ 	
   	<button id="addCategoriaBtn">Agregar</button>
   	<div id="categoriaList"></div>
 	</div>
@@ -726,26 +755,7 @@
 
 
 
-       <div id="clienteTienda" class="section" style="display:none;">
-    <h2>Tienda</h2>
-
-
-       <!-- === CARRITO VISIBLE EN TIEMPO REAL === -->
-<div id="carritoResumen" style="
-    margin-top: 15px; 
-    background: #f9f9f9; 
-    border: 1px solid #ddd; 
-    border-radius: 8px; 
-    padding: 10px;
-">
-    <h4>🛒 Productos seleccionados</h4>
-    <div id="carritoLista" style="max-height: 300px; overflow-y: auto;">
-        <span class="text-muted">No hay productos seleccionados</span>
-    </div>
-</div> 
- <p>Total del Pedido: <span id="carritoTotal">$0.00</span></p>
-  <button onclick="abrirModalPedido()" style="margin-top:12px; padding:8px 16px;">Confirmar Pedido</button>
-</div>
+       
 
 
 <!-- Contenedor de categorías y promociones -->
@@ -762,10 +772,10 @@
     <h3>Confirmar Pedido</h3>
     <label>Nombre:</label>
     <input id="modalClienteNombre" type="text" placeholder="Nombre completo">
-    
+    <label>DNI:</label>
+<input id="modalClienteDni" type="text" placeholder="Documento del cliente">
     <label>Localidad:</label>
     <select id="modalLocalidadSelect"></select>
-    
     <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
       <button onclick="cerrarModalPedido()">Cancelar</button>
 <button onclick="confirmarPedido()">Confirmar Pedido</button>
@@ -812,7 +822,115 @@
 
 
 
+
+
+<!-- Modal Medios de Pago -->
+<div id="modalPago" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9999;">
+  <div style="background:white;padding:25px;border-radius:10px;max-width:500px;width:90%;text-align:left;">
+    <h3>Registrar Medios de Pago</h3>
+    <div id="listaPagos"></div>
+ Total: $<span id="pagoTotal">0.00</span>
+    <button onclick="agregarMedioPago()" 
+      style="margin:10px 0;background:#2ecc71;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
+      + Agregar método
+    </button>
+    <hr>
+    <p><b>Total pedido:</b> $<span id="totalPedido"></span></p>
+    <p><b>Total abonado:</b> $<span id="totalPagado">0.00</span></p>
+    <p><b>Saldo pendiente:</b> $<span id="saldoPendiente">0.00</span></p>
+    <p><b>Estado del Pedido:</b> $<span id="estadoPedido">Pendiente</span></p>
+    <div style="text-align:right;margin-top:15px;">
+      <button onclick="cerrarModalPago()" style="padding:8px 12px;">Cancelar</button>
+      <button onclick="guardarPagosPedido()" 
+        style="padding:8px 12px;background:#3498db;color:white;border:none;border-radius:6px;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="addPromoModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close-button" onclick="document.getElementById('addPromoModal').style.display='none'">&times;</span>
+    <h3>Nueva Promoción</h3>
+
+    <label for="newPromoNombre">Nombre de la promoción:</label>
+   <input type="text" id="newPromoNombre" placeholder="Nombre" />
+
+    <label for="newPromoPrecio">Precio ($):</label>
+    <input type="number" id="newPromoPrecio" min="0" step="0.01" />
+<label for="newPromoPrecioAnterior">Precio anterior ($):</label>
+<input type="number" id="newPromoPrecioAnterior" min="0" step="0.01">
+    <label for="newPromoStock">Stock (unidades):</label>
+    <input type="number" id="newPromoStock" name="stock" min="0">
+    <label for="newPromoCategoria">Categoría:</label>
+    <select id="newPromoCategoria"></select>
+
+    <label for="newPromoImagen">Imagen:</label>
+    <input type="file" id="newPromoImagen" accept="image/*">
+
+    <div style="margin-top: 20px; text-align: right;">
+      <button onclick="document.getElementById('addPromoModal').style.display='none'" class="cancel-btn">Cancelar</button>
+      <button onclick="guardarNuevaPromo()" class="save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+
 <script>
+
+
+
+document.getElementById("addPromoBtn").addEventListener("click", async () => {
+  // Cargar categorías para el select
+  const { data: categorias } = await supabase.from("categorias").select("id,nombre").order("nombre");
+  const select = document.getElementById("newPromoCategoria");
+  select.innerHTML = categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  document.getElementById("addPromoModal").style.display = "block";
+});
+
+async function guardarNuevaPromo() {
+  const nombre = document.getElementById("newPromoNombre").value.trim();
+  const precio = parseFloat(document.getElementById("newPromoPrecio").value);
+const precio_anterior = parseFloat(document.getElementById("newPromoPrecioAnterior").value) || null;
+  const stock = parseInt(document.getElementById("newPromoStock").value);
+  const categoria_id = document.getElementById("newPromoCategoria").value || null;
+  const file = document.getElementById("newPromoImagen").files[0];
+
+  if (!nombre || isNaN(precio) || isNaN(stock)) {
+    alert("Completa todos los campos obligatorios.");
+    return;
+  }
+
+  let imagenPath = null;
+  if (file) {
+    const fileName = `promo_${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("promo_images").upload(fileName, file);
+    if (uploadError) return alert("Error al subir la imagen: " + uploadError.message);
+    imagenPath = fileName;
+  }
+
+
+
+  const { error } = await supabase.from("promociones").insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: imagenPath }]);
+  if (error) return alert("Error al guardar: " + error.message);
+
+  document.getElementById("addPromoModal").style.display = "none";
+  showToast("✅ Promoción agregada correctamente");
+  fetchPromos(); // Refrescar lista
+}
+
+// 🔹 Limpiar campos para cargar una nueva promo
+  document.getElementById("newPromoNombre").value = "";
+  document.getElementById("newPromoPrecio").value = "";
+  document.getElementById("newPromoPrecioAnterior").value = "";
+  document.getElementById("newPromoStock").value = "";
+  document.getElementById("newPromoCategoria").selectedIndex = 0;
+  document.getElementById("newPromoImagen").value = "";
+
+
 
 // Función para mostrar la sección deseada y ocultar todas las demás
 function navigateTo(tabName) {
@@ -845,6 +963,22 @@ function navigateTo(tabName) {
     
 
 }
+
+
+// 🔹 Mostrar imagen en grande
+function mostrarImagenPromo(url) {
+  const modal = document.getElementById("imageModal");
+  const img = document.getElementById("modalImage");
+  img.src = url;
+  modal.style.display = "flex";
+}
+
+// 🔹 Cerrar modal al hacer clic en cualquier parte oscura o en la imagen
+document.getElementById("imageModal").addEventListener("click", () => {
+  document.getElementById("imageModal").style.display = "none";
+  document.getElementById("modalImage").src = "";
+});
+
 
 
 
@@ -1703,6 +1837,8 @@ async function exportSelectedPromos() {
                 img.style.display = 'block';
                 img.style.margin = '4px auto 0 auto';
                 img.crossOrigin = 'anonymous';
+		img.style.cursor = "pointer";
+		img.onclick = () => mostrarImagenPromo(promo.imagen_url);
                 let imgSrc = promo.imagen_url || '';
                 if (promo.imagen) {
                     try {
@@ -2140,7 +2276,7 @@ document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
     
     const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
     const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-    const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, productos: productosPayload, total }]);
+    const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, dni, productos: productosPayload, total }]);
     
     if(error) return alert(error.message);
     
@@ -2163,14 +2299,16 @@ async function getLocalidadNombre(id) {
 
 /* ================== LISTADO DE PEDIDOS OPTIMIZADO CON ESTADO ================== */
 let isFetchingOrders = false;
+let pedidoSeleccionado = null;
+let pagosActuales = [];
 
 async function fetchOrders() {
-  if (isFetchingOrders) return; // evita llamadas concurrentes
+  if (isFetchingOrders) return;
   isFetchingOrders = true;
 
   try {
     const container = document.getElementById("pedidoList");
-    container.innerHTML = ""; // limpia el contenedor antes de agregar
+    container.innerHTML = "";
 
     // 1️⃣ Obtener pedidos
     const { data: pedidos, error: pedidosError } = await supabase
@@ -2179,7 +2317,7 @@ async function fetchOrders() {
       .order("id", { ascending: true });
 
     if (pedidosError) throw pedidosError;
-    if (!pedidos || !pedidos.length) {
+    if (!pedidos?.length) {
       container.innerHTML = `<p style="color:#888;">No hay pedidos cargados.</p>`;
       return;
     }
@@ -2190,11 +2328,8 @@ async function fetchOrders() {
       .select("id, nombre");
 
     if (locError) throw locError;
-
     const localidadMap = {};
-    localidadesData.forEach(l => {
-      localidadMap[l.id] = l.nombre;
-    });
+    localidadesData.forEach(l => (localidadMap[l.id] = l.nombre));
 
     // 3️⃣ Agrupar pedidos por localidad
     const pedidosPorLocalidad = {};
@@ -2202,32 +2337,30 @@ async function fetchOrders() {
       const nombreLocalidad = p.localidad_id
         ? localidadMap[p.localidad_id] || "Sin Localidad"
         : "Sin Localidad";
-
-      // Inicializar estado si no existe
       if (!p.estado) p.estado = "pendiente";
-
-      if (!pedidosPorLocalidad[nombreLocalidad]) pedidosPorLocalidad[nombreLocalidad] = [];
+      if (!pedidosPorLocalidad[nombreLocalidad])
+        pedidosPorLocalidad[nombreLocalidad] = [];
       pedidosPorLocalidad[nombreLocalidad].push(p);
     });
 
-    // 4️⃣ Ordenar las localidades alfabéticamente
+    // 4️⃣ Ordenar las localidades
     const localidadesOrdenadas = Object.keys(pedidosPorLocalidad).sort((a, b) =>
       a.localeCompare(b, "es", { sensitivity: "base" })
     );
 
-    // 5️⃣ Renderizar cada grupo de localidad
+    // 5️⃣ Renderizar
     for (const localidad of localidadesOrdenadas) {
       const pedidosDeLocalidad = pedidosPorLocalidad[localidad];
 
-      // Ordenar pedidos por estado (pendientes arriba) y nombre de cliente
       pedidosDeLocalidad.sort((a, b) => {
-        if (a.estado !== b.estado) return a.estado === "pendiente" ? -1 : 1;
+        if (a.estado !== b.estado)
+          return a.estado === "pendiente" ? -1 : 1;
         return (a.cliente || "").localeCompare(b.cliente || "", "es", { sensitivity: "base" });
       });
 
-      // Título de localidad
+      // Título
       const titulo = document.createElement("h2");
-      titulo.textContent = `📍 ${localidad}`;
+      titulo.textContent = `${localidad}`;
       Object.assign(titulo.style, {
         marginTop: "25px",
         marginBottom: "10px",
@@ -2240,12 +2373,9 @@ async function fetchOrders() {
       });
       container.appendChild(titulo);
 
-      // Renderizar pedidos dentro de esa localidad
+      // Tarjetas
       for (const p of pedidosDeLocalidad) {
-        const localidadNombre = localidad;
-
         const div = document.createElement("div");
-        div.className = "item-card";
         Object.assign(div.style, {
           display: "flex",
           alignItems: "stretch",
@@ -2258,23 +2388,41 @@ async function fetchOrders() {
           border: "1px solid #eee",
         });
 
-        // Información del pedido
+        // 🧾 Info
         const infoDiv = document.createElement("div");
         infoDiv.style.flex = "1";
+
         let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
         p.productos.forEach(pr => {
           prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
         });
         prodHTML += "</ul>";
 
+        // 💰 Mostrar pagos si existen
+        let pagosHTML = "";
+        if (p.pagos && p.pagos.length > 0) {
+          pagosHTML = `
+            <div style="margin-top:8px;background:#f8f9fa;padding:8px;border-radius:6px;">
+              <b>💳 Pagos:</b><br>
+              ${p.pagos
+                .map(pg => `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${pg.monto.toFixed(2)}`)
+                .join("<br>")}
+              ${p.saldo_pendiente > 0
+                ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${p.saldo_pendiente.toFixed(2)}</b>`
+                : ""}
+            </div>
+          `;
+        }
+
         infoDiv.innerHTML = `
           <strong>${safeText(p.cliente)}</strong>
-          <div style="color:#888;margin-bottom:2px;">${localidadNombre ? "Localidad: " + safeText(localidadNombre) : ""}</div>
+          <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
           ${prodHTML}
           <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+          ${pagosHTML}
         `;
 
-        // Botones
+        // 🎛️ Botones
         const actionsDiv = document.createElement("div");
         Object.assign(actionsDiv.style, {
           display: "flex",
@@ -2294,7 +2442,7 @@ async function fetchOrders() {
           fontWeight: "bold",
           cursor: "pointer",
         });
-        pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidadNombre });
+        pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidad });
 
         const editBtn = document.createElement("button");
         editBtn.textContent = "✏️ Editar";
@@ -2322,7 +2470,23 @@ async function fetchOrders() {
         });
         deleteBtn.onclick = () => deleteOrder(p.id);
 
-        // 🔹 Botón de estado Entregado / Pendiente
+        // 💰 Botón Medios de Pago
+        const pagoBtn = document.createElement("button");
+        pagoBtn.textContent = "💰 Medios de Pago";
+        Object.assign(pagoBtn.style, {
+          background: "#27ae60",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+          width: "300px",
+          textAlign: "center",
+        });
+        pagoBtn.onclick = () => abrirModalPago(p);
+
+        // 🔹 Botón Estado
         const estadoBtn = document.createElement("button");
         estadoBtn.textContent = p.estado === "entregado" ? "Entregado" : "Pendiente";
         Object.assign(estadoBtn.style, {
@@ -2333,31 +2497,19 @@ async function fetchOrders() {
           borderRadius: "7px",
           fontWeight: "bold",
           cursor: "pointer",
- width: "900px",           // 🔹 ocupa todo el ancho
-  textAlign: "center",     // 🔹 centra el texto
-  marginTop: "10px"        // 🔹 un pequeño margen arriba
-});
+          width: "300px",
+          textAlign: "center",
+          marginTop: "10px",
+        });
         estadoBtn.onclick = async () => {
-          // Alternar estado
           p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
-
-          // Actualizar en DB
-          const { error } = await supabase.from('pedidos')
-            .update({ estado: p.estado })
-            .eq('id', p.id);
+          const { error } = await supabase.from("pedidos").update({ estado: p.estado }).eq("id", p.id);
           if (error) return alert(error.message);
-
-          // Re-renderizar toda la lista para mantener orden
           fetchOrders();
         };
 
-        actionsDiv.appendChild(pdfBtn);
-        actionsDiv.appendChild(editBtn);
-        actionsDiv.appendChild(deleteBtn);
-        actionsDiv.appendChild(estadoBtn); // agregar al final
-
-        div.appendChild(infoDiv);
-        div.appendChild(actionsDiv);
+        actionsDiv.append(pdfBtn, editBtn, deleteBtn, pagoBtn, estadoBtn);
+        div.append(infoDiv, actionsDiv);
         container.appendChild(div);
       }
     }
@@ -2365,9 +2517,156 @@ async function fetchOrders() {
     console.error(err);
     showToast("Error al cargar pedidos");
   } finally {
-    isFetchingOrders = false; // desbloquear flag
+    isFetchingOrders = false;
   }
 }
+
+
+
+function abrirModalPago(pedido) {
+  pedidoSeleccionado = pedido;
+  pagosActuales = pedido.pagos || [];
+
+  // Mostrar datos del pedido
+  document.getElementById("totalPedido").textContent = Number(pedido.total || 0).toFixed(2);
+  document.getElementById("estadoPedido").textContent = pedido.estado || "Pendiente";
+
+  // Limpiar lista de pagos
+  const lista = document.getElementById("listaPagos");
+  lista.innerHTML = "";
+
+  // Crear filas existentes o una vacía
+  if (pagosActuales.length > 0) {
+    pagosActuales.forEach((p, i) => crearFilaPago(i, p.metodo, p.monto, p.destinatario));
+  } else {
+    crearFilaPago(0);
+  }
+
+  // Recalcular totales
+  recalcularPagos();
+
+  // Mostrar modal
+  document.getElementById("modalPago").style.display = "block";
+}
+
+
+function recalcularPagos() {
+  const lista = document.getElementById("listaPagos");
+  let totalPagos = 0;
+
+  lista.querySelectorAll(".fila-pago").forEach(fila => {
+    const montoInput = fila.querySelector('input[placeholder="Monto"]');
+    const monto = montoInput ? parseFloat(montoInput.value) || 0 : 0;
+    totalPagos += monto;
+  });
+
+  document.getElementById("totalPagado").textContent = totalPagos.toFixed(2);
+
+  const totalPedido = Number(pedidoSeleccionado.total || 0);
+  const saldoPendiente = Math.max(0, totalPedido - totalPagos);
+  document.getElementById("saldoPendiente").textContent = saldoPendiente.toFixed(2);
+}
+
+
+
+function cerrarModalPago() {
+  const modal = document.getElementById("modalPago");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+
+
+function crearFilaPago(index, metodo = '', monto = 0, destinatario = '') {
+  const lista = document.getElementById("listaPagos");
+
+  const fila = document.createElement("div");
+  fila.className = "fila-pago";
+  fila.style.display = "flex";
+  fila.style.gap = "10px";
+  fila.style.marginBottom = "8px";
+  fila.style.alignItems = "center";
+
+  // Select método de pago
+  const selectMetodo = document.createElement("select");
+  const opciones = ["Transferencia", "Efectivo"];
+  opciones.forEach(op => {
+    const option = document.createElement("option");
+    option.value = op;
+    option.textContent = op;
+    if (op === metodo) option.selected = true;
+    selectMetodo.appendChild(option);
+  });
+
+  // Input monto
+  const inputMonto = document.createElement("input");
+  inputMonto.type = "number";
+  inputMonto.placeholder = "Monto";
+  inputMonto.value = monto;
+  inputMonto.min = 0;
+  inputMonto.step = "0.01";
+  inputMonto.oninput = recalcularPagos; // recalcular al cambiar
+
+  // Input destinatario
+  const inputDest = document.createElement("input");
+  inputDest.type = "text";
+  inputDest.placeholder = "Destinatario";
+  inputDest.value = destinatario;
+
+  // Botón eliminar
+  const btnEliminar = document.createElement("button");
+  btnEliminar.textContent = "❌";
+  btnEliminar.onclick = () => {
+    lista.removeChild(fila);
+    recalcularPagos();
+  };
+
+  fila.append(selectMetodo, inputMonto, inputDest, btnEliminar);
+  lista.appendChild(fila);
+}
+
+
+
+async function guardarPagosPedido() {
+  if (!pedidoSeleccionado) return alert("No hay pedido seleccionado");
+
+  const lista = document.getElementById("listaPagos");
+  const pagos = [];
+
+  lista.querySelectorAll(".fila-pago").forEach(fila => {
+    const metodoSelect = fila.querySelector("select");
+    const metodo = metodoSelect ? metodoSelect.value : "";
+
+    const montoInput = fila.querySelector('input[placeholder="Monto"]');
+    const monto = montoInput ? parseFloat(montoInput.value) || 0 : 0;
+
+    const destInput = fila.querySelector('input[placeholder="Destinatario"]');
+    const destinatario = destInput ? destInput.value : "";
+
+    if (metodo && monto > 0) {
+      pagos.push({ metodo, monto, destinatario });
+    }
+  });
+
+  const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
+  const saldo_pendiente = Math.max(0, pedidoSeleccionado.total - totalPagos);
+
+  // Guardar en Supabase
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ pagos, saldo_pendiente })
+    .eq("id", pedidoSeleccionado.id);
+
+  if (error) return alert("Error al guardar pagos: " + error.message);
+
+  // Cerrar modal y refrescar
+  cerrarModalPago();
+  fetchOrders();
+  alert("Pagos guardados correctamente");
+}
+
+
 
 
 
@@ -2584,6 +2883,11 @@ async function editOrderModal(pedido) {
 
 
 
+function agregarMedioPago() {
+  const lista = document.getElementById("listaPagos");
+  const nuevaFilaIndex = lista.querySelectorAll(".fila-pago").length;
+  crearFilaPago(nuevaFilaIndex); // Crea una fila vacía
+}
 
 
 
@@ -2639,8 +2943,8 @@ async function exportPedidoPDF(pedido) {
     const lineY = margin + logoHeight + 10;
 
     // 1️⃣ Obtener logo desde Supabase Storage
-    const BUCKET_NAME = 'promo_images'; // ✅ CAMBIÁ si tu bucket se llama distinto
-    const LOGO_PATH = 'logodistribuidora.png'; // ✅ nombre exacto del archivo en Supabase
+    const BUCKET_NAME = 'promo_images'; // CAMBIAR si tu bucket es distinto
+    const LOGO_PATH = 'logodistribuidora.png';
     let logoImgData = null;
 
     try {
@@ -2650,7 +2954,6 @@ async function exportPedidoPDF(pedido) {
 
       if (logoErr) throw logoErr;
       if (logoSignedData?.signedUrl) {
-        // Convertir logo a Base64
         const response = await fetch(logoSignedData.signedUrl);
         if (!response.ok) throw new Error("Error al descargar el logo (status " + response.status + ")");
         const blob = await response.blob();
@@ -2683,27 +2986,27 @@ async function exportPedidoPDF(pedido) {
 
     // 3️⃣ Datos del cliente y del pedido
     pdf.setFont('helvetica', 'normal');
-pdf.setFontSize(12);
+    pdf.setFontSize(12);
 
-let y = lineY + 30;
+    let y = lineY + 30;
 
-// Cliente
-const clienteText = `Cliente: ${pedido.cliente || ''}`;
-const splitCliente = pdf.splitTextToSize(clienteText, pageWidth - margin * 2);
-pdf.text(splitCliente, margin, y);
-y += splitCliente.length * 15; // altura de las líneas del cliente
+    // Cliente
+    const clienteText = `Cliente: ${pedido.cliente || ''}`;
+    const splitCliente = pdf.splitTextToSize(clienteText, pageWidth - margin * 2);
+    pdf.text(splitCliente, margin, y);
+    y += splitCliente.length * 15;
 
-// Localidad
-const localidadText = `Localidad: ${pedido.localidad || pedido.localidad_nombre || ''}`;
-const splitLocalidad = pdf.splitTextToSize(localidadText, pageWidth - margin * 2);
-pdf.text(splitLocalidad, margin, y);
-y += splitLocalidad.length * 15; // altura de las líneas de localidad
+    // Localidad
+    const localidadText = `Localidad: ${pedido.localidad || pedido.localidad_nombre || ''}`;
+    const splitLocalidad = pdf.splitTextToSize(localidadText, pageWidth - margin * 2);
+    pdf.text(splitLocalidad, margin, y);
+    y += splitLocalidad.length * 15;
 
-// Fecha del sistema
-const fechaSistema = new Date().toLocaleString();
-y += 5; // 🔹 pequeño margen extra antes de la fecha
-pdf.text(`Fecha: ${fechaSistema}`, margin, y);
-y += 25; // espacio antes de la tabla de productos
+    // Fecha del sistema
+    const fechaSistema = new Date().toLocaleString();
+    y += 5;
+    pdf.text(`Fecha: ${fechaSistema}`, margin, y);
+    y += 25;
 
     // 4️⃣ Tabla de productos
     pdf.setFont('helvetica', 'bold');
@@ -2715,7 +3018,6 @@ y += 25; // espacio antes de la tabla de productos
     const colWidths = [220, 80, 80, 80];
     let x = margin;
 
-    // Dibujar encabezados de la tabla
     headers.forEach((h, i) => {
       pdf.text(h, x, y);
       x += colWidths[i];
@@ -2725,30 +3027,71 @@ y += 25; // espacio antes de la tabla de productos
     y += 15;
 
     let total = 0;
-   pedido.productos.forEach(prod => {
-  const sub = prod.cantidad * prod.precio;
-  total += sub;
+    pedido.productos.forEach(prod => {
+      const sub = prod.cantidad * prod.precio;
+      total += sub;
 
-  const nombreWrap = pdf.splitTextToSize(String(prod.nombre), colWidths[0] - 10);
+      const nombreWrap = pdf.splitTextToSize(String(prod.nombre), colWidths[0] - 10);
+      pdf.text(nombreWrap, margin, y);
+      pdf.text(String(prod.cantidad), margin + colWidths[0], y);
+      pdf.text(`$${prod.precio.toFixed(2)}`, margin + colWidths[0] + colWidths[1], y);
+      pdf.text(`$${sub.toFixed(2)}`, margin + colWidths[0] + colWidths[1] + colWidths[2], y);
 
-  pdf.text(nombreWrap, margin, y);
-  pdf.text(String(prod.cantidad), margin + colWidths[0], y);
-  pdf.text(`$${prod.precio.toFixed(2)}`, margin + colWidths[0] + colWidths[1], y);
-  pdf.text(`$${sub.toFixed(2)}`, margin + colWidths[0] + colWidths[1] + colWidths[2], y);
+      y += nombreWrap.length * 15 + 8;
+    });
 
-  y += nombreWrap.length * 15 + 8; // 🔥 suma espacio proporcional
-});
+    // 5️⃣ Pagos realizados
+    if (pedido.pagos && pedido.pagos.length > 0) {
+      y += 20;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text("Pagos Realizados", margin, y);
+      y += 15;
+      pdf.setFont('helvetica', 'normal');
 
-    // 5️⃣ Total final
+      const pagoHeaders = ["Método", "Destinatario", "Monto"];
+      const pagoColWidths = [150, 150, 100];
+      let xPago = margin;
+
+      pagoHeaders.forEach((h, i) => {
+        pdf.text(h, xPago, y);
+        xPago += pagoColWidths[i];
+      });
+      y += 10;
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 15;
+
+      pedido.pagos.forEach(pg => {
+        const destinatario = pg.destinatario || '-';
+        const metodo = pg.metodo || '-';
+        const monto = pg.monto ? `$${pg.monto.toFixed(2)}` : '$0.00';
+
+        pdf.text(metodo, margin, y);
+        pdf.text(destinatario, margin + pagoColWidths[0], y);
+        pdf.text(monto, margin + pagoColWidths[0] + pagoColWidths[1], y);
+
+        y += 15;
+      });
+    }
+
+    // 6️⃣ Total final
     pdf.setFont('helvetica', 'bold');
     y += 10;
     pdf.line(margin, y, pageWidth - margin, y);
     y += 25;
-    pdf.text(`TOTAL: $${total.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
 
-    // 6️⃣ Guardar PDF
+    const totalPagos = (pedido.pagos || []).reduce((sum, p) => sum + (p.monto || 0), 0);
+    const saldoPendiente = Math.max(0, total - totalPagos);
+
+    pdf.text(`TOTAL PEDIDO: $${total.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
+    y += 15;
+    pdf.text(`TOTAL PAGADO: $${totalPagos.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
+    y += 15;
+    pdf.text(`SALDO PENDIENTE: $${saldoPendiente.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
+
+    // 7️⃣ Guardar PDF
     const safeName = pedido.cliente.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     pdf.save(`Pedido_${safeName}_${pedido.id || ''}.pdf`);
+
   } catch (err) {
     console.error("❌ Error al exportar pedido:", err);
     alert("Error al generar el PDF: " + err.message);
@@ -2756,6 +3099,24 @@ y += 25; // espacio antes de la tabla de productos
 }
 
 
+
+
+
+// === MÉTODOS DE PAGO ===
+if (pedidoSeleccionado && pedidoSeleccionado.pagos && pedidoSeleccionado.pagos.length > 0) {
+  let pagosTexto = pedidoSeleccionado.pagos
+    .map(p => `${p.metodo}${p.destinatario ? ` (${p.destinatario})` : ""}: $${p.monto.toFixed(2)}`)
+    .join("\n");
+  const finalY = doc.lastAutoTable?.finalY || 100;
+  doc.setFontSize(12);
+  doc.text("Métodos de Pago:", 10, finalY + 10);
+  doc.text(pagosTexto, 10, finalY + 18);
+  if (pedidoSeleccionado.saldo_pendiente > 0) {
+    doc.setTextColor(200, 0, 0);
+    doc.text(`Saldo Pendiente: $${pedidoSeleccionado.saldo_pendiente.toFixed(2)}`, 10, finalY + 32);
+    doc.setTextColor(0, 0, 0);
+  }
+}
 
 
 
@@ -2786,315 +3147,6 @@ function navigateTo(section) {
     // document.getElementById(section).classList.add('active'); // Lógica real de activación
 }
 
-
-/* ========================================================= Lógica del Carrito y Total ========================================================= */
-
-function renderCarritoCliente() {
-    // 💥 NOTA: Asumiendo que has corregido el ID del total a 'carritoTotal' 💥
-    const lista = document.getElementById('carritoLista');
-    const totalElement = document.getElementById('carritoTotal');
-    const countSpan = document.getElementById('carritoCount'); // Asumiendo que existe
-
-    if (!lista || !totalElement) {
-        // Esto permite que el resto del código se ejecute si la lista o total no están cargados.
-        return console.error("Error: Elemento 'carritoLista' o 'carritoTotal' no encontrado en el DOM.");
-    }
-
-    let html = ``;
-    let total = 0;
-    let totalItems = 0;
-
-    if (carritoCliente.length === 0) {
-        lista.innerHTML = `<span class="text-muted">No hay productos seleccionados</span>`;
-        totalElement.textContent = `$0.00`;
-        if (countSpan) countSpan.textContent = '0';
-        return;
-    }
-
-    html += `<table style="width:100%; border-collapse: collapse;">`;
-    html += `<tr style="border-bottom:1px solid #ccc;">
-                <th style="text-align:left;">Producto</th>
-                <th style="text-align:center;">Cant.</th>
-                <th style="text-align:right;">Subtotal</th>
-                <th></th>
-             </tr>`;
-
-    carritoCliente.forEach(p => {
-        const subtotal = p.precio * p.cantidad;
-        total += subtotal;
-        totalItems += p.cantidad;
-
-        html += `
-            <tr>
-                <td>${p.nombre}</td>
-                <td style="text-align:center;">
-                    <input type="number" min="1" value="${p.cantidad}" 
-                        style="width:60px; padding:3px;" 
-                        onchange="actualizarCantidadCarrito(${p.id}, this.value)">
-                </td>
-                <td style="text-align:right;">$${subtotal.toFixed(2)}</td>
-                <td><button onclick="eliminarDelCarrito(${p.id})" style="background:none; border:none; color:#ff4d4f; cursor:pointer; font-weight:bold;">❌</button></td>
-            </tr>
-        `;
-    });
-
-    html += `</table>`;
-    lista.innerHTML = html;
-    totalElement.textContent = `$${total.toFixed(2)}`;
-    if (countSpan) countSpan.textContent = totalItems;
-}
-
-function actualizarCantidadCarrito(id, nuevaCantidad) {
-    const numericId = parseInt(id);
-    const cantidad = parseInt(nuevaCantidad) || 0;
-    
-    if (cantidad <= 0) {
-        eliminarDelCarrito(numericId);
-        return;
-    }
-
-    const producto = carritoCliente.find(p => parseInt(p.id) === numericId);
-    if (producto) {
-        producto.cantidad = cantidad;
-    }
-    
-    renderCarritoCliente();
-}
-
-function eliminarDelCarrito(id) {
-    const numericId = parseInt(id);
-    carritoCliente = carritoCliente.filter(p => parseInt(p.id) !== numericId);
-    renderCarritoCliente();
-}
-
-/* ========================================================= Lógica de Cantidad Local ========================================================= */
-
-function actualizarCantidadLocal(id) {
-    const numericId = parseInt(id);
-    const cantidad = cantidadesLocales[numericId] || 0; 
-    const span = document.getElementById(`qty-local-${numericId}`);
-    if (span) {
-        span.textContent = cantidad;
-    }
-}
-
-function cambiarCantidadLocal(id, delta) {
-    const numericId = parseInt(id);
-    let cantidadActual = cantidadesLocales[numericId] || 0;
-    
-    cantidadActual += delta;
-    
-    if (cantidadActual < 0) cantidadActual = 0; 
-
-    cantidadesLocales[numericId] = cantidadActual; 
-    actualizarCantidadLocal(numericId);
-}
-
-function agregarAlCarrito(id) {
-    const numericId = parseInt(id);
-    const cantidad = cantidadesLocales[numericId] || 0;
-    
-    if (cantidad <= 0) {
-        showToast("Selecciona una cantidad mayor a cero.", 2500);
-        return;
-    }
-
-    const promo = promocionesGlobal.find(p => parseInt(p.id) === numericId);
-    if (!promo) return;
-
-    let item = carritoCliente.find(p => parseInt(p.id) === numericId);
-
-    if (item) {
-        item.cantidad += cantidad;
-    } else {
-        const { id: promoId, nombre, precio } = promo;
-        carritoCliente.push({ id: promoId, nombre, precio, cantidad: cantidad });
-    }
-
-    cantidadesLocales[numericId] = 0;
-    actualizarCantidadLocal(numericId);
-    
-    showToast(`¡${cantidad} ${promo.nombre} añadido al pedido!`);
-    
-    renderCarritoCliente();
-}
-
-/* ========================================================= Renderizado de Promociones y Eventos ========================================================= */
-
-function renderPromocionesList(promos) {
-    const cont = document.getElementById('productosContainer');
-    if (!cont) return;
-
-    if (promos.length === 0) {
-        cont.innerHTML = `<p style="color:#777; text-align:center;">No se encontraron promociones en esta categoría.</p>`;
-        return;
-    }
-
-    cont.innerHTML = promos.map(p => {
-        const { data } = supabase.storage.from('promo_images').getPublicUrl(p.imagen);
-        const imgUrl = data?.publicUrl || 'https://via.placeholder.com/200';
-        const cantidadLocal = cantidadesLocales[p.id] || 0;
-        
-        return `
-            <div class="promo-card">
-                <img src="${imgUrl}" alt="${p.nombre}">
-                <h4>${p.nombre}</h4>
-                <p>$${p.precio.toFixed(2)}</p>
-                <div class="qty-control">
-                    <button class="qty-btn-local minus" data-id="${p.id}">−</button>
-                    <span id="qty-local-${p.id}">${cantidadLocal}</span> 
-                    <button class="qty-btn-local plus" data-id="${p.id}">+</button>
-                </div>
-                <button class="btn-add-to-cart" data-id="${p.id}" 
-                    style="margin-top: 10px; padding: 10px; background-color: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-                    Añadir al Carrito
-                </button>
-            </div>
-        `;
-    }).join('');
-
-    conectarEventosTienda();
-}
-
-function conectarEventosTienda() {
-    document.querySelectorAll('.qty-btn-local.plus').forEach(btn => {
-        btn.onclick = () => cambiarCantidadLocal(btn.dataset.id, 1);
-    });
-    document.querySelectorAll('.qty-btn-local.minus').forEach(btn => {
-        btn.onclick = () => cambiarCantidadLocal(btn.dataset.id, -1);
-    });
-
-    document.querySelectorAll('.btn-add-to-cart').forEach(btn => {
-        btn.onclick = () => agregarAlCarrito(btn.dataset.id);
-    });
-}
-
-async function cargarPromocionesPorCategoria(categoriaId) {
-    // 💥 CORRECCIÓN: Se elimina el filtro 'visible' no existente 💥
-    let query = supabase.from("promociones").select("*").order("nombre");
-
-    if (categoriaId) {
-        query = query.eq("categoria_id", categoriaId);
-    }
-
-    const { data: promos, error } = await query;
-    if (error) return console.error("Error al cargar promociones:", error);
-    
-    promocionesGlobal = promos; 
-    renderPromocionesList(promos); 
-}
-
-/* ========================================================= Lógica de Inicialización ========================================================= */
-
-async function cargarTiendaCliente() {
-    // 1. Cargar Categorías (Botones)
-    const { data: cats, error } = await supabase.from("categorias").select("id,nombre").order("nombre");
-    if (error) return console.error("Error cargando categorías:", error);
-
-    const container = document.getElementById('categoriasContainer');
-    if (!container) return;
-
-    let html = ``;
-    // Botón para todas las categorías
-    html += `<button class="categoria-btn active" data-id="" onclick="cargarPromocionesPorCategoria('')">Todas</button>`;
-
-    cats.forEach(c => {
-        html += `<button class="categoria-btn" data-id="${c.id}" onclick="cargarPromocionesPorCategoria(${c.id})">${safeText(c.nombre)}</button>`;
-    });
-    
-    container.innerHTML = html;
-
-    // 2. Texto inicial (NO cargar promociones automáticamente, sino al hacer clic)
-    document.getElementById('productosContainer').innerHTML = `
-        <p style="color:#777;">Seleccioná una categoría para ver las promociones.</p>
-    `;
-    
-    // 3. Renderizar Carrito (DEBE IR DESPUÉS DE LA DEFINICIÓN DE renderCarritoCliente)
-    renderCarritoCliente();
-}
-
-
-/* === MODAL === */
-function abrirModalPedido() {
-  document.getElementById('pedidoModal').style.display = 'block';
-  // 💥 Llamada a la nueva función de carga 💥
-  cargarLocalidadesModal(); 
-}
-
-function cerrarModalPedido() {
-  document.getElementById('pedidoModal').style.display = 'none';
-
-}
-
-
-async function cargarLocalidadesModal() {
-    const select = document.getElementById('modalLocalidadSelect');
-    if (!select) {
-        return console.error("Error: Elemento 'modalLocalidadSelect' no encontrado.");
-    }
-
-    // 1. Obtener datos de Supabase
-    const { data: localidades, error } = await supabase
-        .from('localidades')
-        .select('id, nombre')
-        .order('nombre', { ascending: true });
-
-    if (error) {
-        console.error("Error al cargar localidades:", error);
-        return;
-    }
-
-    // 2. Generar las opciones
-    let options = '<option value="">Seleccione su localidad</option>';
-    localidades.forEach(loc => {
-        options += `<option value="${loc.id}">${loc.nombre}</option>`;
-    });
-
-    // 3. Insertar en el DOM
-    select.innerHTML = options;
-}
-
-
-
-async function confirmarPedido() {
-  const nombre = document.getElementById('modalClienteNombre').value.trim();
-  const localidad = document.getElementById('modalLocalidadSelect').value;
-  if (!nombre || !localidad || !carritoCliente.length) {
-    alert("Completa los datos y selecciona productos antes de confirmar.");
-    return;
-  }
-
-// Actualizar indicador número de productos
-const countSpan = document.getElementById('carritoCount');
-if (countSpan) {
-  const totalItems = carritoCliente.reduce((s,p) => s + p.cantidad, 0);
-  countSpan.textContent = totalItems;
-}
-
-
-  const pedido = {
-    cliente: nombre,
-    localidad_id: localidad,
-    productos: carritoCliente,
-    total: carritoCliente.reduce((s, p) => s + p.precio * p.cantidad, 0),
-    created_at: new Date().toISOString()
-  };
-
-  const { error } = await supabase.from('pedidos').insert(pedido);
-  if (error) {
-    alert("Error al enviar pedido.");
-    console.error(error);
-    return;
-  }
-
-  alert("✅ Pedido enviado correctamente");
-  carritoCliente = [];
-  renderCarritoCliente();
-  cerrarModalPedido();
-
-}
-
-document.addEventListener('DOMContentLoaded', cargarTiendaCliente);
 
 
 
@@ -3132,7 +3184,7 @@ if (!cont) return console.warn("No se encontró el contenedor de categorías");
                     <b>${safeText(cat.nombre)}</b>
                                    </div>
                 <div class="card-actions">
-                    <button class="delete-btn" onclick="deleteCategoria(${cat.id})">🗑️ Eliminar</button>
+                    <button onclick="deleteCategoria(5)">🗑️</button>
                 </div>
             `;
             container.appendChild(div);
@@ -3145,13 +3197,31 @@ if (!cont) return console.warn("No se encontró el contenedor de categorías");
 }
 
 
-async function addCategoria(){
-  const nombre = document.getElementById("categoriaNombre").value.trim();
-  if(!nombre) return alert("Ingrese nombre");
-  const {error} = await supabase.from("categorias").insert([{nombre}]);
-  if(error) return alert(error.message);
-  document.getElementById("categoriaNombre").value = "";
-  fetchCategorias();
+
+  document.getElementById("addCategoriaBtn")?.addEventListener("click", () => {
+  const nombre = prompt("Ingrese el nombre de la nueva categoría:");
+
+  if (nombre && nombre.trim() !== "") {
+    guardarNuevaCategoria(nombre.trim());
+  } else {
+    alert("Debes ingresar un nombre válido para la categoría.");
+  }
+});
+
+// Función para guardar la nueva categoría en Supabase
+async function guardarNuevaCategoria(nombre) {
+  try {
+    const { error } = await supabase
+      .from("categorias")
+      .insert([{ nombre }]);
+
+    if (error) throw error;
+
+    alert("✅ Categoría agregada correctamente");
+    fetchCategorias(); // vuelve a cargar la lista de categorías (si existe)
+  } catch (err) {
+    alert("Error al agregar categoría: " + err.message);
+  }
 }
 
 function editCategoria(id, nombre){
@@ -3163,20 +3233,36 @@ function editCategoria(id, nombre){
   `);
 }
 
-async function updateCategoria(id){
-  const nombre = document.getElementById("editCat").value.trim();
-  if(!nombre) return alert("Ingrese nombre");
-  const {error} = await supabase.from("categorias").update({nombre}).eq("id",id);
-  if(error) return alert(error.message);
-  closeModal();
-  fetchCategorias();
+
+async function deleteCategoria(id) {
+  if (!confirm("¿Seguro que querés eliminar esta categoría?")) return;
+
+  try {
+    // verificar si hay promociones usando esa categoría
+    const { data: promosRelacionadas, error: checkError } = await supabase
+      .from("promociones")
+      .select("id, nombre")
+      .eq("categoria_id", id);
+
+    if (checkError) throw checkError;
+
+    if (promosRelacionadas.length > 0) {
+      alert(`⚠️ No se puede eliminar esta categoría porque está asociada a ${promosRelacionadas.length} promoción(es).`);
+      return;
+    }
+
+    const { error } = await supabase.from("categorias").delete().eq("id", id);
+    if (error) throw error;
+
+    alert("✅ Categoría eliminada correctamente");
+    fetchCategorias();
+  } catch (err) {
+    alert("Error al eliminar categoría: " + err.message);
+  }
 }
 
-async function deleteCategoria(id){
-  if(!confirm("Eliminar categoría?")) return;
-  await supabase.from("categorias").delete().eq("id",id);
-  fetchCategorias();
-}
+
+
 
 
 // ================= LOCALIDADES =================
@@ -3341,9 +3427,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // 1. Carga los datos esenciales de la tienda al inicio
-    //    Usamos await para asegurarnos de que las categorías se inyectan en el DOM.
-    await cargarTiendaCliente();
+
 
     // 2. 💥 SOLUCIÓN: Forzar la activación de la sección por defecto ('promos') 💥
     //    Esto dispara:
