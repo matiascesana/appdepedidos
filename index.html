@@ -597,10 +597,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 
-<body>
+<body> 	
 
 
  <nav class="sidebar">
@@ -655,6 +656,14 @@
         
         <label for="modalStock">Stock (unidades):</label>
         <input type="number" id="modalStock" min="0" required>
+
+<!-- Campo: Categoría -->
+<label for="modalCategoria">Categoría:</label>
+<select id="modalCategoria" style="width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #ccc;">
+  <option value="">Cargando categorías...</option>
+</select>
+         
+
         
         <div style="margin-top: 20px; text-align: right;">
             <button onclick="document.getElementById('editPromoModal').style.display = 'none'" class="cancel-btn">Cancelar</button>
@@ -1156,6 +1165,44 @@ async function loadPromoSubMenu() {
 
 
 
+/**
+ * Carga las categorías existentes en el select del modal.
+ * @param {string|null} selectedId - ID de categoría actualmente seleccionada (si hay).
+ */
+async function loadCategoriesIntoModal(selectedId = null) {
+    const select = document.getElementById('modalCategoria');
+    if (!select) return;
+
+    try {
+        const { data: categorias, error } = await supabase
+            .from('categorias')
+            .select('id, nombre')
+            .order('nombre', { ascending: true });
+
+        if (error) throw error;
+
+        // Limpiar el select
+        select.innerHTML = '';
+
+        // Rellenar con opciones
+        categorias.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.nombre;
+            if (selectedId && parseInt(selectedId) === cat.id) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+    } catch (err) {
+        console.error('Error al cargar categorías:', err);
+        select.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
+
+
 
 // ===============================================
 // === 🆕 FUNCIONES DE EDICIÓN Y MODAL 🆕 ===
@@ -1190,6 +1237,8 @@ async function openEditModal(promoId) {
         document.getElementById('modalPrecio').value = promo.precio || 0;
         document.getElementById('modalPrecioAnterior').value = promo.precio_anterior || '';
         document.getElementById('modalStock').value = promo.stock || 0;
+
+await loadCategoriesIntoModal(promo.categoria_id || null);
         
         // Limpiar el campo de archivo por si se abre de nuevo
         document.getElementById('modalImageFile').value = '';
@@ -1213,6 +1262,8 @@ async function savePromotionChanges() {
     const newPrecio = parseFloat(document.getElementById('modalPrecio').value);
     const newPrecioAnterior = parseFloat(document.getElementById('modalPrecioAnterior').value) || null;
     const newStock = parseInt(document.getElementById('modalStock').value) || 0;
+const newCategoriaId = document.getElementById('modalCategoria').value || null;
+
 
     let newImageName = oldImageName;
     
@@ -1270,6 +1321,20 @@ async function savePromotionChanges() {
     } catch (err) {
         console.error('Error al guardar cambios:', err);
         alert('Error al guardar cambios: ' + err.message);
+
+
+const { error: updateError } = await supabase
+    .from('promociones')
+    .update({
+        precio: newPrecio,
+        precio_anterior: newPrecioAnterior,
+        stock: newStock,
+        imagen: newImageName,
+        categoria_id: newCategoriaId
+    })
+    .eq('id', promoId);
+
+
     }
 }
 
@@ -1746,7 +1811,7 @@ async function exportSelectedPromos() {
 
         const TITLE_HEIGHT = 25; // Altura estimada para el título de categoría + espacio
         const LOGO_HEIGHT = 60; 
-        const LOGO_WIDTH = 190;
+        const LOGO_WIDTH = 250;
 	const LOGO_VERTICAL_OFFSET = 10;
         const TITLE_LOGO_AREA_HEIGHT = Math.max(TITLE_HEIGHT, LOGO_HEIGHT) + 5; // Asegurar espacio para ambos
 
@@ -2677,17 +2742,21 @@ async function editOrderModal(pedido) {
     const { data: productosDB } = await supabase.from('promociones').select('*').order('id');
     const { data: categorias } = await supabase.from('categorias').select('*').order('id');
 
-    let productosPedido = pedido.productos.map(pr => ({ ...pr }));
+    // Clonamos los productos del pedido para edición y garantizamos campo descuento
+    let productosPedido = (pedido.productos || []).map(pr => ({ ...pr, descuento: pr.descuento || 0 }));
+    // Variable persistente dentro del modal para el descuento general
+    let descuentoGeneral = typeof pedido.descuento_general !== 'undefined' ? pedido.descuento_general : 0;
 
     function renderModal(stockMsg = "") {
         document.getElementById("modalInner").style.maxWidth = "1300px";
         document.getElementById("modalInner").style.width = "98%";
 
+        // Lista de productos en el pedido
         let listaHTML = `<ul id="productosPedidoList" style="margin-bottom:8px;">`;
         productosPedido.forEach((pr, idx) => {
             const prodInfo = productosDB.find(pdb => pdb.id === pr.id);
             const stockActualDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-            const stockOriginal = pedido.productos.find(op => op.id === pr.id)?.cantidad || 0;
+            const stockOriginal = (pedido.productos || []).find(op => op.id === pr.id)?.cantidad || 0;
             const stockBase = stockActualDB + stockOriginal;
 
             listaHTML += `
@@ -2697,17 +2766,24 @@ async function editOrderModal(pedido) {
                         <button class="qtyMinus" data-idx="${idx}" style="background:#ddd;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;">−</button>
                         <input type="number" min="1" max="${stockBase}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:50px;text-align:center;">
                         <button class="qtyPlus" data-idx="${idx}" style="background:#ddd;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;">+</button>
+                        <input type="number" min="0" max="100" value="${pr.descuento || 0}" 
+                               class="editDescuentoInput" data-idx="${idx}" style="width:50px;text-align:center;" placeholder="% Desc">
                     </div>
                     <span style="color:#888;">(stock: ${stockBase})</span>
-                    <span style="color:#3498db;font-weight:bold;">$${(pr.precio*pr.cantidad).toFixed(2)}</span>
+                    <span style="color:#3498db;font-weight:bold;">$${(pr.precio * pr.cantidad * (1 - (pr.descuento || 0)/100)).toFixed(2)}</span>
                     <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;">🗑️</button>
                 </li>
             `;
         });
         listaHTML += `</ul>`;
 
-        const total = productosPedido.reduce((s,p)=>s + p.precio*p.cantidad, 0);
+        // Calculamos total: primero descuentos por producto, luego descuento general
+        const totalSinDescuento = productosPedido.reduce((s, p) =>
+            s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0
+        );
+        const totalConDescuento = totalSinDescuento * (1 - (descuentoGeneral || 0) / 100);
 
+        // Abrimos modal con todo el HTML (manteniendo estilo / estructura)
         openModal(`
             <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
                 <h2 style="margin:0;font-size:1.3em;">Editar Pedido</h2>
@@ -2716,6 +2792,10 @@ async function editOrderModal(pedido) {
                 <div style="margin-bottom:16px;">
                     <label style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
                     <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:500;display:block;margin-bottom:4px;">DNI</label>
+                    <input type="text" id="editPedidoDni" value="${safeText(pedido.dni || '')}" placeholder="Ingrese DNI" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
                 </div>
                 <div style="margin-bottom:16px;">
                     <label style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
@@ -2730,7 +2810,12 @@ async function editOrderModal(pedido) {
                         ➕ Agregar productos
                     </button>
                     ${listaHTML}
-                    <div style="margin-top:8px;font-weight:bold;">Total: <span id="pedidoTotal" style="color:#ff4d4f;">$${total.toFixed(2)}</span></div>
+                    <div style="margin-bottom:16px;">
+                        <label style="font-weight:500;display:block;margin-bottom:4px;">Descuento general (%)</label>
+                        <input type="number" id="editDescuentoGeneral" value="${descuentoGeneral}" min="0" max="100" step="0.01"
+                               style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                    </div>
+                    <div style="margin-top:8px;font-weight:bold;">Total: <span id="pedidoTotal" style="color:#ff4d4f;">$${totalConDescuento.toFixed(2)}</span></div>
                     ${stockMsg ? `<div style="color:#ff4d4f;font-weight:bold;margin-top:10px;">${stockMsg}</div>` : ""}
                 </div>
                 <button id="saveEditPedidoBtn" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;">
@@ -2739,16 +2824,37 @@ async function editOrderModal(pedido) {
             </div>
         `);
 
-        // Botón abrir submodal de selección de productos
-        document.getElementById("openProductSelector").onclick = () => openSubModal();
+        // ---- IMPORTANT: don't re-run renderModal from this input; only update total ----
+        const descuentoInput = document.getElementById("editDescuentoGeneral");
+        if (descuentoInput) {
+            descuentoInput.oninput = (e) => {
+                let val = parseFloat(e.target.value);
+                if (isNaN(val)) val = 0;
+                if (val < 0) val = 0;
+                if (val > 100) val = 100;
+                descuentoGeneral = val;
 
-        // Botones + y −
+                // Recalcular total sin re-renderizar todo el modal
+                const totalSinDesc = productosPedido.reduce((s, p) =>
+                    s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0
+                );
+                const totalConDesc = totalSinDesc * (1 - descuentoGeneral / 100);
+                const totalSpan = document.getElementById("pedidoTotal");
+                if (totalSpan) totalSpan.textContent = `$${totalConDesc.toFixed(2)}`;
+            };
+        }
+
+        // Abrir submodal para agregar productos
+        const openSelectorBtn = document.getElementById("openProductSelector");
+        if (openSelectorBtn) openSelectorBtn.onclick = () => openSubModal();
+
+        // Botones + y − por producto
         document.querySelectorAll('.qtyPlus').forEach(btn => {
             btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
+                const idx = parseInt(btn.dataset.idx, 10);
                 const prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
                 const stockDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-                const stockOriginal = pedido.productos.find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const stockOriginal = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
                 const stockBase = stockDB + stockOriginal;
                 if (productosPedido[idx].cantidad < stockBase) {
                     productosPedido[idx].cantidad++;
@@ -2760,43 +2866,67 @@ async function editOrderModal(pedido) {
         });
         document.querySelectorAll('.qtyMinus').forEach(btn => {
             btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
+                const idx = parseInt(btn.dataset.idx, 10);
                 if (productosPedido[idx].cantidad > 1) {
                     productosPedido[idx].cantidad--;
                     renderModal();
                 }
             };
         });
+        // input cantidad
         document.querySelectorAll('.editQtyInput').forEach(input => {
             input.onchange = () => {
-                const idx = parseInt(input.dataset.idx);
+                const idx = parseInt(input.dataset.idx, 10);
                 const prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
                 const stockDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-                const stockOriginal = pedido.productos.find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const stockOriginal = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
                 const stockBase = stockDB + stockOriginal;
-                let val = Math.max(1, parseInt(input.value, 10));
+                let val = Math.max(1, parseInt(input.value, 10) || 1);
                 if (val > stockBase) val = stockBase;
                 productosPedido[idx].cantidad = val;
                 renderModal();
             };
         });
+        // input descuento por producto
+        document.querySelectorAll('.editDescuentoInput').forEach(input => {
+            input.onchange = () => {
+                const idx = parseInt(input.dataset.idx, 10);
+                let val = parseFloat(input.value);
+                if (isNaN(val)) val = 0;
+                if (val < 0) val = 0;
+                if (val > 100) val = 100;
+                productosPedido[idx].descuento = val;
+                renderModal();
+            };
+        });
+        // eliminar producto
         document.querySelectorAll('.deletePrBtn').forEach(btn => {
             btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
+                const idx = parseInt(btn.dataset.idx, 10);
                 productosPedido.splice(idx, 1);
                 renderModal();
             };
         });
 
         // Guardar cambios con validación manual
-        document.getElementById('saveEditPedidoBtn').onclick = () => {
-            const cliente = document.getElementById('editPedidoCliente').value.trim();
-            const localidad_id = document.getElementById('editPedidoLocalidad').value;
-            if (!cliente) return alert("Ingrese el nombre del cliente");
-            if (!localidad_id) return alert("Seleccione la localidad");
-            if (!productosPedido.length) return alert("Agregue productos");
-            saveEditPedido(pedido.id, productosPedido);
-        };
+        const saveBtn = document.getElementById('saveEditPedidoBtn');
+        if (saveBtn) {
+            saveBtn.onclick = () => {
+                const cliente = document.getElementById('editPedidoCliente').value.trim();
+                const dni = document.getElementById('editPedidoDni').value.trim();
+                const localidad_id = document.getElementById('editPedidoLocalidad').value;
+
+                if (!cliente) return alert("Ingrese el nombre del cliente");
+                if (!dni) return alert("Ingrese el DNI del cliente");
+                if (!localidad_id) return alert("Seleccione la localidad");
+                if (!productosPedido.length) return alert("Agregue productos");
+
+                // Antes de llamar al save, asignamos el descuento general al pedido (persistente en la variable)
+                pedido.descuento_general = descuentoGeneral;
+
+                saveEditPedido(pedido.id, productosPedido, dni);
+            };
+        }
     }
 
     // Submodal de selección de productos (igual que antes)
@@ -2817,7 +2947,7 @@ async function editOrderModal(pedido) {
 
         const lista = document.getElementById('listaProductosSubModal');
         function renderProductos(filtro = "", cat = "") {
-            let filtrados = productosDB.filter(p => 
+            let filtrados = productosDB.filter(p =>
                 (!cat || p.categoria_id == cat) &&
                 (p.nombre.toLowerCase().includes(filtro.toLowerCase()))
             );
@@ -2831,7 +2961,8 @@ async function editOrderModal(pedido) {
                 btn.onclick = () => {
                     const prod = productosDB.find(p => p.id == btn.dataset.id);
                     if (!productosPedido.some(pp => pp.id == prod.id)) {
-                        productosPedido.push({ id: prod.id, nombre: prod.nombre, cantidad: 1, precio: prod.precio });
+                        // mantenemos estructura original, añadimos campo descuento por defecto 0
+                        productosPedido.push({ id: prod.id, nombre: prod.nombre, cantidad: 1, precio: prod.precio, descuento: 0 });
                         closeModal();
                         renderModal();
                     }
@@ -2840,37 +2971,53 @@ async function editOrderModal(pedido) {
         }
         renderProductos();
 
-        document.getElementById('buscadorProducto').oninput = e => renderProductos(e.target.value, document.getElementById('filtroCategoria').value);
-        document.getElementById('filtroCategoria').onchange = e => renderProductos(document.getElementById('buscadorProducto').value, e.target.value);
+        const buscador = document.getElementById('buscadorProducto');
+        const filtro = document.getElementById('filtroCategoria');
+        if (buscador) buscador.oninput = e => renderProductos(e.target.value, filtro ? filtro.value : "");
+        if (filtro) filtro.onchange = e => renderProductos(buscador ? buscador.value : "", e.target.value);
     }
 
-    // Guardado con ajuste de stock (igual que antes)
-    window.saveEditPedido = async function(id, nuevosProductos) {
+    // Guardado con ajuste de stock (igual que antes) — ahora guarda descuento_general y recalcula total correctamente
+    window.saveEditPedido = async function(id, nuevosProductos, dni) {
         const cliente = document.getElementById('editPedidoCliente').value.trim();
         const localidad_id = document.getElementById('editPedidoLocalidad').value;
 
-
+        // Obtener pedido original para restaurar/ajustar stock
         const { data: pedidoOriginal } = await supabase.from('pedidos').select('*').eq('id', id).single();
         const productosOriginal = pedidoOriginal.productos || [];
         const mapOriginal = {};
         productosOriginal.forEach(p => mapOriginal[p.id] = p.cantidad);
         const mapNuevo = {};
         nuevosProductos.forEach(p => mapNuevo[p.id] = p.cantidad);
-        const allIds = new Set([...productosOriginal.map(p=>p.id), ...nuevosProductos.map(p=>p.id)]);
+        const allIds = new Set([...productosOriginal.map(p => p.id), ...nuevosProductos.map(p => p.id)]);
 
-        for(const prodId of allIds) {
+        for (const prodId of allIds) {
             const cantOriginal = mapOriginal[prodId] || 0;
-            const cantNueva    = mapNuevo[prodId]    || 0;
+            const cantNueva = mapNuevo[prodId] || 0;
             const dif = cantNueva - cantOriginal;
-            if(dif !== 0) {
+            if (dif !== 0) {
                 const { data: promo } = await supabase.from('promociones').select('*').eq('id', prodId).single();
                 await supabase.from('promociones').update({ stock: (promo.stock || 0) - dif }).eq('id', prodId);
             }
         }
 
-        const total = nuevosProductos.reduce((s,p)=>s + p.precio*p.cantidad, 0);
-        const { error } = await supabase.from('pedidos').update({ cliente, localidad_id, productos: nuevosProductos, total }).eq('id', id);
-        if(error) return alert(error.message);
+        // Recalcular total considerando descuentos por producto y descuento general
+        const totalSinDescuento = nuevosProductos.reduce((s, p) =>
+            s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0
+        );
+        const totalConDescuento = totalSinDescuento * (1 - (descuentoGeneral || 0) / 100);
+
+        // Guardar en supabase incluyendo descuento_general
+        const { error } = await supabase.from('pedidos').update({
+            cliente,
+            dni,
+            localidad_id,
+            productos: nuevosProductos,
+            total: totalConDescuento,
+            descuento_general: descuentoGeneral
+        }).eq('id', id);
+
+        if (error) return alert(error.message);
 
         closeModal();
         await fetchOrders();
@@ -2878,35 +3025,8 @@ async function editOrderModal(pedido) {
         showToast('Pedido actualizado correctamente');
     };
 
+    // Render inicial
     renderModal();
-}
-
-
-
-function agregarMedioPago() {
-  const lista = document.getElementById("listaPagos");
-  const nuevaFilaIndex = lista.querySelectorAll(".fila-pago").length;
-  crearFilaPago(nuevaFilaIndex); // Crea una fila vacía
-}
-
-
-
-
-async function agregarPedido(pedido) {
-  pedido.estado = "pendiente"; // nuevo pedido siempre pendiente
-  const { error } = await supabase.from('pedidos').insert([pedido]);
-  if (error) return alert('Error al guardar pedido: ' + error.message);
-
-  // Refrescar listado de pedidos
-  fetchOrders();
-
-  // Refrescar listado de clientes con pedidos
-  fetchClientes();
-
-  showToast('✅ Pedido agregado');
-
-  // 🔹 Reiniciar lista de productos para el próximo pedido
-  productosPedido = [];
 }
 
 
@@ -2929,195 +3049,219 @@ async function deleteOrder(id){
 
 
 // =========================================================
-// 🧾 EXPORTAR PEDIDO A PDF (Corregido y mejorado)
+// 🧾 EXPORTAR PEDIDO A PDF (Versión estable tipo descargarPDF)
 // =========================================================
 
 async function exportPedidoPDF(pedido) {
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const margin = 40;
-    const logoHeight = 70;
-    const logoWidth = 180;
-    const lineY = margin + logoHeight + 10;
-
-    // 1️⃣ Obtener logo desde Supabase Storage
-    const BUCKET_NAME = 'promo_images'; // CAMBIAR si tu bucket es distinto
-    const LOGO_PATH = 'logodistribuidora.png';
-    let logoImgData = null;
-
     try {
-      const { data: logoSignedData, error: logoErr } = await supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(LOGO_PATH, 3600);
+        const { jsPDF } = window.jspdf;
+        if (!jsPDF) throw new Error("jsPDF no está cargado. Asegúrate de incluir jspdf.umd.min.js y jspdf.plugin.autotable.min.js");
 
-      if (logoErr) throw logoErr;
-      if (logoSignedData?.signedUrl) {
-        const response = await fetch(logoSignedData.signedUrl);
-        if (!response.ok) throw new Error("Error al descargar el logo (status " + response.status + ")");
-        const blob = await response.blob();
+        const doc = new jsPDF("p", "mm", "a4");
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const marginX = 15;
+        const contentWidth = pageWidth - (marginX * 2);
 
-        logoImgData = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+        // ==============================
+        // 🔹 Datos del pedido y cliente
+        // ==============================
+        const nombreCliente = (pedido.cliente || "Sin nombre").trim();
+        const localidad = (pedido.localidad || pedido.localidad_nombre || "Sin localidad").trim();
+        const dni = (pedido.dni || "Sin DNI").trim();
+        const fecha = new Date().toLocaleString("es-AR");
+
+        if (!pedido.productos || pedido.productos.length === 0) {
+            alert("El pedido no contiene productos para generar el PDF.");
+            return;
+        }
+
+        // ==============================
+        // 💰 Calcular productos, descuentos y totales
+        // ==============================
+        let ahorroTotal = 0;        // ahorro por promociones
+        let descuentoTotal = 0;     // descuentos individuales
+
+        const productos = pedido.productos.map(p => {
+            const precioActual = p.precio || 0;
+            const cantidad = p.cantidad || 0;
+            const descuento = p.descuento || 0;
+            const precioConDescuento = precioActual * (1 - descuento / 100);
+            const subtotal = precioConDescuento * cantidad;
+
+            const subtotalSinDescuento = precioActual * cantidad;
+            descuentoTotal += subtotalSinDescuento - subtotal;
+
+            // calcular ahorro por promo (precio anterior - actual)
+            let ahorroPromo = 0;
+            if (p.precio_anterior && p.precio_anterior > precioActual) {
+                ahorroPromo = (p.precio_anterior - precioActual) * cantidad;
+                ahorroTotal += ahorroPromo;
+            }
+
+            return [
+                p.nombre || "Sin nombre",
+                cantidad,
+                p.precio_anterior && p.precio_anterior > precioActual ? `$${p.precio_anterior.toFixed(2)}` : "-",
+                `$${precioActual.toFixed(2)}`,
+                `$${subtotal.toFixed(2)}`
+            ];
         });
-      } else {
-        console.warn("No se pudo generar la URL firmada del logo");
-      }
+
+        const totalSinDescuento = pedido.productos.reduce((acc, p) => acc + (p.precio || 0) * (p.cantidad || 0), 0);
+        const descuentoGeneral = pedido.descuento_general || 0;
+        const totalConDescuentoGeneral = totalSinDescuento * (1 - descuentoGeneral / 100);
+        const totalFinal = totalConDescuentoGeneral - descuentoTotal;
+
+        const totalPagos = (pedido.pagos || []).reduce((sum, p) => sum + (p.monto || 0), 0);
+        const saldoPendiente = Math.max(0, totalFinal - totalPagos);
+
+        // ==============================
+        // 🖼️ Cargar logo desde Supabase
+        // ==============================
+        const logoURL = "https://ejbqlejlgprvwzrptojo.supabase.co/storage/v1/object/public/promo_images/logodistribuidora.png";
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = logoURL;
+
+        const generarContenidoYGuardar = (startY) => {
+            let currentY = startY;
+
+            // ==============================
+            // 🧾 Encabezado
+            // ==============================
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("Pedido de Cliente", pageWidth / 2, currentY, { align: "center" });
+            currentY += 15;
+
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Cliente: ${nombreCliente}`, marginX, currentY); currentY += 8;
+            doc.text(`DNI: ${dni}`, marginX, currentY); currentY += 8;
+            doc.text(`Localidad: ${localidad}`, marginX, currentY); currentY += 8;
+            doc.text(`Fecha: ${fecha}`, marginX, currentY); currentY += 8;
+
+            // ==============================
+            // 📦 Tabla de productos
+            // ==============================
+            doc.autoTable({
+                startY: currentY + 5,
+                head: [["Producto", "Cantidad", "Precio Ant.", "Precio Actual", "Subtotal"]],
+                body: productos,
+                styles: { fontSize: 10, cellPadding: 3, overflow: 'linebreak' },
+                headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+                columnStyles: {
+                    0: { cellWidth: 70 },
+                    1: { cellWidth: 20, halign: "center" },
+                    2: { cellWidth: 30, halign: "right" },
+                    3: { cellWidth: 30, halign: "right" },
+                    4: { cellWidth: 30, halign: "right" },
+                },
+                tableWidth: contentWidth,
+                margin: { left: marginX, right: marginX },
+            });
+
+            let finalY = doc.lastAutoTable.finalY;
+
+            // ==============================
+            // 💳 Pagos realizados
+            // ==============================
+            if (pedido.pagos && pedido.pagos.length > 0) {
+                const pagosTabla = pedido.pagos.map(pg => [
+                    pg.metodo || "-",
+                    pg.destinatario || "-",
+                    pg.monto ? `$${pg.monto.toFixed(2)}` : "$0.00"
+                ]);
+
+                finalY += 10;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(13);
+                doc.text("Pagos Realizados", marginX, finalY);
+
+                doc.autoTable({
+                    startY: finalY + 5,
+                    head: [["Método", "Destinatario", "Monto"]],
+                    body: pagosTabla,
+                    styles: { fontSize: 10, cellPadding: 3 },
+                    headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+                    columnStyles: {
+                        0: { cellWidth: 60 },
+                        1: { cellWidth: 80 },
+                        2: { cellWidth: 40, halign: "right" },
+                    },
+                    tableWidth: "wrap",
+                    margin: { left: marginX, right: marginX },
+                });
+                finalY = doc.lastAutoTable.finalY;
+            }
+
+            // ==============================
+            // 🧮 Totales
+            // ==============================
+            const totalX = pageWidth - marginX;
+
+            finalY += 10;
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Total del Pedido: $${totalSinDescuento.toFixed(2)}`, totalX, finalY, { align: "right" });
+            finalY += 8;
+            if (descuentoGeneral > 0) {
+                doc.text(`Descuento general (${descuentoGeneral.toFixed(2)}%): -$${(totalSinDescuento * descuentoGeneral / 100).toFixed(2)}`, totalX, finalY, { align: "right" });
+                finalY += 8;
+            }
+            doc.text(`Pagado: $${totalPagos.toFixed(2)}`, totalX, finalY, { align: "right" });
+            finalY += 8;
+            doc.text(`Saldo pendiente: $${saldoPendiente.toFixed(2)}`, totalX, finalY, { align: "right" });
+
+            // ==============================
+            // 💬 Líneas finales con descuentos
+            // ==============================
+            const descuentoAplicadoTotal = (totalSinDescuento - totalFinal) > 0 ? (totalSinDescuento - totalFinal) : 0;
+
+            finalY += 12;
+            doc.setFontSize(12);
+            doc.setTextColor(0, 102, 204); // Azul suave
+            if (ahorroTotal > 0) {
+                doc.text(`Suma de ahorro con promociones: $${ahorroTotal.toFixed(2)}`, marginX, finalY);
+                finalY += 7;
+            }
+            if (descuentoAplicadoTotal > 0) {
+                doc.text(`Se le aplicó un descuento de: $${descuentoAplicadoTotal.toFixed(2)}`, marginX, finalY);
+            }
+            doc.setTextColor(0, 0, 0);
+
+            // ==============================
+            // 💾 Guardar PDF
+            // ==============================
+            const safeName = nombreCliente.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const fechaArchivo = new Date().toISOString().split('T')[0];
+            doc.save(`Pedido_${safeName}_${fechaArchivo}.pdf`);
+        };
+
+        // ==============================
+        // 🖼️ Carga del logo
+        // ==============================
+        img.onload = () => {
+            const logoWidth = 110;
+            const logoHeight = 35;
+            const logoX = (pageWidth - logoWidth) / 2;
+            const startYAfterLogo = 55;
+            doc.addImage(img, 'PNG', logoX, 10, logoWidth, logoHeight);
+            generarContenidoYGuardar(startYAfterLogo);
+        };
+
+        img.onerror = () => {
+            console.warn("⚠️ No se pudo cargar el logo, generando PDF sin imagen.");
+            generarContenidoYGuardar(20);
+        };
+
+        if (img.complete) img.onload();
+
     } catch (err) {
-      console.warn("⚠️ No se pudo cargar el logo de la empresa:", err.message);
-      logoImgData = null;
+        console.error("❌ Error al generar el PDF:", err);
+        alert("Error al generar el PDF: " + err.message);
     }
-
-    // 2️⃣ Dibujar logo y encabezado
-    if (logoImgData) {
-      pdf.addImage(logoImgData, 'PNG', margin, margin, logoWidth, logoHeight);
-    }
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(18);
-    pdf.text("Pedido de Cliente", pageWidth - margin, margin + 30, { align: 'right' });
-
-    pdf.setLineWidth(0.5);
-    pdf.line(margin, lineY, pageWidth - margin, lineY);
-
-    // 3️⃣ Datos del cliente y del pedido
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-
-    let y = lineY + 30;
-
-    // Cliente
-    const clienteText = `Cliente: ${pedido.cliente || ''}`;
-    const splitCliente = pdf.splitTextToSize(clienteText, pageWidth - margin * 2);
-    pdf.text(splitCliente, margin, y);
-    y += splitCliente.length * 15;
-
-    // Localidad
-    const localidadText = `Localidad: ${pedido.localidad || pedido.localidad_nombre || ''}`;
-    const splitLocalidad = pdf.splitTextToSize(localidadText, pageWidth - margin * 2);
-    pdf.text(splitLocalidad, margin, y);
-    y += splitLocalidad.length * 15;
-
-    // Fecha del sistema
-    const fechaSistema = new Date().toLocaleString();
-    y += 5;
-    pdf.text(`Fecha: ${fechaSistema}`, margin, y);
-    y += 25;
-
-    // 4️⃣ Tabla de productos
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("Tu Compra", margin, y);
-    y += 15;
-    pdf.setFont('helvetica', 'normal');
-
-    const headers = ["Producto", "Cantidad", "Precio", "Subtotal"];
-    const colWidths = [220, 80, 80, 80];
-    let x = margin;
-
-    headers.forEach((h, i) => {
-      pdf.text(h, x, y);
-      x += colWidths[i];
-    });
-    y += 10;
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 15;
-
-    let total = 0;
-    pedido.productos.forEach(prod => {
-      const sub = prod.cantidad * prod.precio;
-      total += sub;
-
-      const nombreWrap = pdf.splitTextToSize(String(prod.nombre), colWidths[0] - 10);
-      pdf.text(nombreWrap, margin, y);
-      pdf.text(String(prod.cantidad), margin + colWidths[0], y);
-      pdf.text(`$${prod.precio.toFixed(2)}`, margin + colWidths[0] + colWidths[1], y);
-      pdf.text(`$${sub.toFixed(2)}`, margin + colWidths[0] + colWidths[1] + colWidths[2], y);
-
-      y += nombreWrap.length * 15 + 8;
-    });
-
-    // 5️⃣ Pagos realizados
-    if (pedido.pagos && pedido.pagos.length > 0) {
-      y += 20;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text("Pagos Realizados", margin, y);
-      y += 15;
-      pdf.setFont('helvetica', 'normal');
-
-      const pagoHeaders = ["Método", "Destinatario", "Monto"];
-      const pagoColWidths = [150, 150, 100];
-      let xPago = margin;
-
-      pagoHeaders.forEach((h, i) => {
-        pdf.text(h, xPago, y);
-        xPago += pagoColWidths[i];
-      });
-      y += 10;
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 15;
-
-      pedido.pagos.forEach(pg => {
-        const destinatario = pg.destinatario || '-';
-        const metodo = pg.metodo || '-';
-        const monto = pg.monto ? `$${pg.monto.toFixed(2)}` : '$0.00';
-
-        pdf.text(metodo, margin, y);
-        pdf.text(destinatario, margin + pagoColWidths[0], y);
-        pdf.text(monto, margin + pagoColWidths[0] + pagoColWidths[1], y);
-
-        y += 15;
-      });
-    }
-
-    // 6️⃣ Total final
-    pdf.setFont('helvetica', 'bold');
-    y += 10;
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 25;
-
-    const totalPagos = (pedido.pagos || []).reduce((sum, p) => sum + (p.monto || 0), 0);
-    const saldoPendiente = Math.max(0, total - totalPagos);
-
-    pdf.text(`TOTAL PEDIDO: $${total.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
-    y += 15;
-    pdf.text(`TOTAL PAGADO: $${totalPagos.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
-    y += 15;
-    pdf.text(`SALDO PENDIENTE: $${saldoPendiente.toFixed(2)}`, pageWidth - margin - 100, y, { align: 'right' });
-
-    // 7️⃣ Guardar PDF
-    const safeName = pedido.cliente.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    pdf.save(`Pedido_${safeName}_${pedido.id || ''}.pdf`);
-
-  } catch (err) {
-    console.error("❌ Error al exportar pedido:", err);
-    alert("Error al generar el PDF: " + err.message);
-  }
 }
-
-
-
-
-
-// === MÉTODOS DE PAGO ===
-if (pedidoSeleccionado && pedidoSeleccionado.pagos && pedidoSeleccionado.pagos.length > 0) {
-  let pagosTexto = pedidoSeleccionado.pagos
-    .map(p => `${p.metodo}${p.destinatario ? ` (${p.destinatario})` : ""}: $${p.monto.toFixed(2)}`)
-    .join("\n");
-  const finalY = doc.lastAutoTable?.finalY || 100;
-  doc.setFontSize(12);
-  doc.text("Métodos de Pago:", 10, finalY + 10);
-  doc.text(pagosTexto, 10, finalY + 18);
-  if (pedidoSeleccionado.saldo_pendiente > 0) {
-    doc.setTextColor(200, 0, 0);
-    doc.text(`Saldo Pendiente: $${pedidoSeleccionado.saldo_pendiente.toFixed(2)}`, 10, finalY + 32);
-    doc.setTextColor(0, 0, 0);
-  }
-}
-
 
 
 
@@ -3152,115 +3296,247 @@ function navigateTo(section) {
 
 
 // ================= CATEGORÍAS =================
+
 async function fetchCategorias() {
     try {
-        const { data: categorias = [], error: catError } = await supabase.from("categorias").select("*").order("id");
-        
-        if (catError) {
-            throw catError; 
-        }
-        
-	const cont = document.getElementById("categoriaList");
-if (!cont) return console.warn("No se encontró el contenedor de categorías");
+        // 1. Obtener datos de Supabase
+        const { data: categorias = [], error: catError } = await supabase
+            .from("categorias")
+            .select("*")
+           .order("nombre", { ascending: true });
 
 
-        // 1. Obtener el contenedor
+        if (catError) throw catError; 
+        
         const container = document.getElementById('categoriaList');
         
-        // ✅ VERIFICACIÓN CRÍTICA: Salir si el contenedor es null
+        // 2. Verificación Crítica: ¿Existe el contenedor en el DOM?
         if (!container) {
-            console.warn("Elemento 'categoriaList' no encontrado. La pestaña no está activa.");
+            console.warn("Elemento 'categoriaList' no encontrado. Asegúrate de que la pestaña de categorías esté activa.");
             return; 
         }
         
-        // Línea 1183 (o similar) se ejecuta SÓLO si 'container' existe
+        // 3. Limpiar el contenedor antes de renderizar
         container.innerHTML = ''; 
         
+        // 4. Renderizar cada categoría
         for (const cat of categorias) {
             const div = document.createElement('div');
             div.className = 'card';
-            div.innerHTML = `
-                <div class="card-info">
-                    <b>${safeText(cat.nombre)}</b>
-                                   </div>
-                <div class="card-actions">
-                    <button onclick="deleteCategoria(5)">🗑️</button>
-                </div>
-            `;
+            div.dataset.catId = cat.id;
+
+            // info
+            const info = document.createElement('div');
+            info.className = 'card-info';
+            info.style = 'font-size: 14px; color: #555; font-weight: normal;';
+            info.textContent = cat.nombre;
+
+            // acciones
+            const actions = document.createElement('div');
+            actions.className = 'card-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '✏️';
+            editBtn.addEventListener('click', () => editCategoria(cat.id, cat.nombre));
+
+            const delBtn = document.createElement('button');
+            delBtn.textContent = '🗑️';
+            delBtn.addEventListener('click', () => deleteCategoria(cat.id));
+
+            actions.appendChild(editBtn);
+            actions.appendChild(delBtn);
+
+            div.appendChild(info);
+            div.appendChild(actions);
             container.appendChild(div);
         }
 
     } catch (err) {
         console.error('fetchCategorias error', err.message || err);
-        showToast('Error cargando categorías.', 3000);
+        showToast ? showToast('Error cargando categorías.', 3000) : alert('Error cargando categorías: ' + (err.message || err));
     }
 }
 
 
 
-  document.getElementById("addCategoriaBtn")?.addEventListener("click", () => {
-  const nombre = prompt("Ingrese el nombre de la nueva categoría:");
+// ================= AGREGAR NUEVA CATEGORÍA =================
 
-  if (nombre && nombre.trim() !== "") {
-    guardarNuevaCategoria(nombre.trim());
-  } else {
-    alert("Debes ingresar un nombre válido para la categoría.");
-  }
+document.getElementById("addCategoriaBtn")?.addEventListener("click", () => {
+    const nombre = prompt("Ingrese el nombre de la nueva categoría:");
+
+    if (nombre && nombre.trim() !== "") {
+        guardarNuevaCategoria(nombre.trim());
+    } else {
+        alert("Debes ingresar un nombre válido para la categoría.");
+    }
 });
+
 
 // Función para guardar la nueva categoría en Supabase
 async function guardarNuevaCategoria(nombre) {
-  try {
-    const { error } = await supabase
-      .from("categorias")
-      .insert([{ nombre }]);
+    try {
+        const { error } = await supabase
+            .from("categorias")
+            .insert([{ nombre }]);
 
-    if (error) throw error;
+        if (error) throw error;
 
-    alert("✅ Categoría agregada correctamente");
-    fetchCategorias(); // vuelve a cargar la lista de categorías (si existe)
-  } catch (err) {
-    alert("Error al agregar categoría: " + err.message);
-  }
+        alert("✅ Categoría agregada correctamente");
+        fetchCategorias(); // vuelve a cargar la lista de categorías (si existe)
+    } catch (err) {
+        alert("Error al agregar categoría: " + err.message);
+    }
 }
 
-function editCategoria(id, nombre){
-  openModal("Editar categoría", `
-    <div style="padding:18px 12px;">
-      <input id="editCat" value="${escapeHtml(nombre)}" style="padding:10px 16px;border-radius:8px;border:1px solid #ccc;font-size:16px;">
-      <button onclick="updateCategoria(${id})" style="margin-left:10px;background:#3498db;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;">Guardar</button>
-    </div>
-  `);
+
+
+// ----------------- EDITAR CATEGORÍA (versión robusta) -----------------
+function editCategoria(id, nombre) {
+    const nombreSeguro = escapeHtml(nombre);
+
+    // Creamos el HTML completo del modal (título incluido)
+    const modalHtml = `
+        <div style="padding: 18px 12px; width: 100%;">
+            <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 18px; color: #333;">
+                Editar categoría
+            </h3>
+
+            <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                <input 
+                    id="editCat" 
+                    type="text" 
+                    value="${nombreSeguro}" 
+                    placeholder="Escriba el nuevo nombre"
+                    style="
+                        flex-grow: 1; 
+                        padding: 10px 16px;
+                        border-radius: 8px;
+                        border: 1px solid #ccc;
+                        font-size: 16px;
+                    "
+                >
+                <button 
+                    onclick="updateCategoria(${id})" 
+                    style="
+                        background: #3498db;
+                        color: #fff;
+                        border: none;
+                        padding: 10px 18px;
+                        border-radius: 8px;
+                        font-weight: bold;
+                        font-size: 16px;
+                        cursor: pointer;
+                        white-space: nowrap;
+                    "
+                >
+                    Guardar
+                </button>
+            </div>
+        </div>
+    `;
+
+    openModal(modalHtml);
+
+    // Enfocar el input tras abrir el modal
+    setTimeout(() => {
+        document.getElementById('editCat')?.focus();
+    }, 150);
 }
 
+
+
+
+// ================= ELIMINAR CATEGORÍA =================
 
 async function deleteCategoria(id) {
-  if (!confirm("¿Seguro que querés eliminar esta categoría?")) return;
+    if (!confirm("¿Seguro que querés eliminar esta categoría?")) return;
 
-  try {
-    // verificar si hay promociones usando esa categoría
-    const { data: promosRelacionadas, error: checkError } = await supabase
-      .from("promociones")
-      .select("id, nombre")
-      .eq("categoria_id", id);
+    try {
+        // verificar si hay promociones usando esa categoría
+        const { data: promosRelacionadas, error: checkError } = await supabase
+            .from("promociones")
+            .select("id, nombre")
+            .eq("categoria_id", id);
 
-    if (checkError) throw checkError;
+        if (checkError) throw checkError;
 
-    if (promosRelacionadas.length > 0) {
-      alert(`⚠️ No se puede eliminar esta categoría porque está asociada a ${promosRelacionadas.length} promoción(es).`);
-      return;
+        if (promosRelacionadas.length > 0) {
+            alert(`⚠️ No se puede eliminar esta categoría porque está asociada a ${promosRelacionadas.length} promoción(es).`);
+            return;
+        }
+
+        const { error } = await supabase.from("categorias").delete().eq("id", id);
+        if (error) throw error;
+
+        alert("✅ Categoría eliminada correctamente");
+        fetchCategorias();
+    } catch (err) {
+        alert("Error al eliminar categoría: " + err.message);
     }
-
-    const { error } = await supabase.from("categorias").delete().eq("id", id);
-    if (error) throw error;
-
-    alert("✅ Categoría eliminada correctamente");
-    fetchCategorias();
-  } catch (err) {
-    alert("Error al eliminar categoría: " + err.message);
-  }
 }
 
+
+
+// ================= ACTUALIZAR CATEGORÍA =================
+
+async function updateCategoria(id) {
+    const inputElement = document.getElementById("editCat");
+    if (!inputElement) {
+        return console.error("No se encontró el campo de edición (#editCat).");
+    }
+    
+    const nuevoNombre = inputElement.value.trim();
+
+    if (!nuevoNombre) {
+        alert("El nombre de la categoría no puede estar vacío.");
+        return;
+    }
+
+    try {
+        if (typeof closeModal === 'function') {
+            closeModal(); 
+        } else {
+            console.warn("Función closeModal() no definida. El modal debe cerrarse manualmente.");
+        }
+        
+        const { error } = await supabase
+            .from("categorias")
+            .update({ nombre: nuevoNombre })
+            .eq("id", id);
+
+        if (error) throw error;
+
+        alert("✅ Categoría actualizada correctamente.");
+        fetchCategorias(); 
+
+    } catch (err) {
+        console.error("Error al actualizar categoría:", err);
+        alert("Error al actualizar categoría: " + (err.message || 'Error desconocido'));
+    }
+}
+
+
+
+// ================= FUNCIONES DE SEGURIDAD =================
+
+function safeText(str) {
+    if (typeof str !== 'string') return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+
+function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 
 
