@@ -1233,14 +1233,20 @@ async function openEditModal(promoId) {
         document.getElementById('modalPromoId').value = promo.id;
         document.getElementById('modalOldImageName').value = promo.imagen || '';
         document.getElementById('modalCurrentImageName').textContent = promo.imagen || 'Sin imagen';
-        
         document.getElementById('modalPrecio').value = promo.precio || 0;
         document.getElementById('modalPrecioAnterior').value = promo.precio_anterior || '';
         document.getElementById('modalStock').value = promo.stock || 0;
 
-await loadCategoriesIntoModal(promo.categoria_id || null);
-        
-        // Limpiar el campo de archivo por si se abre de nuevo
+        // Cargar categorías en el select
+        await loadCategoriesIntoModal(promo.categoria_id || null);
+
+        // Seleccionar la categoría actual
+        const catSelect = document.getElementById('modalCategoria');
+        if (catSelect && promo.categoria_id) {
+            catSelect.value = promo.categoria_id;
+        }
+
+        // Limpiar campo de archivo
         document.getElementById('modalImageFile').value = '';
 
         // 3. Mostrar el modal
@@ -1260,23 +1266,20 @@ async function savePromotionChanges() {
     const oldImageName = document.getElementById('modalOldImageName').value;
     const newImageFile = document.getElementById('modalImageFile').files[0];
     const newPrecio = parseFloat(document.getElementById('modalPrecio').value);
-    const newPrecioAnterior = parseFloat(document.getElementById('modalPrecioAnterior').value) || null;
+    const newPrecioAnterior = parseFloat(document.getElementById('modalPrecioAnterior').value);
     const newStock = parseInt(document.getElementById('modalStock').value) || 0;
-const newCategoriaId = document.getElementById('modalCategoria').value || null;
-
+    const newCategoriaId = document.getElementById('modalCategoria').value || null;
 
     let newImageName = oldImageName;
-    
+
     if (!promoId) return alert('ID de promoción no encontrado.');
-    
+
     try {
-        // 1. Manejo de la Carga de Imagen
+        // 1. Manejo de la carga de imagen
         if (newImageFile) {
-            // Generar nombre de archivo único
             const fileExtension = newImageFile.name.split('.').pop();
             const uniqueName = `${promoId}_${Date.now()}.${fileExtension}`;
-            
-            // Subir nuevo archivo
+
             const { error: uploadError } = await supabase.storage
                 .from('promo_images')
                 .upload(uniqueName, newImageFile, {
@@ -1285,56 +1288,42 @@ const newCategoriaId = document.getElementById('modalCategoria').value || null;
                 });
 
             if (uploadError) throw uploadError;
-            
+
             newImageName = uniqueName;
 
-            // 2. Eliminación de la Imagen Anterior (si existe y es diferente)
+            // Eliminar la imagen anterior si existe
             if (oldImageName && oldImageName !== newImageName) {
                 const { error: deleteError } = await supabase.storage
                     .from('promo_images')
                     .remove([oldImageName]);
-                
-                if (deleteError) console.warn('Advertencia: No se pudo eliminar la imagen anterior:', deleteError);
+                if (deleteError) console.warn('No se pudo eliminar la imagen anterior:', deleteError);
             }
         }
 
-        // 3. Actualizar la BD (promociones)
+        // 2. Actualizar la base de datos
         const { error: updateError } = await supabase
             .from('promociones')
             .update({
                 precio: newPrecio,
-                precio_anterior: newPrecioAnterior,
+                precio_anterior: isNaN(newPrecioAnterior) ? null : newPrecioAnterior,
                 stock: newStock,
-                imagen: newImageName 
+                imagen: newImageName,
+                categoria_id: newCategoriaId
             })
             .eq('id', promoId);
 
         if (updateError) throw updateError;
 
-        alert('Promoción actualizada con éxito!');
+        alert('✅ Promoción actualizada con éxito!');
         document.getElementById('editPromoModal').style.display = 'none';
-        
-        // 4. Recargar la lista para reflejar los cambios
+
+        // 3. Recargar la lista para reflejar cambios
         const currentCategoryId = document.getElementById('promoCategoriaFilter').value;
         await renderPromosByFilter(currentCategoryId);
 
     } catch (err) {
         console.error('Error al guardar cambios:', err);
         alert('Error al guardar cambios: ' + err.message);
-
-
-const { error: updateError } = await supabase
-    .from('promociones')
-    .update({
-        precio: newPrecio,
-        precio_anterior: newPrecioAnterior,
-        stock: newStock,
-        imagen: newImageName,
-        categoria_id: newCategoriaId
-    })
-    .eq('id', promoId);
-
-
     }
 }
 
