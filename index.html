@@ -1445,15 +1445,9 @@ async function fetchPromos() {
 // 🆕 2. Función para manejar la selección múltiple
 // ----------------------------------------------------
 
-/**
- * Función que se ejecuta al presionar "Mostrar Categorías Seleccionadas".
- * Recoge todos los checkboxes marcados y llama al renderizado.
- */
 function handleShowSelected() {
     const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked'))
                             .map(cb => cb.value);
-                            
-    // La función renderPromosByFilter ya está diseñada para manejar arrays de IDs
     renderPromosByFilter(selectedIds);
 }
 
@@ -1461,44 +1455,22 @@ function handleShowSelected() {
 // 🆕 3. Función para manejar el clic individual (Mostrar solo esa)
 // ----------------------------------------------------
 
-/**
- * Función que se ejecuta al hacer click en un checkbox de categoría.
- * Deselecciona los demás y dispara la carga inmediata (si está marcada).
- * @param {Event} e - Evento de click.
- * @param {Array<string>} allCategoryIds - Todos los IDs de categoría posibles.
- */
 function handleCategorySingleClick(e, allCategoryIds) {
     const clickedCheckbox = e.target;
-    
-    // Si el usuario acaba de desmarcar, no hacemos nada más que esperar a "Mostrar seleccionadas"
-    if (!clickedCheckbox.checked) {
-        return;
-    }
+    if (!clickedCheckbox.checked) return;
 
-    // 1. Desmarcar todos los demás checkboxes
     document.querySelectorAll('.category-checkbox').forEach(cb => {
-        if (cb !== clickedCheckbox) {
-            cb.checked = false;
-        }
+        if (cb !== clickedCheckbox) cb.checked = false;
     });
 
-    // 2. Disparar el renderizado inmediatamente con la única categoría seleccionada
     renderPromosByFilter([clickedCheckbox.value]);
 }
 
-
-/**
- * Función manejadora que se dispara al cambiar el filtro.
- * Lee todos los valores seleccionados del menú múltiple.
- */
 function handlePromoFilterChange() {
     const sel = document.getElementById('promoCategoriaFilter');
-    // Mapea todas las opciones seleccionadas y obtiene sus valores
     const selectedIds = Array.from(sel.options)
                             .filter(option => option.selected)
                             .map(option => option.value);
-                            
-    // Llama al renderizado con el array de IDs
     renderPromosByFilter(selectedIds);
 }
 
@@ -1509,23 +1481,17 @@ async function renderPromosByFilter(categoryIds = []) {
 
     container.innerHTML = '<p style="padding: 20px;">Cargando promociones...</p>';
 
-    // Si no hay categorías seleccionadas, muestra el mensaje de inicio
     if (categoryIds.length === 0) {
         container.innerHTML = '<p style="padding: 20px;">Selecciona una o más categorías para ver las promociones.</p>';
         return;
     }
 
-    // --- 2. Obtener Datos Filtrados desde Supabase ---
     let query = supabase.from("promociones").select("*").order("id");
-    
-    // 🆕 Ajuste de Título
     let categoryName = 'Promociones Filtradas';
 
-// 🌟 INICIALIZACIÓN Y ASIGNACIÓN SEGURA DE LAS VARIABLES DE CONTROL 🌟
     const specificCategoryIds = categoryIds.filter(id => id !== 'sin_categoria' && id !== '');
     const isSinCategoriaSelected = categoryIds.includes('sin_categoria');
-    const isTodasSelected = categoryIds.includes(''); // <-- ¡Aquí se define!
-    
+    const isTodasSelected = categoryIds.includes('');
     let filterApplied = false;
 
     if (categoryIds.length === 1) {
@@ -1535,7 +1501,6 @@ async function renderPromosByFilter(categoryIds = []) {
         } else if (id === 'sin_categoria') {
             categoryName = 'Sin Categoría';
         } else {
-            // Busca el nombre de la categoría para un solo ID
             const { data: categoriaData } = await supabase.from("categorias").select("nombre").eq("id", id).maybeSingle();
             categoryName = categoriaData?.nombre || 'Promociones Filtradas';
         }
@@ -1543,14 +1508,10 @@ async function renderPromosByFilter(categoryIds = []) {
         categoryName = `Múltiples Categorías (${categoryIds.length} seleccionadas)`;
     }
 
-
-
     if (isTodasSelected) {
-        // Si "Todas las categorías" está seleccionada, no aplicamos ningún filtro
         categoryName = 'Todas las Promociones';
         filterApplied = true;
     } else if (specificCategoryIds.length > 0) {
-        // Filtra por múltiples IDs específicos
         query = query.in('categoria_id', specificCategoryIds);
         categoryName = `Múltiples Categorías (${specificCategoryIds.length})`;
         filterApplied = true;
@@ -1558,33 +1519,25 @@ async function renderPromosByFilter(categoryIds = []) {
     
     if (isSinCategoriaSelected) {
         if (filterApplied) {
-            // Si ya hay un filtro aplicado (múltiples IDs), es complicado usar 'OR' en el filtro simple.
-            // Para simplificar, si seleccionas "Sin Categoría" junto con otras, solo la mostramos si es la única seleccionada.
-            // Si necesitas lógica OR compleja, necesitarías una función o un RPC en Supabase.
             categoryName = "Categorías y Sin Categoría";
         } else {
-            // Solo se selecciona "Sin Categoría"
             query = query.is('categoria_id', null);
             categoryName = "Sin Categoría";
             filterApplied = true;
         }
     }
     
-    // Si no se aplicó ningún filtro (caso no manejado arriba), salimos.
     if (!filterApplied && specificCategoryIds.length === 0 && !isSinCategoriaSelected) {
         container.innerHTML = '<p style="padding: 20px;">Selecciona una o más categorías para ver las promociones.</p>';
         return;
     }
 
-    // Ejecutar consulta
     const { data: promos = [], error: promoError } = await query;
     if (promoError) {
         console.error("Error al obtener promociones:", promoError);
         container.innerHTML = 'Error al cargar las promociones.';
         return;
     }
-    
-    // --- 3. Renderizado ---
     
     container.innerHTML = ''; 
 
@@ -1593,50 +1546,44 @@ async function renderPromosByFilter(categoryIds = []) {
         return;
     }
     
-    // Título de Categoría
+    // ✅ Corrección 1: agregar texto al título
     const catTitle = document.createElement('h2');
-   catTitle.style.marginTop = "0px"; 
-// Reducimos el padding o margen entre el texto y la línea (borderBottom)
-catTitle.style.paddingBottom = "3px"; 
-catTitle.style.marginBottom = "0"; // Asegura que no haya margen extra debajo
-catTitle.style.lineHeight = "3";
-catTitle.style.borderBottom = "1px solid #333";
-catTitle.style.fontSize = "18px";
+    catTitle.textContent = categoryName;
+    catTitle.style.marginTop = "0px"; 
+    catTitle.style.paddingBottom = "3px"; 
+    catTitle.style.marginBottom = "0"; 
+    catTitle.style.lineHeight = "3";
+    catTitle.style.borderBottom = "1px solid #333";
+    catTitle.style.fontSize = "18px";
     container.appendChild(catTitle);
     
-    // 🆕 Contenedor de la Barra de Progreso
-const progressBarContainer = document.createElement('div');
-progressBarContainer.id = 'renderProgressBarContainer';
-// 💡 Asegúrate de que el contenedor siguiente también tenga un margen superior pequeño o nulo
-progressBarContainer.style.marginTop = '0px'; 
-progressBarContainer.style.marginBottom = '10px'; 
-container.appendChild(progressBarContainer);
+    // ✅ Corrección 3: ID único para la barra de progreso
+    const progressBarContainer = document.createElement('div');
+    progressBarContainer.id = `renderProgressBarContainer_${Date.now()}`;
+    progressBarContainer.style.marginTop = '0px'; 
+    progressBarContainer.style.marginBottom = '10px'; 
+    container.appendChild(progressBarContainer);
 
-    // Contenedor de la Cuadrícula
     const promoContainer = document.createElement('div');
     promoContainer.className = "promo-group-container"; 
     promoContainer.style.marginTop = '0px';
     promos.sort((a,b)=>a.id-b.id);
     
-    // 🚨 BUCLE DE RENDERIZADO 🚨
     const totalPromos = promos.length; 
     let renderedCount = 0;
     
     for (const p of promos) {
-        
-        // LÓGICA DE LA IMAGEN
+        // ✅ Corrección 2: obtener URL pública sin generar signedUrl por cada una
         let imgSrc = p.imagen_url || '';
         if (p.imagen) { 
             try {
-                // La operación asíncrona CRÍTICA para el progreso
-                const { data: signedData } = await supabase.storage.from('promo_images').createSignedUrl(p.imagen, 3600);
-                imgSrc = signedData?.signedUrl || imgSrc;
+                const { data: publicData } = supabase.storage.from('promo_images').getPublicUrl(p.imagen);
+                imgSrc = publicData?.publicUrl || imgSrc;
             } catch (err) { 
-                console.warn('Error al obtener signedUrl para:', p.imagen, err); 
+                console.warn('Error al obtener URL pública para:', p.imagen, err); 
             }
         } 
 
-        // Creación del elemento de imagen
         const imgEl = document.createElement('img');
         imgEl.alt = p.nombre || '';
         imgEl.src = imgSrc || '';
@@ -1647,12 +1594,10 @@ container.appendChild(progressBarContainer);
         imgEl.style.borderRadius = '6px';
         imgEl.style.marginBottom = '6px';
         
-        // Creación de la tarjeta
         const div = document.createElement('div');
         div.className = 'promo-card';
         div.style.position = 'relative'; 
 
-        // Contenido de la tarjeta
         div.innerHTML = `
             <input type="checkbox" class="promo-select" data-promo-id="${p.id}" checked>
             
@@ -1679,27 +1624,19 @@ container.appendChild(progressBarContainer);
             </div>
         `;
 
-
-        // Insertar la imagen: 
-        if (imgSrc) {
-            div.insertBefore(imgEl, div.querySelector('b')); 
-        }
+        if (imgSrc) div.insertBefore(imgEl, div.querySelector('b')); 
 
         promoContainer.appendChild(div);
         
-        // 🌟 ACTUALIZAR BARRA DE PROGRESO (Movido al final del bucle)
         renderedCount++;
         const progress = Math.round((renderedCount / totalPromos) * 100);
-        updateProgressBar('renderProgressBarContainer', progress, `Cargando Promociones: ${renderedCount} de ${totalPromos}`, true);
+        updateProgressBar(progressBarContainer.id, progress, `Cargando Promociones: ${renderedCount} de ${totalPromos}`, true);
     }
     
     container.appendChild(promoContainer);
-
-    // 🆕 OCULTAR BARRA AL TERMINAR
-    updateProgressBar('renderProgressBarContainer', 100, `Carga completa (${totalPromos} promociones).`, false);
+    updateProgressBar(progressBarContainer.id, 100, `Carga completa (${totalPromos} promociones).`, false);
 }
 
-// Llama a fetchPromos al inicio
 fetchPromos();
 
 
