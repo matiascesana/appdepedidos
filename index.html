@@ -644,7 +644,7 @@
         <input type="hidden" id="modalPromoId">
         <input type="hidden" id="modalOldImageName">
         <label for="modalNombre">Nombre de la Promoción</label>
-    	<input type="text" id="modalNombre" required>
+	<input type="text" id="modalNombre" required>
         <label for="modalImageFile">Cambiar Imagen:</label>
         <input type="file" id="modalImageFile" accept="image/*">
         <p>Imagen actual: <span id="modalCurrentImageName" style="font-style: italic;"></span></p>
@@ -1234,6 +1234,10 @@ async function openEditModal(promoId) {
         document.getElementById('modalPromoId').value = promo.id;
         document.getElementById('modalOldImageName').value = promo.imagen || '';
         document.getElementById('modalCurrentImageName').textContent = promo.imagen || 'Sin imagen';
+        
+        // CAMBIO AÑADIDO: Cargar el nombre de la promoción
+        document.getElementById('modalNombre').value = promo.nombre || ''; 
+
         document.getElementById('modalPrecio').value = promo.precio || 0;
         document.getElementById('modalPrecioAnterior').value = promo.precio_anterior || '';
         document.getElementById('modalStock').value = promo.stock || 0;
@@ -1259,6 +1263,8 @@ async function openEditModal(promoId) {
     }
 }
 
+// ----------------------------------------------------------------------
+
 /**
  * Guarda los cambios de la promoción, maneja la carga/eliminación de la imagen.
  */
@@ -1266,6 +1272,10 @@ async function savePromotionChanges() {
     const promoId = document.getElementById('modalPromoId').value;
     const oldImageName = document.getElementById('modalOldImageName').value;
     const newImageFile = document.getElementById('modalImageFile').files[0];
+    
+    // CAMBIO AÑADIDO: Obtener el nuevo nombre del modal
+    const newNombre = document.getElementById('modalNombre').value;
+    
     const newPrecio = parseFloat(document.getElementById('modalPrecio').value);
     const newPrecioAnterior = parseFloat(document.getElementById('modalPrecioAnterior').value);
     const newStock = parseInt(document.getElementById('modalStock').value) || 0;
@@ -1274,10 +1284,15 @@ async function savePromotionChanges() {
     let newImageName = oldImageName;
 
     if (!promoId) return alert('ID de promoción no encontrado.');
+    
+    // ID del contenedor de la barra de progreso
+    const progressBarContainerId = 'uploadProgressBarContainer'; // Asegúrate de que este ID exista en tu HTML
 
     try {
         // 1. Manejo de la carga de imagen
         if (newImageFile) {
+            updateProgressBar(progressBarContainerId, 10, 'Iniciando carga de imagen...', true);
+
             const fileExtension = newImageFile.name.split('.').pop();
             const uniqueName = `${promoId}_${Date.now()}.${fileExtension}`;
 
@@ -1287,6 +1302,8 @@ async function savePromotionChanges() {
                     cacheControl: '3600',
                     upsert: false
                 });
+            
+            updateProgressBar(progressBarContainerId, 50, 'Imagen cargada. Actualizando BBDD...');
 
             if (uploadError) throw uploadError;
 
@@ -1300,11 +1317,17 @@ async function savePromotionChanges() {
                 if (deleteError) console.warn('No se pudo eliminar la imagen anterior:', deleteError);
             }
         }
+        
+        updateProgressBar(progressBarContainerId, newImageFile ? 70 : 70, 'Actualizando registros...');
+
 
         // 2. Actualizar la base de datos
         const { error: updateError } = await supabase
             .from('promociones')
             .update({
+                // CAMBIO AÑADIDO: Incluir el nuevo nombre en la actualización
+                nombre: newNombre, 
+                
                 precio: newPrecio,
                 precio_anterior: isNaN(newPrecioAnterior) ? null : newPrecioAnterior,
                 stock: newStock,
@@ -1314,6 +1337,8 @@ async function savePromotionChanges() {
             .eq('id', promoId);
 
         if (updateError) throw updateError;
+        
+        updateProgressBar(progressBarContainerId, 100, 'Actualización completada!', true);
 
         alert('✅ Promoción actualizada con éxito!');
         document.getElementById('editPromoModal').style.display = 'none';
@@ -1325,9 +1350,13 @@ async function savePromotionChanges() {
     } catch (err) {
         console.error('Error al guardar cambios:', err);
         alert('Error al guardar cambios: ' + err.message);
+    } finally {
+        // Ocultar la barra de progreso al finalizar
+        updateProgressBar(progressBarContainerId, 0, '', false);
     }
 }
 
+// ----------------------------------------------------------------------
 
 /**
  * Muestra u oculta y actualiza la barra de progreso.
@@ -1366,7 +1395,6 @@ function updateProgressBar(containerId, progress, text, visible = true) {
         container.style.display = 'none';
     }
 }
-
 
 
 /* =========================================================
@@ -2714,6 +2742,7 @@ function crearFilaPago(index, metodo = '', monto = 0, destinatario = '') {
   lista.appendChild(fila);
 }
 
+
 function agregarMedioPago() {
   // Llama a la función que crea una fila de pago vacía
   crearFilaPago(); 
@@ -2725,6 +2754,7 @@ function agregarMedioPago() {
     inputMonto.focus();
   }
 }
+
 
 async function guardarPagosPedido() {
   if (!pedidoSeleccionado) return alert("No hay pedido seleccionado");
@@ -3791,8 +3821,5 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 </body>
 </html>
-
-
-
 
 
