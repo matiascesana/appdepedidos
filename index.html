@@ -643,7 +643,8 @@
         <h3>Editar Promoción</h3>
         <input type="hidden" id="modalPromoId">
         <input type="hidden" id="modalOldImageName">
-        
+        <label for="modalNombre">Nombre de la Promoción</label>
+    	<input type="text" id="modalNombre" required>
         <label for="modalImageFile">Cambiar Imagen:</label>
         <input type="file" id="modalImageFile" accept="image/*">
         <p>Imagen actual: <span id="modalCurrentImageName" style="font-style: italic;"></span></p>
@@ -3790,6 +3791,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 </body>
 </html>
+
 
 
 
