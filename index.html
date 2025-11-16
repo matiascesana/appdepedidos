@@ -2713,7 +2713,17 @@ function crearFilaPago(index, metodo = '', monto = 0, destinatario = '') {
   lista.appendChild(fila);
 }
 
-
+function agregarMedioPago() {
+  // Llama a la función que crea una fila de pago vacía
+  crearFilaPago(); 
+  
+  // Opcional: enfocar el input de monto de la nueva fila para mejor UX
+  const nuevaFila = document.getElementById("listaPagos").lastElementChild;
+  const inputMonto = nuevaFila ? nuevaFila.querySelector('input[placeholder="Monto"]') : null;
+  if (inputMonto) {
+    inputMonto.focus();
+  }
+}
 
 async function guardarPagosPedido() {
   if (!pedidoSeleccionado) return alert("No hay pedido seleccionado");
@@ -3780,6 +3790,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 </body>
 </html>
+
 
 
 
