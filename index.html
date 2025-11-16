@@ -2811,7 +2811,7 @@ async function editOrderModal(pedido) {
     let descuentoGeneral = typeof pedido.descuento_general !== 'undefined' ? pedido.descuento_general : 0;
 
     function renderModal(stockMsg = "") {
-        document.getElementById("modalInner").style.maxWidth = "900px";
+        document.getElementById("modalInner").style.maxWidth = "700px";
         document.getElementById("modalInner").style.width = "90vw";
 
         // Lista de productos en el pedido
@@ -3821,6 +3821,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 </body>
 </html>
+
 
 
 
