@@ -607,7 +607,8 @@
  <nav class="sidebar">
   <h2>MENU</h2>
   <ul style="list-style:none; padding:0; margin:0;">
-<li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>    
+<li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
+<li><button class="tab-btn" data-tab="pedidosArchivados">Pedidos Archivados</button></li>
 <li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
     
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
@@ -679,6 +680,7 @@
 
         <div id="pedidos" class="section">
             <h2>Pedidos</h2>
+<div id="totalesPedidosBox" style="margin-bottom:15px;"></div>
             <form id="pedidoForm" onsubmit="return false;" 
       style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
 <!-- Cliente: más largo -->
@@ -718,8 +720,32 @@
 	</div>	
 	<h2>Lista de Pedidos</h2>
 	<div id="pedidoList"></div>
+	<div id="botonArchivarMesActual" style="margin-top:25px; text-align: right;">
+    <button id="archiveButton" onclick="archiveCurrentMonthOrders()" class="action-button" style="background-color: #f39c12; padding: 10px 20px;">
+        📦 Archivar Pedidos del Mes Actual
+    </button>
+</div>
 	</div>
 	</div>
+
+<section id="pedidosArchivados" class="section" style="display:none;">
+    <h2>Pedidos Archivados</h2>
+
+    <div id="buscadorArchivados" style="margin-bottom:20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label for="archiveMonth" style="font-weight:bold;">Mes:</label>
+        <select id="archiveMonth" style="padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+        
+        <label for="archiveYear" style="font-weight:bold;">Año:</label>
+        <select id="archiveYear" style="padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+        
+        <button id="searchArchivedBtn" class="button button-primary" onclick="fetchArchivedOrders()" style="padding:8px 15px; margin-left:10px;">
+            🔍 Buscar
+        </button>
+    </div>
+
+    <div id="listadoArchivados"></div>
+</section>
+
 
 
 
@@ -1054,6 +1080,23 @@ function activateSection(tab) {
   if (tab !== 'clienteTienda') {
       limpiarContenedoresTienda();
   }
+
+// === 💡 NUEVA LÓGICA: MANEJO DE VISIBILIDAD DEL BOTÓN "AGREGAR PROMOCIÓN" ===
+  const addPromoBtn = document.getElementById('addPromoBtn');
+
+  // 1. Ocultar el botón por defecto para todas las secciones
+  if (addPromoBtn) {
+      addPromoBtn.style.display = 'none';
+  }
+  
+  // 2. Mostrar el botón SÓLO si la pestaña es 'promos'
+  if (tab === 'promos') {
+      if (addPromoBtn) {
+          addPromoBtn.style.display = 'block'; 
+          // O 'inline-block' si así lo deseas, pero 'block' suele funcionar para botones.
+      }
+  }
+
     
   // 2. Quita 'active' de todas las secciones
   document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
@@ -2422,17 +2465,22 @@ async function fetchOrders() {
   if (isFetchingOrders) return;
   isFetchingOrders = true;
 
-  try {
+ try {
     const container = document.getElementById("pedidoList");
-    container.innerHTML = "";
+    container.innerHTML = ""; // 1️⃣ Obtener pedidos
 
-    // 1️⃣ Obtener pedidos
     const { data: pedidos, error: pedidosError } = await supabase
-      .from("pedidos")
-      .select("*")
-      .order("id", { ascending: true });
+        .from("pedidos")
+        .select("*")
+        // 💡 MODIFICACIÓN: FILTRAR SOLO PEDIDOS NO ARCHIVADOS
+        .eq("archivado", false)
+        .order("id", { ascending: true });
 
     if (pedidosError) throw pedidosError;
+
+    // 💡 NUEVA LLAMADA: CALCULAR Y MOSTRAR LOS TOTALES
+    renderPedidosTotales(pedidos);
+
     if (!pedidos?.length) {
       container.innerHTML = `<p style="color:#888;">No hay pedidos cargados.</p>`;
       return;
@@ -2636,6 +2684,274 @@ async function fetchOrders() {
     isFetchingOrders = false;
   }
 }
+
+/**
+ * Calcula y renderiza el total de ventas y la discriminación de pagos
+ * solo para los pedidos NO archivados.
+ * @param {Array} pedidos - Lista de pedidos activos.
+ */
+function renderPedidosTotales(pedidos) {
+    let totalVentas = 0;
+    let totalEfectivo = 0;
+    let totalTransferencias = 0;
+
+    // Solo considerar pedidos activos para el resumen
+    const pedidosActivos = pedidos.filter(p => !p.archivado);
+
+    pedidosActivos.forEach(pedido => {
+        // Suma de todas las ventas (Total de Pedido)
+        totalVentas += pedido.total || 0;
+
+        // Suma de pagos discriminando efectivo y transferencia
+        if (pedido.pagos && Array.isArray(pedido.pagos)) {
+            pedido.pagos.forEach(pago => {
+                if (pago.metodo === 'Efectivo') {
+                    totalEfectivo += pago.monto || 0;
+                } else if (pago.metodo === 'Transferencia') {
+                    totalTransferencias += pago.monto || 0;
+                }
+            });
+        }
+    });
+
+    const totalesHTML = `
+        <div style="background:#ecf0f1; padding:15px; border-radius:8px; display:flex; gap:20px; flex-wrap:wrap; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #ccc;">
+            <div style="flex:1; min-width:200px; padding:10px; background:#e8f0f3; border-radius:6px; border-left: 5px solid #ff4d4f;">
+                <h4 style="margin:0 0 5px 0; color:#2c3e50;">💰 Total de Ventas (Pedidos)</h4>
+                <p style="font-size:1.8em; font-weight:bold; color:#ff4d4f; margin:0;">$${totalVentas.toFixed(2)}</p>
+            </div>
+            
+            <div style="flex:1; min-width:200px; padding:10px; background:#f5f5f5; border-radius:6px; border-left: 5px solid #3498db;">
+                <h4 style="margin:0 0 5px 0; color:#555;">Recibido en Pagos</h4>
+                <p style="font-size:1.5em; font-weight:bold; color:#3498db; margin:0;">$${(totalEfectivo + totalTransferencias).toFixed(2)}</p>
+                <div style="font-size:0.9em; margin-top:5px;">
+                    Efectivo: <span style="font-weight:bold; float:right;">$${totalEfectivo.toFixed(2)}</span><br>
+                    Transferencia: <span style="font-weight:bold; float:right;">$${totalTransferencias.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('totalesPedidosBox').innerHTML = totalesHTML;
+}
+
+
+
+
+
+/**
+ * Archiva todos los pedidos del mes actual (no archivados).
+ */
+async function archiveCurrentMonthOrders() {
+    if (!confirm("⚠️ ¿Está seguro de que desea archivar TODOS los pedidos del mes actual? Esta acción es permanente para los totales activos. El stock descontado se mantendrá.")) {
+        return;
+    }
+
+    try {
+        const now = new Date();
+        // Obtener el primer día del mes actual (para el filtro de fecha de Supabase)
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        // Obtener el primer día del mes siguiente
+        const firstDayOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+        showToast("Iniciando archivado...");
+        
+        // 1. Marcar como archivados todos los pedidos no archivados de este mes
+        const { error: updateError } = await supabase
+            .from("pedidos")
+            .update({ archivado: true }) // Marcar como archivado
+            .eq("archivado", false) // Solo los que NO están archivados
+            .gte('created_at', firstDayOfMonth) // Mayor o igual que el primer día del mes
+            .lt('created_at', firstDayOfNextMonth); // Menor que el primer día del mes siguiente (todo el mes actual)
+
+        if (updateError) throw updateError;
+
+        // 2. Refrescar la lista de pedidos activos (ya no deberían aparecer)
+        await fetchOrders(); 
+        
+        showToast("✅ Pedidos del mes archivados correctamente.", 3500);
+
+    } catch (err) {
+        console.error("Error al archivar pedidos:", err);
+        showToast("❌ Error al archivar pedidos: " + err.message, 5000);
+    }
+}
+
+
+
+
+
+// Variable para almacenar la lista de meses para el select
+const meses = [
+    { value: 1, name: 'Enero' }, { value: 2, name: 'Febrero' }, { value: 3, name: 'Marzo' }, 
+    { value: 4, name: 'Abril' }, { value: 5, name: 'Mayo' }, { value: 6, name: 'Junio' }, 
+    { value: 7, name: 'Julio' }, { value: 8, name: 'Agosto' }, { value: 9, name: 'Septiembre' }, 
+    { value: 10, name: 'Octubre' }, { value: 11, name: 'Noviembre' }, { value: 12, name: 'Diciembre' }
+];
+
+/**
+ * Rellena los selectores de mes y año con valores relevantes.
+ */
+function setupArchiveFilters() {
+    const monthSelect = document.getElementById('archiveMonth');
+    const yearSelect = document.getElementById('archiveYear');
+    
+    // Si los elementos no existen (e.g., estamos en otra pestaña), salir
+    if (!monthSelect || !yearSelect) return; 
+    
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-based
+    const currentYear = now.getFullYear();
+
+    // Rellenar meses
+    monthSelect.innerHTML = meses.map(m => 
+        `<option value="${m.value}" ${m.value === currentMonth ? 'selected' : ''}>${m.name}</option>`
+    ).join('');
+
+    // Rellenar años (últimos 3 años y el actual)
+    yearSelect.innerHTML = '';
+    for (let y = currentYear; y >= currentYear - 3; y--) {
+        const option = document.createElement('option');
+        option.value = y;
+        option.textContent = y;
+        if (y === currentYear) option.selected = true;
+        yearSelect.appendChild(option);
+    }
+}
+
+/**
+ * Busca y muestra los pedidos archivados para el mes y año seleccionados.
+ */
+async function fetchArchivedOrders() {
+    const month = document.getElementById('archiveMonth').value;
+    const year = document.getElementById('archiveYear').value;
+    const container = document.getElementById("listadoArchivados");
+    container.innerHTML = "Cargando pedidos archivados...";
+
+    if (!month || !year) {
+        container.innerHTML = `<p style="color:#e74c3c;">Seleccione un mes y un año para buscar.</p>`;
+        return;
+    }
+    
+    try {
+        // Calcular el rango de fechas para el mes/año seleccionado
+        const firstDayOfMonth = new Date(year, month - 1, 1).toISOString();
+        const firstDayOfNextMonth = new Date(year, month, 1).toISOString(); // month is 0-based in JS Date
+
+        // Obtener pedidos archivados
+        const { data: pedidos, error: pedidosError } = await supabase
+            .from("pedidos")
+            .select("*")
+            .eq("archivado", true) // Solo los archivados
+            .gte('created_at', firstDayOfMonth) 
+            .lt('created_at', firstDayOfNextMonth)
+            .order("id", { ascending: false });
+
+        if (pedidosError) throw pedidosError;
+
+        if (!pedidos?.length) {
+            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados para ${meses[month-1].name} de ${year}.</p>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        
+        // Calcular totales del mes archivado para el resumen
+        let totalVentasMes = 0;
+        let totalPagadoMes = 0;
+
+        // Agregar el resumen de Totales del mes archivado al inicio
+        const resumenHTML = `
+            <div style="margin-bottom:20px; padding:15px; background:#fff; border-radius:8px; border-left: 5px solid #2980b9; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <h3 style="margin:0 0 10px 0;">Resumen ${meses[month-1].name} / ${year}</h3>
+                <div id="resumenTotalesArchivados"></div>
+            </div>
+        `;
+        container.insertAdjacentHTML('afterbegin', resumenHTML);
+        const resumenDiv = document.getElementById("resumenTotalesArchivados");
+
+
+        // 4. Renderizar la lista de pedidos archivados (similar a fetchOrders pero sin botones de acción)
+        for (const p of pedidos) {
+            // Calcular totales
+            totalVentasMes += p.total || 0;
+            const totalPagos = (p.pagos || []).reduce((sum, pago) => sum + (pago.monto || 0), 0);
+            totalPagadoMes += totalPagos;
+            
+            const localidad = await getLocalidadNombre(p.localidad_id);
+            
+            const div = document.createElement("div");
+            Object.assign(div.style, { 
+                display: "flex", 
+                flexDirection: "column",
+                padding: "18px 14px", 
+                marginBottom: "14px", 
+                borderRadius: "12px", 
+                background: "#f8f8f8", // Color diferente para archivado
+                boxShadow: "0 2px 12px rgba(0,0,0,0.07)", 
+                border: "1px solid #ddd",
+            }); 
+            
+            let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+            p.productos.forEach(pr => { 
+                prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
+            }); 
+            prodHTML += "</ul>";
+
+            let pagosHTML = "";
+            if (p.pagos && p.pagos.length > 0) {
+                pagosHTML = `
+                    <div style="margin-top:8px;background:#eef;padding:8px;border-radius:6px;">
+                        <b>💳 Pagos Registrados:</b><br> 
+                        ${p.pagos
+                            .map(pg => `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${pg.monto.toFixed(2)}`)
+                            .join("<br>")}
+                        ${p.saldo_pendiente > 0 ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${p.saldo_pendiente.toFixed(2)}</b>` : ""}
+                    </div>
+                `;
+            }
+            
+            const estadoTexto = p.estado === 'Completado' ? '✅ Completado' : p.saldo_pendiente > 0 ? '⚠️ Pendiente de Pago' : '⏳ Pendiente';
+            
+            div.innerHTML = ` 
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <strong>Pedido #${p.id} - ${safeText(p.cliente)}</strong> 
+                        <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-weight:bold; font-size:1.2em; color:#2c3e50;">Total: $${Number(p.total || 0).toFixed(2)}</span>
+                        <div style="font-size:0.9em; color:${p.saldo_pendiente > 0 ? '#e74c3c' : '#27ae60'};">${estadoTexto}</div>
+                    </div>
+                </div>
+                ${prodHTML} 
+                ${pagosHTML}
+                <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:10px; text-align:right;">
+                    <button class="button-secondary" onclick='exportPedidoPDF(${JSON.stringify(p).replace(/"/g, '&quot;')})'
+                        style="padding: 6px 12px; font-size: 13px; border: 1px solid #3498db; color: #3498db; background: none;">
+                        📄 Ver PDF
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+        
+        // Actualizar resumen de totales
+        resumenDiv.innerHTML = `
+            <p style="margin:5px 0;"><strong>Ventas Totales:</strong> <span style="float:right; font-weight:bold; color:#ff4d4f;">$${totalVentasMes.toFixed(2)}</span></p>
+            <p style="margin:5px 0;"><strong>Total Pagado:</strong> <span style="float:right; font-weight:bold; color:#3498db;">$${totalPagadoMes.toFixed(2)}</span></p>
+            <hr style="border:none; border-top:1px dashed #ccc;">
+            <p style="margin:5px 0;"><strong>Saldo Pendiente:</strong> <span style="float:right; font-weight:bold; color:#e74c3c;">$${(totalVentasMes - totalPagadoMes).toFixed(2)}</span></p>
+        `;
+
+        
+    } catch (err) {
+        console.error("Error al cargar pedidos archivados:", err);
+        container.innerHTML = `<p style="color:#e74c3c;">Error al cargar pedidos: ${err.message}</p>`;
+    }
+}
+
+
 
 
 
@@ -3749,6 +4065,8 @@ async function deleteDocumento(id, archivo) {
 
 
 // === INICIALIZACIÓN DE EVENTOS ===
+
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Conexiones de botones (Esto está bien y se mantiene)
     document.querySelectorAll('.sidebar .tab-btn').forEach(button => {
@@ -3783,7 +4101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     fetchOrders(); 
     fetchDocumentos();
     loadPromoSubMenu();
-  
+  setupArchiveFilters();
 
 
 
@@ -3804,7 +4122,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
-
 // Asigna los eventos de clic
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -3818,11 +4135,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 
 
+
+
 </script>
 </body>
 </html>
-
-
-
 
 
