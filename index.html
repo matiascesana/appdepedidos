@@ -732,6 +732,10 @@
     <h2>Pedidos Archivados</h2>
 
     <div id="buscadorArchivados" style="margin-bottom:20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        
+        <input type="text" id="archiveSearchTerm" placeholder="Buscar por Nombre, Apellido o DNI" 
+               style="padding:8px; border-radius:4px; border:1px solid #ccc; flex-grow: 1; min-width: 200px;">
+        
         <label for="archiveMonth" style="font-weight:bold;">Mes:</label>
         <select id="archiveMonth" style="padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
         
@@ -742,7 +746,7 @@
             🔍 Buscar
         </button>
     </div>
-
+    
     <div id="listadoArchivados"></div>
 </section>
 
@@ -2586,95 +2590,120 @@ async function fetchOrders() {
           ${pagosHTML}
         `;
 
-        // 🎛️ Botones
-        const actionsDiv = document.createElement("div");
-        Object.assign(actionsDiv.style, {
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          alignItems: "flex-end",
-        });
+       // 🎛️ Botones
+const actionsDiv = document.createElement("div");
+Object.assign(actionsDiv.style, {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    alignItems: "flex-end",
+});
 
-        const pdfBtn = document.createElement("button");
-        pdfBtn.textContent = "📄 Exportar PDF";
-        Object.assign(pdfBtn.style, {
-          background: "#2ecc71",
-          color: "#fff",
-          border: "none",
-          padding: "8px 18px",
-          borderRadius: "7px",
-          fontWeight: "bold",
-          cursor: "pointer",
-        });
-        pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidad });
+// 📄 Botón PDF
+const pdfBtn = document.createElement("button");
+pdfBtn.textContent = "📄 Exportar PDF";
+Object.assign(pdfBtn.style, {
+    background: "#2ecc71",
+    color: "#fff",
+    border: "none",
+    padding: "8px 18px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+});
+pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidad });
 
-        const editBtn = document.createElement("button");
-        editBtn.textContent = "✏️ Editar";
-        Object.assign(editBtn.style, {
-          background: "#3498db",
-          color: "#fff",
-          border: "none",
-          padding: "8px 18px",
-          borderRadius: "7px",
-          fontWeight: "bold",
-          cursor: "pointer",
-        });
-        editBtn.onclick = () => editOrderModal(p);
+// ✏️ Botón Editar
+const editBtn = document.createElement("button");
+editBtn.textContent = "✏️ Editar";
+Object.assign(editBtn.style, {
+    background: "#3498db",
+    color: "#fff",
+    border: "none",
+    padding: "8px 18px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+});
+editBtn.onclick = () => editOrderModal(p);
 
-        const deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "🗑️ Eliminar";
-        Object.assign(deleteBtn.style, {
-          background: "#ff4d4f",
-          color: "#fff",
-          border: "none",
-          padding: "8px 18px",
-          borderRadius: "7px",
-          fontWeight: "bold",
-          cursor: "pointer",
-        });
-        deleteBtn.onclick = () => deleteOrder(p.id);
+// 🗑️ Botón Eliminar
+const deleteBtn = document.createElement("button");
+deleteBtn.textContent = "🗑️ Eliminar";
+Object.assign(deleteBtn.style, {
+    background: "#ff4d4f",
+    color: "#fff",
+    border: "none",
+    padding: "8px 18px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+});
+deleteBtn.onclick = () => deleteOrder(p.id);
 
-        // 💰 Botón Medios de Pago
-        const pagoBtn = document.createElement("button");
-        pagoBtn.textContent = "💰 Medios de Pago";
-        Object.assign(pagoBtn.style, {
-          background: "#27ae60",
-          color: "#fff",
-          border: "none",
-          padding: "8px 18px",
-          borderRadius: "7px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          width: "300px",
-          textAlign: "center",
-        });
-        pagoBtn.onclick = () => abrirModalPago(p);
+// 💰 Botón Medios de Pago
+const pagoBtn = document.createElement("button");
+pagoBtn.textContent = "💰 Medios de Pago";
+Object.assign(pagoBtn.style, {
+    background: "#27ae60",
+    color: "#fff",
+    border: "none",
+    padding: "8px 18px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    width: "300px",
+    textAlign: "center",
+});
+pagoBtn.onclick = () => abrirModalPago(p);
 
-        // 🔹 Botón Estado
-        const estadoBtn = document.createElement("button");
-        estadoBtn.textContent = p.estado === "entregado" ? "Entregado" : "Pendiente";
-        Object.assign(estadoBtn.style, {
-          background: p.estado === "entregado" ? "#ff4d4f" : "#2ecc71",
-          color: "#fff",
-          border: "none",
-          padding: "8px 18px",
-          borderRadius: "7px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          width: "300px",
-          textAlign: "center",
-          marginTop: "10px",
-        });
-        estadoBtn.onclick = async () => {
-          p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
-          const { error } = await supabase.from("pedidos").update({ estado: p.estado }).eq("id", p.id);
-          if (error) return alert(error.message);
-          fetchOrders();
-        };
+// 🔹 Botón Estado (Corregido: Declarado con const)
+const estadoBtn = document.createElement("button");
+estadoBtn.textContent = p.estado === "entregado" ? "Entregado" : "Pendiente";
+Object.assign(estadoBtn.style, {
+    background: p.estado === "entregado" ? "#ff4d4f" : "#2ecc71",
+    color: "#fff",
+    border: "none",
+    padding: "8px 18px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    width: "300px",
+    textAlign: "center",
+    marginTop: "10px",
+});
+estadoBtn.onclick = async () => {
+    p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
+    const { error } = await supabase.from("pedidos").update({ estado: p.estado }).eq("id", p.id);
+    if (error) return alert(error.message);
+    fetchOrders();
+};
 
-        actionsDiv.append(pdfBtn, editBtn, deleteBtn, pagoBtn, estadoBtn);
-        div.append(infoDiv, actionsDiv);
-        container.appendChild(div);
+// 📦 NUEVO BOTÓN DE ARCHIVAR INDIVIDUAL
+const archiveIndividualBtn = document.createElement("button");
+archiveIndividualBtn.textContent = "📦 Archivar";
+Object.assign(archiveIndividualBtn.style, {
+    background: "#95a5a6", // Color gris suave para archivar
+    color: "#fff",
+    border: "none",
+    padding: "8px 18px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    width: "300px",
+    textAlign: "center",
+});
+archiveIndividualBtn.onclick = () => archiveIndividualOrder(p.id);
+
+
+// 💡 AÑADIR TODOS LOS BOTONES AL DIV DE ACCIONES
+actionsDiv.append(pdfBtn, editBtn, deleteBtn, pagoBtn, estadoBtn, archiveIndividualBtn);
+
+div.append(infoDiv, actionsDiv);
+container.appendChild(div);
+
+
+
       }
     }
   } catch (err) {
@@ -2740,43 +2769,35 @@ function renderPedidosTotales(pedidos) {
 
 
 /**
- * Archiva todos los pedidos del mes actual (no archivados).
+ * Archiva un pedido individual por su ID y refresca la lista de pedidos activos.
+ * @param {number} orderId - El ID del pedido a archivar.
  */
-async function archiveCurrentMonthOrders() {
-    if (!confirm("⚠️ ¿Está seguro de que desea archivar TODOS los pedidos del mes actual? Esta acción es permanente para los totales activos. El stock descontado se mantendrá.")) {
+async function archiveIndividualOrder(orderId) {
+    if (!confirm(`¿Está seguro de que desea archivar el Pedido #${orderId}? Ya no se verá en la lista activa.`)) {
         return;
     }
 
     try {
-        const now = new Date();
-        // Obtener el primer día del mes actual (para el filtro de fecha de Supabase)
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        // Obtener el primer día del mes siguiente
-        const firstDayOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-
-        showToast("Iniciando archivado...");
+        showToast(`Archivando Pedido #${orderId}...`);
         
-        // 1. Marcar como archivados todos los pedidos no archivados de este mes
+        // 1. Actualizar el estado 'archivado' a true en Supabase
         const { error: updateError } = await supabase
             .from("pedidos")
-            .update({ archivado: true }) // Marcar como archivado
-            .eq("archivado", false) // Solo los que NO están archivados
-            .gte('created_at', firstDayOfMonth) // Mayor o igual que el primer día del mes
-            .lt('created_at', firstDayOfNextMonth); // Menor que el primer día del mes siguiente (todo el mes actual)
+            .update({ archivado: true })
+            .eq("id", orderId); 
 
         if (updateError) throw updateError;
 
-        // 2. Refrescar la lista de pedidos activos (ya no deberían aparecer)
+        // 2. Refrescar la lista de pedidos activos (el pedido archivado desaparecerá)
         await fetchOrders(); 
         
-        showToast("✅ Pedidos del mes archivados correctamente.", 3500);
+        showToast(`✅ Pedido #${orderId} archivado correctamente.`, 3500);
 
     } catch (err) {
-        console.error("Error al archivar pedidos:", err);
-        showToast("❌ Error al archivar pedidos: " + err.message, 5000);
+        console.error("Error al archivar pedido individual:", err);
+        showToast("❌ Error al archivar pedido: " + err.message, 5000);
     }
 }
-
 
 
 
@@ -2820,43 +2841,56 @@ function setupArchiveFilters() {
 }
 
 /**
- * Busca y muestra los pedidos archivados para el mes y año seleccionados.
+ * Busca y muestra los pedidos archivados para el mes, año y término de búsqueda seleccionados.
+ * Incluye un botón para desarchivar pedidos individualmente.
  */
 async function fetchArchivedOrders() {
     const month = document.getElementById('archiveMonth').value;
     const year = document.getElementById('archiveYear').value;
+    const searchTerm = document.getElementById('archiveSearchTerm').value.trim(); // Captura el término de búsqueda
     const container = document.getElementById("listadoArchivados");
     container.innerHTML = "Cargando pedidos archivados...";
 
+    // Verifica que el mes y el año estén seleccionados
     if (!month || !year) {
         container.innerHTML = `<p style="color:#e74c3c;">Seleccione un mes y un año para buscar.</p>`;
         return;
     }
     
     try {
-        // Calcular el rango de fechas para el mes/año seleccionado
+        // Calcular el rango de fechas (Inicio del mes y fin del mes)
         const firstDayOfMonth = new Date(year, month - 1, 1).toISOString();
-        const firstDayOfNextMonth = new Date(year, month, 1).toISOString(); // month is 0-based in JS Date
+        const firstDayOfNextMonth = new Date(year, month, 1).toISOString();
 
-        // Obtener pedidos archivados
-        const { data: pedidos, error: pedidosError } = await supabase
+        // 1. Consulta base a Supabase: Filtrar por archivados y rango de fecha
+        let query = supabase
             .from("pedidos")
             .select("*")
             .eq("archivado", true) // Solo los archivados
             .gte('created_at', firstDayOfMonth) 
-            .lt('created_at', firstDayOfNextMonth)
+            .lt('created_at', firstDayOfNextMonth);
+            
+        // 2. Aplicar filtro de búsqueda si se proporcionó un término
+        if (searchTerm) {
+            // Usamos 'ilike' para búsqueda insensible a mayúsculas/minúsculas.
+            query = query.or(`cliente.ilike.%${searchTerm}%,dni.ilike.%${searchTerm}%`);
+        }
+
+        // 3. Ejecutar la consulta
+        const { data: pedidos, error: pedidosError } = await query
             .order("id", { ascending: false });
 
         if (pedidosError) throw pedidosError;
 
+        // 4. Manejar caso de no resultados
         if (!pedidos?.length) {
-            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados para ${meses[month-1].name} de ${year}.</p>`;
+            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados para ${meses[month-1].name} de ${year} ${searchTerm ? `con el término "${searchTerm}"` : ""}.</p>`;
             return;
         }
 
         container.innerHTML = '';
         
-        // Calcular totales del mes archivado para el resumen
+        // 5. Inicializar variables para el resumen de totales del mes archivado
         let totalVentasMes = 0;
         let totalPagadoMes = 0;
 
@@ -2871,13 +2905,15 @@ async function fetchArchivedOrders() {
         const resumenDiv = document.getElementById("resumenTotalesArchivados");
 
 
-        // 4. Renderizar la lista de pedidos archivados (similar a fetchOrders pero sin botones de acción)
+        // 6. Renderizar la lista de pedidos archivados
         for (const p of pedidos) {
-            // Calcular totales
+            // Calcular totales para el resumen
             totalVentasMes += p.total || 0;
+            // Sumar pagos registrados
             const totalPagos = (p.pagos || []).reduce((sum, pago) => sum + (pago.monto || 0), 0);
             totalPagadoMes += totalPagos;
             
+            // Suponiendo que tienes una función getLocalidadNombre definida
             const localidad = await getLocalidadNombre(p.localidad_id);
             
             const div = document.createElement("div");
@@ -2887,12 +2923,13 @@ async function fetchArchivedOrders() {
                 padding: "18px 14px", 
                 marginBottom: "14px", 
                 borderRadius: "12px", 
-                background: "#f8f8f8", // Color diferente para archivado
+                background: "#f8f8f8", 
                 boxShadow: "0 2px 12px rgba(0,0,0,0.07)", 
                 border: "1px solid #ddd",
             }); 
             
             let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+            // Suponiendo que tienes una función safeText definida
             p.productos.forEach(pr => { 
                 prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
             }); 
@@ -2917,6 +2954,7 @@ async function fetchArchivedOrders() {
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
                         <strong>Pedido #${p.id} - ${safeText(p.cliente)}</strong> 
+                        <div style="color:#888;margin-bottom:2px;">DNI: ${safeText(p.dni || 'N/A')}</div>
                         <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
                     </div>
                     <div style="text-align:right;">
@@ -2926,17 +2964,25 @@ async function fetchArchivedOrders() {
                 </div>
                 ${prodHTML} 
                 ${pagosHTML}
-                <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:10px; text-align:right;">
+                
+                <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:10px; display:flex; justify-content:flex-end; gap: 10px;">
+                    
                     <button class="button-secondary" onclick='exportPedidoPDF(${JSON.stringify(p).replace(/"/g, '&quot;')})'
                         style="padding: 6px 12px; font-size: 13px; border: 1px solid #3498db; color: #3498db; background: none;">
                         📄 Ver PDF
                     </button>
+                    
+                    <button class="button-primary" onclick='unarchiveOrder(${p.id})'
+                        style="padding: 6px 12px; font-size: 13px; background: #27ae60; color: white; border: none;">
+                        🔄 Desarchivar
+                    </button>
+                    
                 </div>
             `;
             container.appendChild(div);
         }
         
-        // Actualizar resumen de totales
+        // 7. Actualizar resumen de totales
         resumenDiv.innerHTML = `
             <p style="margin:5px 0;"><strong>Ventas Totales:</strong> <span style="float:right; font-weight:bold; color:#ff4d4f;">$${totalVentasMes.toFixed(2)}</span></p>
             <p style="margin:5px 0;"><strong>Total Pagado:</strong> <span style="float:right; font-weight:bold; color:#3498db;">$${totalPagadoMes.toFixed(2)}</span></p>
@@ -2948,6 +2994,44 @@ async function fetchArchivedOrders() {
     } catch (err) {
         console.error("Error al cargar pedidos archivados:", err);
         container.innerHTML = `<p style="color:#e74c3c;">Error al cargar pedidos: ${err.message}</p>`;
+    }
+}
+
+
+
+
+
+/**
+ * Desarchiva un pedido individual por su ID, moviéndolo a la lista activa de pedidos.
+ * @param {number} orderId - El ID del pedido a desarchivar.
+ */
+async function unarchiveOrder(orderId) {
+    if (!confirm(`¿Está seguro de que desea DESARCHIVAR el Pedido #${orderId}? Volverá a la lista de pedidos activos.`)) {
+        return;
+    }
+
+    try {
+        showToast(`Desarchivando Pedido #${orderId}...`);
+        
+        // 1. Actualizar el estado 'archivado' a false en Supabase
+        const { error: updateError } = await supabase
+            .from("pedidos")
+            .update({ archivado: false })
+            .eq("id", orderId); 
+
+        if (updateError) throw updateError;
+
+        // 2. Refrescar la lista de pedidos activos (fetchOrders) para que aparezca allí
+        await fetchOrders(); 
+        
+        // 3. Refrescar la lista de archivados (fetchArchivedOrders) para que desaparezca de aquí
+        await fetchArchivedOrders(); 
+
+        showToast(`✅ Pedido #${orderId} desarchivado correctamente.`, 3500);
+
+    } catch (err) {
+        console.error("Error al desarchivar pedido:", err);
+        showToast("❌ Error al desarchivar pedido: " + err.message, 5000);
     }
 }
 
@@ -4140,5 +4224,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 </body>
 </html>
+
 
 
