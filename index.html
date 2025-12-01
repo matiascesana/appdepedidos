@@ -718,6 +718,24 @@
     	</div>
     	</div>
 	</div>	
+<div id="pedidos" class="tab-content" data-section="pedidos">
+    <h2>Pedidos Activos</h2>
+
+    <div style="margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <label for="orderSearch" style="display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50;">Buscar Cliente:</label>
+        <input 
+            type="text" 
+            id="orderSearch" 
+            placeholder="Escriba nombre, apellido o DNI del cliente..." 
+            oninput="debounceFetchOrders()"
+            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1em;"
+        >
+    </div>
+    <div id="totalesPedidos"></div>
+    <div id="pedidoList">
+        </div>
+</div>
+
 	<h2>Lista de Pedidos</h2>
 	<div id="pedidoList"></div>
 	<div id="botonArchivarMesActual" style="margin-top:25px; text-align: right;">
@@ -1142,6 +1160,20 @@ let localidadSeleccionada = null; // Para la confirmación del pedido
 let carritoCliente = [];
 let promocionesGlobal = []; // Contiene todas las promos de la categoría actual
 let categoriaTiendaActual = null;
+let lastOrdersScrollPosition = 0;
+
+
+// Variable para controlar el retraso de la búsqueda (debounce)
+let debounceTimer;
+
+function debounceFetchOrders() {
+    // Limpia el temporizador anterior para reiniciar la cuenta regresiva
+    clearTimeout(debounceTimer);
+    
+    // Establece un nuevo temporizador que llamará a fetchOrders después de 300ms
+    // si el usuario no sigue escribiendo.
+    debounceTimer = setTimeout(fetchOrders, 300); 
+}
 
 // 💥 NUEVA VARIABLE GLOBAL PARA CANTIDAD TEMPORAL EN TARJETA 💥
 let cantidadesLocales = {};
@@ -2465,254 +2497,296 @@ let isFetchingOrders = false;
 let pedidoSeleccionado = null;
 let pagosActuales = [];
 
+
 async function fetchOrders() {
-  if (isFetchingOrders) return;
-  isFetchingOrders = true;
+  if (isFetchingOrders) return;
+  isFetchingOrders = true;
 
- try {
-    const container = document.getElementById("pedidoList");
-    container.innerHTML = ""; // 1️⃣ Obtener pedidos
+ try {
+    const container = document.getElementById("pedidoList");
+    
+    // 💡 IDENTIFICAR EL ELEMENTO DE SCROLL
+    const scrollTarget = document.querySelector('.content') || document.documentElement;
 
-    const { data: pedidos, error: pedidosError } = await supabase
-        .from("pedidos")
-        .select("*")
-        // 💡 MODIFICACIÓN: FILTRAR SOLO PEDIDOS NO ARCHIVADOS
-        .eq("archivado", false)
-        .order("id", { ascending: true });
+    // 💡 Obtener término de búsqueda
+    const searchInput = document.getElementById("orderSearch");
+    const searchTerm = searchInput ? searchInput.value.trim() : "";
 
+    // PASO 1: GUARDAR o RESETEAR la posición de scroll
+    // Si hay búsqueda, forzamos a 0. Si no, mantenemos la posición.
+    lastOrdersScrollPosition = searchTerm ? 0 : scrollTarget.scrollTop;
+    
+    container.innerHTML = ""; 
+    // 💡 IMPORTANTE: Limpiamos el contenedor de totales/resultados al inicio de CADA llamada
+    document.getElementById("totalesPedidos").innerHTML = ""; 
+
+    // 1️⃣ Construir la consulta base
+    let query = supabase
+        .from("pedidos")
+        .select("*")
+        .eq("archivado", false)
+        .order("id", { ascending: true });
+    
+    // 💡 Aplicar filtro de búsqueda si hay un término
+    if (searchTerm) {
+        // Usamos 'ilike' (case-insensitive LIKE) para buscar el término en los campos 'cliente' o 'dni'.
+        query = query.or(`cliente.ilike.%${searchTerm}%,dni.ilike.%${searchTerm}%`);
+    }
+
+    // 2️⃣ Ejecutar la consulta
+    const { data: pedidos, error: pedidosError } = await query;
+    
     if (pedidosError) throw pedidosError;
 
-    // 💡 NUEVA LLAMADA: CALCULAR Y MOSTRAR LOS TOTALES
-    renderPedidosTotales(pedidos);
 
-    if (!pedidos?.length) {
-      container.innerHTML = `<p style="color:#888;">No hay pedidos cargados.</p>`;
-      return;
-    }
-
-    // 2️⃣ Cargar localidades
-    const { data: localidadesData, error: locError } = await supabase
-      .from("localidades")
-      .select("id, nombre");
-
-    if (locError) throw locError;
-    const localidadMap = {};
-    localidadesData.forEach(l => (localidadMap[l.id] = l.nombre));
-
-    // 3️⃣ Agrupar pedidos por localidad
-    const pedidosPorLocalidad = {};
-    pedidos.forEach(p => {
-      const nombreLocalidad = p.localidad_id
-        ? localidadMap[p.localidad_id] || "Sin Localidad"
-        : "Sin Localidad";
-      if (!p.estado) p.estado = "pendiente";
-      if (!pedidosPorLocalidad[nombreLocalidad])
-        pedidosPorLocalidad[nombreLocalidad] = [];
-      pedidosPorLocalidad[nombreLocalidad].push(p);
-    });
-
-    // 4️⃣ Ordenar las localidades
-    const localidadesOrdenadas = Object.keys(pedidosPorLocalidad).sort((a, b) =>
-      a.localeCompare(b, "es", { sensitivity: "base" })
-    );
-
-    // 5️⃣ Renderizar
-    for (const localidad of localidadesOrdenadas) {
-      const pedidosDeLocalidad = pedidosPorLocalidad[localidad];
-
-      pedidosDeLocalidad.sort((a, b) => {
-        if (a.estado !== b.estado)
-          return a.estado === "pendiente" ? -1 : 1;
-        return (a.cliente || "").localeCompare(b.cliente || "", "es", { sensitivity: "base" });
-      });
-
-      // Título
-      const titulo = document.createElement("h2");
-      titulo.textContent = `${localidad}`;
-      Object.assign(titulo.style, {
-        marginTop: "25px",
-        marginBottom: "10px",
-        padding: "8px 14px",
-        background: "#3498db",
-        color: "#fff",
-        borderRadius: "8px",
-        fontSize: "1.2em",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-      });
-      container.appendChild(titulo);
-
-      // Tarjetas
-      for (const p of pedidosDeLocalidad) {
-        const div = document.createElement("div");
-        Object.assign(div.style, {
-          display: "flex",
-          alignItems: "stretch",
-          justifyContent: "space-between",
-          padding: "18px 14px",
-          marginBottom: "14px",
-          borderRadius: "12px",
-          background: "#fff",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-          border: "1px solid #eee",
-        });
-
-        // 🧾 Info
-        const infoDiv = document.createElement("div");
-        infoDiv.style.flex = "1";
-
-        let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-        p.productos.forEach(pr => {
-          prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
-        });
-        prodHTML += "</ul>";
-
-        // 💰 Mostrar pagos si existen
-        let pagosHTML = "";
-        if (p.pagos && p.pagos.length > 0) {
-          pagosHTML = `
-            <div style="margin-top:8px;background:#f8f9fa;padding:8px;border-radius:6px;">
-              <b>💳 Pagos:</b><br>
-              ${p.pagos
-                .map(pg => `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${pg.monto.toFixed(2)}`)
-                .join("<br>")}
-              ${p.saldo_pendiente > 0
-                ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${p.saldo_pendiente.toFixed(2)}</b>`
-                : ""}
-            </div>
-          `;
-        }
-
-        infoDiv.innerHTML = `
-          <strong>${safeText(p.cliente)}</strong>
-          <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
-          ${prodHTML}
-          <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
-          ${pagosHTML}
+    // 💡 Mostrar totales o resultados
+    if (searchTerm) {
+        // Mostrar mensaje de resultados si hay búsqueda
+        document.getElementById("totalesPedidos").innerHTML = `
+            <p style="color:#2980b9; font-weight:bold;">Mostrando ${pedidos.length} resultados para "${safeText(searchTerm)}".</p>
         `;
-
-       // 🎛️ Botones
-const actionsDiv = document.createElement("div");
-Object.assign(actionsDiv.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    alignItems: "flex-end",
-});
-
-// 📄 Botón PDF
-const pdfBtn = document.createElement("button");
-pdfBtn.textContent = "📄 Exportar PDF";
-Object.assign(pdfBtn.style, {
-    background: "#2ecc71",
-    color: "#fff",
-    border: "none",
-    padding: "8px 18px",
-    borderRadius: "7px",
-    fontWeight: "bold",
-    cursor: "pointer",
-});
-pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidad });
-
-// ✏️ Botón Editar
-const editBtn = document.createElement("button");
-editBtn.textContent = "✏️ Editar";
-Object.assign(editBtn.style, {
-    background: "#3498db",
-    color: "#fff",
-    border: "none",
-    padding: "8px 18px",
-    borderRadius: "7px",
-    fontWeight: "bold",
-    cursor: "pointer",
-});
-editBtn.onclick = () => editOrderModal(p);
-
-// 🗑️ Botón Eliminar
-const deleteBtn = document.createElement("button");
-deleteBtn.textContent = "🗑️ Eliminar";
-Object.assign(deleteBtn.style, {
-    background: "#ff4d4f",
-    color: "#fff",
-    border: "none",
-    padding: "8px 18px",
-    borderRadius: "7px",
-    fontWeight: "bold",
-    cursor: "pointer",
-});
-deleteBtn.onclick = () => deleteOrder(p.id);
-
-// 💰 Botón Medios de Pago
-const pagoBtn = document.createElement("button");
-pagoBtn.textContent = "💰 Medios de Pago";
-Object.assign(pagoBtn.style, {
-    background: "#27ae60",
-    color: "#fff",
-    border: "none",
-    padding: "8px 18px",
-    borderRadius: "7px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    width: "300px",
-    textAlign: "center",
-});
-pagoBtn.onclick = () => abrirModalPago(p);
-
-// 🔹 Botón Estado (Corregido: Declarado con const)
-const estadoBtn = document.createElement("button");
-estadoBtn.textContent = p.estado === "entregado" ? "Entregado" : "Pendiente";
-Object.assign(estadoBtn.style, {
-    background: p.estado === "entregado" ? "#ff4d4f" : "#2ecc71",
-    color: "#fff",
-    border: "none",
-    padding: "8px 18px",
-    borderRadius: "7px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    width: "300px",
-    textAlign: "center",
-    marginTop: "10px",
-});
-estadoBtn.onclick = async () => {
-    p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
-    const { error } = await supabase.from("pedidos").update({ estado: p.estado }).eq("id", p.id);
-    if (error) return alert(error.message);
-    fetchOrders();
-};
-
-// 📦 NUEVO BOTÓN DE ARCHIVAR INDIVIDUAL
-const archiveIndividualBtn = document.createElement("button");
-archiveIndividualBtn.textContent = "📦 Archivar";
-Object.assign(archiveIndividualBtn.style, {
-    background: "#95a5a6", // Color gris suave para archivar
-    color: "#fff",
-    border: "none",
-    padding: "8px 18px",
-    borderRadius: "7px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    width: "300px",
-    textAlign: "center",
-});
-archiveIndividualBtn.onclick = () => archiveIndividualOrder(p.id);
-
-
-// 💡 AÑADIR TODOS LOS BOTONES AL DIV DE ACCIONES
-actionsDiv.append(pdfBtn, editBtn, deleteBtn, pagoBtn, estadoBtn, archiveIndividualBtn);
-
-div.append(infoDiv, actionsDiv);
-container.appendChild(div);
-
-
-
-      }
+    } else {
+        // Mostrar totales normales si no hay búsqueda (el campo está vacío)
+        renderPedidosTotales(pedidos);
     }
-  } catch (err) {
-    console.error(err);
-    showToast("Error al cargar pedidos");
-  } finally {
-    isFetchingOrders = false;
-  }
+    // -----------------------------------------------------
+
+    if (!pedidos?.length) {
+        let mensaje = searchTerm 
+            ? `<p style="color:#888;">No se encontraron pedidos con el término "${safeText(searchTerm)}".</p>`
+            : `<p style="color:#888;">No hay pedidos cargados.</p>`;
+        
+        container.innerHTML = mensaje;
+        return;
+    }
+
+    // 2️⃣ Cargar localidades
+    const { data: localidadesData, error: locError } = await supabase
+      .from("localidades")
+      .select("id, nombre");
+
+    if (locError) throw locError;
+    const localidadMap = {};
+    localidadesData.forEach(l => (localidadMap[l.id] = l.nombre));
+
+    // 3️⃣ Agrupar pedidos por localidad
+    const pedidosPorLocalidad = {};
+    const grupoPrincipal = searchTerm ? "Resultados de Búsqueda" : null;
+
+    pedidos.forEach(p => {
+      const nombreLocalidad = searchTerm 
+        ? grupoPrincipal
+        : (p.localidad_id ? localidadMap[p.localidad_id] || "Sin Localidad" : "Sin Localidad");
+        
+      if (!p.estado) p.estado = "pendiente";
+      if (!pedidosPorLocalidad[nombreLocalidad])
+        pedidosPorLocalidad[nombreLocalidad] = [];
+      pedidosPorLocalidad[nombreLocalidad].push(p);
+    });
+
+    // 4️⃣ Ordenar las localidades
+    const localidadesOrdenadas = Object.keys(pedidosPorLocalidad).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
+
+    // 5️⃣ Renderizar
+    for (const localidad of localidadesOrdenadas) {
+      const pedidosDeLocalidad = pedidosPorLocalidad[localidad];
+
+      pedidosDeLocalidad.sort((a, b) => {
+        if (a.estado !== b.estado)
+          return a.estado === "pendiente" ? -1 : 1;
+        return (a.cliente || "").localeCompare(b.cliente || "", "es", { sensitivity: "base" });
+      });
+
+      // Título
+      const titulo = document.createElement("h2");
+      titulo.textContent = `${localidad}`;
+      Object.assign(titulo.style, {
+        marginTop: "25px",
+        marginBottom: "10px",
+        padding: "8px 14px",
+        background: searchTerm ? "#f39c12" : "#3498db", // Título naranja para búsqueda
+        color: "#fff",
+        borderRadius: "8px",
+        fontSize: "1.2em",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+      });
+      container.appendChild(titulo);
+
+      // Tarjetas
+      for (const p of pedidosDeLocalidad) {
+        const div = document.createElement("div");
+        Object.assign(div.style, {
+          display: "flex",
+          alignItems: "stretch",
+          justifyContent: "space-between",
+          padding: "18px 14px",
+          marginBottom: "14px",
+          borderRadius: "12px",
+          background: "#fff",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+          border: "1px solid #eee",
+        });
+
+        // 🧾 Info
+        const infoDiv = document.createElement("div");
+        infoDiv.style.flex = "1";
+
+        let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+        p.productos.forEach(pr => {
+          prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
+        });
+        prodHTML += "</ul>";
+
+        // 💰 Mostrar pagos si existen
+        let pagosHTML = "";
+        if (p.pagos && p.pagos.length > 0) {
+          pagosHTML = `
+            <div style="margin-top:8px;background:#f8f9fa;padding:8px;border-radius:6px;">
+              <b>💳 Pagos:</b><br>
+              ${p.pagos
+                .map(pg => `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${pg.monto.toFixed(2)}`)
+                .join("<br>")}
+              ${p.saldo_pendiente > 0
+                ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${p.saldo_pendiente.toFixed(2)}</b>`
+                : ""}
+            </div>
+          `;
+        }
+
+        infoDiv.innerHTML = `
+          <strong>${safeText(p.cliente)}</strong>
+          <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
+          ${prodHTML}
+          <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+          ${pagosHTML}
+        `;
+
+        // 🎛️ Botones
+        const actionsDiv = document.createElement("div");
+        Object.assign(actionsDiv.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          alignItems: "flex-end",
+        });
+
+        const pdfBtn = document.createElement("button");
+        pdfBtn.textContent = "📄 Exportar PDF";
+        Object.assign(pdfBtn.style, {
+          background: "#2ecc71",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+        });
+        pdfBtn.onclick = () => exportPedidoPDF({ ...p, localidad_nombre: localidad });
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✏️ Editar";
+        Object.assign(editBtn.style, {
+          background: "#3498db",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+        });
+        editBtn.onclick = () => editOrderModal(p);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "🗑️ Eliminar";
+        Object.assign(deleteBtn.style, {
+          background: "#ff4d4f",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+        });
+        deleteBtn.onclick = () => deleteOrder(p.id);
+
+        // 💰 Botón Medios de Pago
+        const pagoBtn = document.createElement("button");
+        pagoBtn.textContent = "💰 Medios de Pago";
+        Object.assign(pagoBtn.style, {
+          background: "#27ae60",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+          width: "300px",
+          textAlign: "center",
+        });
+        pagoBtn.onclick = () => abrirModalPago(p);
+
+        // 🔹 Botón Estado
+        const estadoBtn = document.createElement("button");
+        estadoBtn.textContent = p.estado === "entregado" ? "Entregado" : "Pendiente";
+        Object.assign(estadoBtn.style, {
+          background: p.estado === "entregado" ? "#ff4d4f" : "#2ecc71",
+          color: "#fff",
+          border: "none",
+          padding: "8px 18px",
+          borderRadius: "7px",
+          fontWeight: "bold",
+          cursor: "pointer",
+          width: "300px",
+          textAlign: "center",
+          marginTop: "10px",
+        });
+        estadoBtn.onclick = async () => {
+          p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
+          const { error } = await supabase.from("pedidos").update({ estado: p.estado }).eq("id", p.id);
+          if (error) return alert(error.message);
+          fetchOrders();
+        };
+        
+        // 📦 Botón Archivar Individual
+        const archiveIndividualBtn = document.createElement("button");
+        archiveIndividualBtn.textContent = "📦 Archivar";
+        Object.assign(archiveIndividualBtn.style, {
+            background: "#95a5a6", // Color gris suave para archivar
+            color: "#fff",
+            border: "none",
+            padding: "8px 18px",
+            borderRadius: "7px",
+            fontWeight: "bold",
+            cursor: "pointer",
+            width: "300px",
+            textAlign: "center",
+        });
+        archiveIndividualBtn.onclick = () => archiveIndividualOrder(p.id);
+
+
+        actionsDiv.append(pdfBtn, editBtn, deleteBtn, pagoBtn, estadoBtn, archiveIndividualBtn);
+        div.append(infoDiv, actionsDiv);
+        container.appendChild(div);
+      }
+    }
+    
+    // PASO 2: RESTAURAR la posición de scroll
+    setTimeout(() => {
+        // Restaurar scroll usando la posición guardada
+        scrollTarget.scrollTop = lastOrdersScrollPosition;
+    }, 0); 
+
+  } catch (err) {
+    console.error(err);
+    showToast("Error al cargar pedidos");
+  } finally {
+    isFetchingOrders = false;
+  }
 }
+
+
 
 /**
  * Calcula y renderiza el total de ventas y la discriminación de pagos
@@ -4224,6 +4298,5 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 </body>
 </html>
-
 
 
