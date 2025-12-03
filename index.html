@@ -607,14 +607,15 @@
  <nav class="sidebar">
   <h2>MENU</h2>
   <ul style="list-style:none; padding:0; margin:0;">
-<li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
-<li><button class="tab-btn" data-tab="pedidosArchivados">Pedidos Archivados</button></li>
-<li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
+    <li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
+    <li><button class="tab-btn" data-tab="pedidosArchivados">Pedidos Archivados</button></li>
+    <li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
     
+    <li><button class="tab-btn" data-tab="reporteVentas">Reporte de Ventas</button></li>
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
     <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
     <li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
-    </ul>
+  </ul>
 </nav>
    
     
@@ -782,6 +783,30 @@
        style="max-width:90%; max-height:90%; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.5);">
 </div>
 
+
+
+
+</section>
+
+<section id="reporteVentas" class="section">
+    <h2>📈 Reporte de Ventas por Producto</h2>
+    <p style="color:#555;">Muestra la cantidad total vendida de cada producto a través de los pedidos activos. Use esta información para planificar sus pedidos de reposición de stock.</p>
+    
+    <div style="margin-bottom: 15px; text-align: right;">
+        <button onclick="exportSalesPDF()" 
+                style="padding: 8px 15px; border: none; border-radius: 6px; background: #c0392b; color: white; cursor: pointer; font-weight: bold;">
+            ⬇️ Exportar PDF
+        </button>
+    </div>
+    <div id="salesReportContainer" style="margin-top:20px;">
+        <p>Cargando datos de ventas...</p>
+    </div>
+</section>
+
+
+
+<div id="imageModal" 
+     style="display:none; position:fixed; z-index:9999; top:0; left:0; width:100%; height:100%;
 
 
 
@@ -1130,8 +1155,10 @@ function activateSection(tab) {
   // 4. Carga los datos específicos
   if (tab === 'promos') fetchPromos();  else if (tab === 'pedidos') fetchOrders();
   // ... (resto de las cargas de datos)
-  else if (tab === 'clienteTienda') cargarTiendaCliente(); 
+  else if (tab === 'clienteTienda') cargarTiendaCliente();
+else if (tab === 'reporteVentas') fetchSalesData(); 
 }
+
 
 
 // 5. Escucha los clics de los botones del menú
@@ -4292,6 +4319,301 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 
+
+
+/* =========================================================
+   NUEVA LÓGICA DE REPORTE DE VENTAS
+   ========================================================= */
+
+let allPromos = []; // Variable global para almacenar todas las promociones/stock
+let allCategories = [];
+
+
+
+
+/**
+ * Obtiene todas las promociones para mapear IDs a nombres, stock y categorías.
+ */
+async function fetchAllPromos() {
+    if (allPromos.length > 0) return; // Ya cargado
+    
+    await fetchAllCategories(); // Asegura que las categorías estén cargadas
+    
+    console.log('Cargando todas las promociones...');
+    // Se asume que 'promociones' tiene una columna 'categoria_id'
+    const { data, error } = await supabase.from('promociones').select('id, nombre, stock, categoria_id'); 
+    
+    if (error) {
+        console.error('Error al cargar todas las promociones:', error);
+        return;
+    }
+    
+    // Mapear el nombre de la categoría a cada promoción
+    allPromos = data.map(promo => {
+        const category = allCategories.find(c => c.id === promo.categoria_id);
+        promo.categoria_nombre = category ? category.nombre : 'Sin Categoría';
+        return promo;
+    });
+    console.log(`${allPromos.length} promociones cargadas.`);
+}
+
+
+
+
+
+
+/**
+ * Obtiene los datos de ventas DE PEDIDOS ACTIVOS, los agrupa por categoría y los muestra.
+ */
+async function fetchSalesData() {
+    const container = document.getElementById('salesReportContainer');
+    container.innerHTML = '<p>Obteniendo datos de pedidos...</p>';
+
+    // 1. Cargar todas las promociones (incluyendo la categoría)
+    await fetchAllPromos();
+    
+    // 2. Obtener SOLO los pedidos activos
+    const { data: orders, error: ordersError } = await supabase
+        .from('pedidos')
+        .select('productos') 
+        .eq('archivado', false); 
+
+    if (ordersError) {
+        console.error('Error al obtener pedidos para el reporte:', ordersError);
+        container.innerHTML = `<p style="color:#ff4d4f;">Error al cargar los pedidos: ${ordersError.message}</p>`;
+        return;
+    }
+    
+    if (!orders || orders.length === 0) {
+        container.innerHTML = '<p>No se encontraron pedidos activos.</p>';
+        return;
+    }
+
+    // 3. Agregar las ventas por producto
+    const salesMap = new Map(); 
+    
+    orders.forEach(order => {
+        if (order.productos && Array.isArray(order.productos)) {
+            order.productos.forEach(product => {
+                const prodId = product.id;
+                const qty = parseInt(product.cantidad, 10) || 0; 
+                
+                if (prodId && qty > 0) {
+                    const currentTotal = salesMap.get(prodId) || 0;
+                    salesMap.set(prodId, currentTotal + qty);
+                }
+            });
+        }
+    });
+
+    // 4. Mapear los datos de ventas con nombre, stock y CATEGORÍA
+    const reportData = [];
+    salesMap.forEach((totalSold, prodId) => {
+        const promo = allPromos.find(p => p.id === prodId);
+        const stockActual = promo ? (promo.stock ?? 0) : 'N/A';
+        
+        reportData.push({
+            nombre: promo ? promo.nombre : `ID Desconocido (${prodId})`,
+            stock: stockActual,
+            vendido: totalSold,
+            // NUEVO: Añadir categoría para la agrupación
+            categoria: promo ? promo.categoria_nombre : 'Sin Categoría', 
+        });
+    });
+    
+    // 5. ORDENAR: Primero por Categoría (A-Z), luego por Nombre (A-Z)
+    reportData.sort((a, b) => {
+        const catA = a.categoria.toUpperCase();
+        const catB = b.categoria.toUpperCase();
+        
+        if (catA < catB) return -1;
+        if (catA > catB) return 1;
+        
+        // Si las categorías son iguales, ordena por nombre del producto
+        const nameA = a.nombre.toUpperCase();
+        const nameB = b.nombre.toUpperCase();
+        
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+    });
+    
+    // **Almacenar datos en global para la exportación a PDF**
+    window.currentReportData = reportData; 
+
+    // 6. Renderizar la tabla
+    renderSalesReportTable(container, reportData);
+}
+
+
+
+
+
+
+/**
+ * Obtiene todas las categorías para mapear IDs a nombres.
+ */
+async function fetchAllCategories() {
+    console.log('Cargando todas las categorías...');
+    const { data, error } = await supabase.from('categorias').select('id, nombre'); 
+    if (error) {
+        console.error('Error al cargar todas las categorías:', error);
+        return;
+    }
+    allCategories = data;
+}
+
+
+
+
+
+
+/**
+ * Renderiza la tabla de reporte de ventas, agrupada por categoría, en una sola tabla
+ * con filas separadoras para las categorías, imitando la estructura del PDF.
+ */
+function renderSalesReportTable(container, data) {
+    if (data.length === 0) {
+        container.innerHTML = '<p>No se encontraron ventas de productos.</p>';
+        return;
+    }
+    
+    // Inicia una sola tabla para todo el reporte
+    let html = `
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid #ccc;">
+                    <th style="width: 60%;">Producto</th>
+                    <th style="width: 20%; text-align:center;">Vendido Total</th>
+                    <th style="width: 20%; text-align:center;">Stock Actual</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    let currentCategory = '';
+    
+    data.forEach(item => {
+        const isLowStock = item.stock !== 'N/A' && item.stock < item.vendido;
+
+        // 1. Fila de Encabezado de Categoría (si la categoría cambia)
+        if (item.categoria !== currentCategory) {
+            currentCategory = item.categoria;
+            
+            // Fila especial para la categoría que ocupa 3 columnas (colspan="3")
+            // Esto replica la fila de encabezado que ves en el PDF.
+            html += `
+                <tr>
+                    <td colspan="3" style="background: #eaf3f8; font-weight: bold; padding: 8px 10px; border-top: 2px solid #3498db; color: #2c3e50;">
+                        Categoría: ${currentCategory}
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 2. Fila de Producto
+        html += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td style="text-align:center;">${item.vendido}</td>
+                <td style="text-align:center; color:${isLowStock ? '#ff4d4f' : '#2ecc71'};">${item.stock}</td>
+            </tr>
+        `;
+    });
+
+    // Cierra la tabla
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+
+
+
+
+
+
+/**
+ * Exporta el reporte de ventas actual a un archivo PDF, incluyendo agrupaciones por categoría.
+ */
+function exportSalesPDF() {
+    const data = window.currentReportData;
+    if (!data || data.length === 0) {
+        showToast('No hay datos para exportar.');
+        return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    // Título y Fecha
+    doc.setFontSize(18);
+    doc.text("Reporte de Ventas de Productos (Activos)", 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Fecha del Reporte: ${new Date().toLocaleDateString()}`, 14, 27);
+    
+    // Preparar datos para AutoTable
+    const finalData = [];
+    let currentCategory = '';
+    
+    // Agrupar y formatear los datos para el PDF
+    data.forEach(item => {
+        // Si la categoría cambia, inserta una fila de encabezado de categoría
+        if (item.categoria !== currentCategory) {
+            currentCategory = item.categoria;
+            // Fila de encabezado de categoría (se extiende por las 3 columnas)
+            finalData.push([{ 
+                content: `Categoría: ${currentCategory}`, 
+                colSpan: 3, 
+                styles: { 
+                    fillColor: [236, 240, 241], // Gris claro
+                    fontStyle: 'bold', 
+                    halign: 'left',
+                    textColor: [52, 73, 94]
+                } 
+            }]);
+        }
+        // Fila de producto
+        finalData.push([item.nombre, item.vendido, item.stock]);
+    });
+
+
+    const headers = [
+        ["Producto", "Vendido Total", "Stock Actual"]
+    ];
+    
+    // Generar la tabla
+    doc.autoTable({
+        head: headers,
+        body: finalData, // Usamos los datos formateados
+        startY: 35,
+        styles: {
+            fontSize: 10,
+            cellPadding: 3,
+            valign: 'middle',
+            lineWidth: 0.1,
+            lineColor: [200, 200, 200]
+        },
+        headStyles: {
+            fillColor: [44, 62, 80], 
+            textColor: 255,
+            fontStyle: 'bold',
+            halign: 'center'
+        },
+        columnStyles: {
+            0: { halign: 'left' },
+            1: { halign: 'center' },
+            2: { halign: 'center' },
+        }
+    });
+
+    // Guardar el archivo
+    doc.save(`Reporte_Ventas_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
+    showToast('PDF de reporte de ventas generado.');
+}
 
 
 
