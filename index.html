@@ -231,8 +231,8 @@
 
 
 
-<!-- CATEGORÍAS -->
-<div id="categoriasContainer" class="categorias-container"></div>
+
+
 
 
 <div id="carritoModal">
@@ -660,20 +660,27 @@
         <label for="modalStock">Stock (unidades):</label>
         <input type="number" id="modalStock" min="0" required>
 
-<!-- Campo: Categoría -->
-<label for="modalCategoria">Categoría:</label>
-<select id="modalCategoria" style="width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #ccc;">
-  <option value="">Cargando categorías...</option>
-</select>
-         
 
-        
+   
         <div style="margin-top: 20px; text-align: right;">
             <button onclick="document.getElementById('editPromoModal').style.display = 'none'" class="cancel-btn">Cancelar</button>
             <button onclick="savePromotionChanges()" class="save-btn">Guardar Cambios</button>
         </div>
     </div>
 </div>
+
+
+
+<section id="categorias" class="section">
+  <h2 style="margin-bottom:15px;">Categorías</h2>
+
+  <button id="addCategoriaBtn"
+      style="padding:6px 12px;background:#2ecc71;color:#fff;border:none;border-radius:6px;margin-bottom:15px;">
+      ➕ Nueva Categoría
+  </button>
+
+  <div id="categoriaList"></div>
+</section>         
 
 
 
@@ -811,7 +818,7 @@
 
 
 
-<div id="categorias" class="section">
+<div id="categoriasContainer" class="section">
 	<h1>Gestión de Categorías</h1>
  	
   	<button id="addCategoriaBtn">Agregar</button>
@@ -1151,26 +1158,32 @@ function activateSection(tab) {
   // 3. Activa la sección seleccionada
   const section = document.getElementById(tab);
   if (section) section.classList.add('active');
-
+  
   // 4. Carga los datos específicos
-  if (tab === 'promos') fetchPromos();  else if (tab === 'pedidos') fetchOrders();
-  // ... (resto de las cargas de datos)
+  if (tab === 'promos') fetchPromos();  
+  else if (tab === 'pedidos') fetchOrders();
+  else if (tab === 'categorias') fetchCategorias();
   else if (tab === 'clienteTienda') cargarTiendaCliente();
-else if (tab === 'reporteVentas') fetchSalesData(); 
+  else if (tab === 'reporteVentas') fetchSalesData(); 
 }
 
 
 
-// 5. Escucha los clics de los botones del menú
+// Asigna los eventos de clic (versión CORRECTA)
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
+    const tab = btn.getAttribute('data-tab');
+    // activar la pestaña indicada por el data-tab del botón
     activateSection(tab);
+
+    // cerrar sidebar en móviles si estaba abierto
     if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
       toggleSidebar();
     }
   });
 });
+
+
 
 // Mostrar Promos por defecto
 activateSection('promos');
@@ -4280,7 +4293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Cargar el resto de los datos (estos fetch ya NO deberían estar en el DCL, 
     //    sino solo en la función activateSection para cada pestaña, pero se mantienen 
     //    aquí para evitar otros errores de "not defined" si los usas al inicio)
-    fetchCategorias();
+  
     fetchLocalidades();
     fetchPromos(); 
     fetchOrders(); 
