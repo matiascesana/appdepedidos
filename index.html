@@ -650,6 +650,12 @@
         <label for="modalImageFile">Cambiar Imagen:</label>
         <input type="file" id="modalImageFile" accept="image/*">
         <p>Imagen actual: <span id="modalCurrentImageName" style="font-style: italic;"></span></p>
+<div class="form-group">
+    <label for="modalCategoria">Categoría actual:</label>
+    <select id="modalCategoria" class="form-control">
+        <option value="">Cargando categorías...</option>
+    </select>
+</div>
 
         <label for="modalPrecio">Precio Actual ($):</label>
         <input type="number" id="modalPrecio" min="0" step="0.01" required>
@@ -973,6 +979,7 @@ background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:999
 
 
 
+
 document.getElementById("addPromoBtn").addEventListener("click", async () => {
   // Cargar categorías para el select
   const { data: categorias } = await supabase.from("categorias").select("id,nombre").order("nombre");
@@ -1078,6 +1085,190 @@ document.getElementById("imageModal").addEventListener("click", () => {
 const SUPABASE_URL = "https://ejbqlejlgprvwzrptojo.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqYnFsZWpsZ3Bydnd6cnB0b2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMjkwMjIsImV4cCI6MjA3MjYwNTAyMn0.9fVItJka0MN3nlfowVudIE0AuNmfTJGQcbbqpau2Th8";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let availableCategorias = [];
+
+
+
+// --- NUEVA FUNCIÓN: Carga todas las categorías disponibles ---
+async function fetchAvailableCategorias() {
+    try {
+        const { data: categorias = [], error } = await supabase
+            .from("categorias")
+            .select("id, nombre") // Solo necesitamos ID y nombre
+            .order("nombre", { ascending: true });
+        
+        if (error) throw error;
+        
+        availableCategorias = categorias; // Almacenamos la lista completa
+        
+    } catch (err) {
+        console.error('Error cargando categorías disponibles:', err);
+    }
+}
+
+
+// --- NUEVA FUNCIÓN: Llena el <select> en el modal ---
+function populateCategoriaSelect(selectedCategoryId) {
+    const select = document.getElementById('modalCategoria');
+    if (!select) return;
+
+    // 1. Limpiar y añadir opción por defecto
+    select.innerHTML = '<option value="" disabled selected>Seleccione una categoría</option>';
+    
+    if (availableCategorias.length === 0) {
+        select.innerHTML += '<option value="">No hay categorías disponibles</option>';
+        return;
+    }
+
+    // 2. Inyectar las opciones
+    availableCategorias.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.nombre;
+        
+        // CRÍTICO: Seleccionar la categoría actual de la promoción
+        // Usamos == para manejar la posible diferencia entre string/number en los IDs.
+        if (cat.id == selectedCategoryId) { 
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Función auxiliar para obtener el valor de un elemento de forma segura.
+ * Si el elemento no existe (es null), retorna null.
+ */
+const getSafeValue = (id) => {
+    const element = document.getElementById(id);
+    if (!element) {
+        // En un entorno de producción, puede comentar esta advertencia.
+        console.warn(`Elemento ${id} no encontrado. Asumiendo valor nulo.`);
+        return null;
+    }
+    return element.value;
+};
+
+
+// ----------------------------------------------------------------------
+
+/**
+ * Guarda los cambios de la promoción, maneja la carga/eliminación de la imagen.
+ */
+async function savePromotionChanges() {
+    
+    // ================= 1. OBTENER VALORES DE FORMA SEGURA =================
+    
+    // ⚠️ CRÍTICO: Usamos getSafeValue para prevenir el TypeError.
+    const promoId = getSafeValue('modalPromoId');
+    const oldImageName = getSafeValue('modalOldImageName');
+    
+    // Archivo de imagen se maneja diferente (files[0])
+    const newImageFileElement = document.getElementById('modalImageFile');
+    const newImageFile = newImageFileElement && newImageFileElement.files ? newImageFileElement.files[0] : null;
+
+    // Obtener el resto de los valores de forma segura
+    const newNombre = getSafeValue('modalNombre');
+    const newPrecioStr = getSafeValue('modalPrecio');
+    const newPrecioAnteriorStr = getSafeValue('modalPrecioAnterior');
+    const newStockStr = getSafeValue('modalStock');
+    
+    // Lógica para Categoría (ya robusta)
+    const categoriaElement = document.getElementById('modalCategoria');
+    let newCategoriaId = null;
+
+    if (categoriaElement) {
+        newCategoriaId = categoriaElement.value;
+        // Si el valor es una cadena vacía (opción por defecto sin valor), lo establecemos a null.
+        if (newCategoriaId === "") newCategoriaId = null;
+    }
+    
+    // ================= 2. VALIDACIÓN Y PARSEO =================
+
+    let newImageName = oldImageName;
+    
+    if (!promoId) return alert('Error: ID de promoción no encontrado. No se puede guardar.');
+    
+    // Parseo: Usamos || '0' o || '' para garantizar que parseFloat/parseInt no fallen con null.
+    const newPrecio = parseFloat(newPrecioStr || '0');
+    const newPrecioAnterior = parseFloat(newPrecioAnteriorStr || '0');
+    const newStock = parseInt(newStockStr || '0') || 0;
+    
+    // ID del contenedor de la barra de progreso (Asegúrese de que exista en su HTML)
+    const progressBarContainerId = 'uploadProgressBarContainer'; 
+
+    try {
+        // 3. Manejo de la carga de imagen
+        if (newImageFile) {
+            // Se asume la existencia de updateProgressBar
+            updateProgressBar(progressBarContainerId, 10, 'Iniciando carga de imagen...', true); 
+
+            const fileExtension = newImageFile.name.split('.').pop();
+            const uniqueName = `${promoId}_${Date.now()}.${fileExtension}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('promo_images')
+                .upload(uniqueName, newImageFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+                
+            updateProgressBar(progressBarContainerId, 50, 'Imagen cargada. Actualizando BBDD...');
+
+            if (uploadError) throw uploadError;
+
+            newImageName = uniqueName;
+
+            // Eliminar la imagen anterior si existe
+            if (oldImageName && oldImageName !== newImageName) {
+                const { error: deleteError } = await supabase.storage
+                    .from('promo_images')
+                    .remove([oldImageName]);
+                if (deleteError) console.warn('No se pudo eliminar la imagen anterior:', deleteError);
+            }
+        }
+        
+        updateProgressBar(progressBarContainerId, newImageFile ? 70 : 70, 'Actualizando registros...');
+
+
+        // 4. Actualizar la base de datos
+        const { error: updateError } = await supabase
+            .from('promociones')
+            .update({
+                nombre: newNombre,
+                precio: newPrecio,
+                // Si el precio anterior es 0 o NaN (vacío), guardamos null
+                precio_anterior: isNaN(newPrecioAnterior) || newPrecioAnterior === 0 ? null : newPrecioAnterior, 
+                stock: newStock,
+                imagen: newImageName,
+                categoria_id: newCategoriaId // ¡Campo corregido!
+            })
+            .eq('id', promoId);
+
+        if (updateError) throw updateError;
+        
+        updateProgressBar(progressBarContainerId, 100, 'Actualización completada!', true);
+
+        alert('✅ Promoción actualizada con éxito!');
+        document.getElementById('editPromoModal').style.display = 'none';
+
+        // 5. Recargar la lista para reflejar cambios
+        // Se asume la existencia de renderPromosByFilter
+        const currentCategoryId = document.getElementById('promoCategoriaFilter').value; 
+        await renderPromosByFilter(currentCategoryId);
+
+    } catch (err) {
+        console.error('Error al guardar cambios:', err);
+        alert('Error al guardar cambios: ' + err.message);
+    } finally {
+        // Ocultar la barra de progreso al finalizar
+        updateProgressBar(progressBarContainerId, 0, '', false);
+    }
+}
+
+
+
 
 /* =========================================================
    Utilidades generales
@@ -1323,10 +1514,11 @@ async function loadCategoriesIntoModal(selectedId = null) {
 
 
 
-
 // ===============================================
 // === 🆕 FUNCIONES DE EDICIÓN Y MODAL 🆕 ===
 // ===============================================
+
+
 
 /**
  * Abre el modal y carga los datos de la promoción seleccionada.
@@ -1348,32 +1540,38 @@ async function openEditModal(promoId) {
             .maybeSingle();
 
         if (error || !promo) throw new Error(error?.message || 'Promoción no encontrada');
+        
+        // 💡 CRÍTICO: Asegurarse de que las categorías disponibles estén cargadas
+        // (Esto es clave si el DOMContentLoaded falló o si se llegó aquí primero)
+        if (availableCategorias.length === 0) {
+            await fetchAvailableCategorias(); 
+        }
 
         // 2. Llenar los campos del modal
         document.getElementById('modalPromoId').value = promo.id;
         document.getElementById('modalOldImageName').value = promo.imagen || '';
         document.getElementById('modalCurrentImageName').textContent = promo.imagen || 'Sin imagen';
-        
-        // CAMBIO AÑADIDO: Cargar el nombre de la promoción
         document.getElementById('modalNombre').value = promo.nombre || ''; 
-
         document.getElementById('modalPrecio').value = promo.precio || 0;
         document.getElementById('modalPrecioAnterior').value = promo.precio_anterior || '';
         document.getElementById('modalStock').value = promo.stock || 0;
 
-        // Cargar categorías en el select
-        await loadCategoriesIntoModal(promo.categoria_id || null);
-
-        // Seleccionar la categoría actual
+        // 3. 🎯 CORRECCIÓN: Llenar el <select> y seleccionar la opción actual
+        // Reemplazamos 'loadCategoriesIntoModal' por su función 'populateCategoriaSelect'.
+        populateCategoriaSelect(promo.categoria_id); 
+        
+        // Ya no necesita este código, pues populateCategoriaSelect ya selecciona el valor
+        /*
         const catSelect = document.getElementById('modalCategoria');
         if (catSelect && promo.categoria_id) {
             catSelect.value = promo.categoria_id;
         }
+        */
 
         // Limpiar campo de archivo
         document.getElementById('modalImageFile').value = '';
 
-        // 3. Mostrar el modal
+        // 4. Mostrar el modal
         modal.style.display = 'block';
 
     } catch (err) {
@@ -1382,98 +1580,10 @@ async function openEditModal(promoId) {
     }
 }
 
-// ----------------------------------------------------------------------
-
-/**
- * Guarda los cambios de la promoción, maneja la carga/eliminación de la imagen.
- */
-async function savePromotionChanges() {
-    const promoId = document.getElementById('modalPromoId').value;
-    const oldImageName = document.getElementById('modalOldImageName').value;
-    const newImageFile = document.getElementById('modalImageFile').files[0];
-    
-    // CAMBIO AÑADIDO: Obtener el nuevo nombre del modal
-    const newNombre = document.getElementById('modalNombre').value;
-    
-    const newPrecio = parseFloat(document.getElementById('modalPrecio').value);
-    const newPrecioAnterior = parseFloat(document.getElementById('modalPrecioAnterior').value);
-    const newStock = parseInt(document.getElementById('modalStock').value) || 0;
-    const newCategoriaId = document.getElementById('modalCategoria').value || null;
-
-    let newImageName = oldImageName;
-
-    if (!promoId) return alert('ID de promoción no encontrado.');
-    
-    // ID del contenedor de la barra de progreso
-    const progressBarContainerId = 'uploadProgressBarContainer'; // Asegúrate de que este ID exista en tu HTML
-
-    try {
-        // 1. Manejo de la carga de imagen
-        if (newImageFile) {
-            updateProgressBar(progressBarContainerId, 10, 'Iniciando carga de imagen...', true);
-
-            const fileExtension = newImageFile.name.split('.').pop();
-            const uniqueName = `${promoId}_${Date.now()}.${fileExtension}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('promo_images')
-                .upload(uniqueName, newImageFile, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
-            
-            updateProgressBar(progressBarContainerId, 50, 'Imagen cargada. Actualizando BBDD...');
-
-            if (uploadError) throw uploadError;
-
-            newImageName = uniqueName;
-
-            // Eliminar la imagen anterior si existe
-            if (oldImageName && oldImageName !== newImageName) {
-                const { error: deleteError } = await supabase.storage
-                    .from('promo_images')
-                    .remove([oldImageName]);
-                if (deleteError) console.warn('No se pudo eliminar la imagen anterior:', deleteError);
-            }
-        }
-        
-        updateProgressBar(progressBarContainerId, newImageFile ? 70 : 70, 'Actualizando registros...');
 
 
-        // 2. Actualizar la base de datos
-        const { error: updateError } = await supabase
-            .from('promociones')
-            .update({
-                // CAMBIO AÑADIDO: Incluir el nuevo nombre en la actualización
-                nombre: newNombre, 
-                
-                precio: newPrecio,
-                precio_anterior: isNaN(newPrecioAnterior) ? null : newPrecioAnterior,
-                stock: newStock,
-                imagen: newImageName,
-                categoria_id: newCategoriaId
-            })
-            .eq('id', promoId);
 
-        if (updateError) throw updateError;
-        
-        updateProgressBar(progressBarContainerId, 100, 'Actualización completada!', true);
 
-        alert('✅ Promoción actualizada con éxito!');
-        document.getElementById('editPromoModal').style.display = 'none';
-
-        // 3. Recargar la lista para reflejar cambios
-        const currentCategoryId = document.getElementById('promoCategoriaFilter').value;
-        await renderPromosByFilter(currentCategoryId);
-
-    } catch (err) {
-        console.error('Error al guardar cambios:', err);
-        alert('Error al guardar cambios: ' + err.message);
-    } finally {
-        // Ocultar la barra de progreso al finalizar
-        updateProgressBar(progressBarContainerId, 0, '', false);
-    }
-}
 
 // ----------------------------------------------------------------------
 
