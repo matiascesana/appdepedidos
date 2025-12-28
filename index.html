@@ -2789,15 +2789,21 @@ async function fetchOrders() {
           border: "1px solid #eee",
         });
 
-        // 🧾 Info
-        const infoDiv = document.createElement("div");
-        infoDiv.style.flex = "1";
+         // 🧾 Info
+const infoDiv = document.createElement("div");
+infoDiv.style.flex = "1";
 
-        let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-        p.productos.forEach(pr => {
-          prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
-        });
-        prodHTML += "</ul>";
+// 📅 Formatear la fecha (Extraemos solo DD/MM/AAAA)
+// Si tu campo se llama distinto a 'created_at', cámbialo aquí:
+const fechaPedido = p.created_at 
+    ? new Date(p.created_at).toLocaleDateString('es-AR') 
+    : 'Sin fecha';
+
+let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
+p.productos.forEach(pr => {
+    prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
+});
+prodHTML += "</ul>";
 
         // 💰 Mostrar pagos si existen
         let pagosHTML = "";
@@ -2816,12 +2822,16 @@ async function fetchOrders() {
         }
 
         infoDiv.innerHTML = `
-          <strong>${safeText(p.cliente)}</strong>
-          <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
-          ${prodHTML}
-          <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
-          ${pagosHTML}
-        `;
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+        <strong style="font-size: 1.1em;">${safeText(p.cliente)}</strong>
+        <span style="color: #7f8c8d; font-size: 0.85em; font-weight: normal;">(${fechaPedido})</span>
+    </div>
+    <div style="color:#888; margin-bottom:2px; font-size: 0.9em;">Localidad: ${safeText(localidad)}</div>
+    ${prodHTML}
+    <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+    ${pagosHTML}
+`;
+
 
         // 🎛️ Botones
         const actionsDiv = document.createElement("div");
@@ -4753,6 +4763,7 @@ function exportSalesPDF() {
 </script>
 </body>
 </html>
+
 
 
 
