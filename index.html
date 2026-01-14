@@ -2800,9 +2800,22 @@ const fechaPedido = p.created_at
     : 'Sin fecha';
 
 let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-p.productos.forEach(pr => {
-    prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
-});
+
+// Verificamos si productos es una lista (formato viejo)
+if (Array.isArray(p.productos)) {
+    p.productos.forEach(pr => {
+        prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
+    });
+} 
+// Verificamos si productos es un texto (formato nuevo de la tienda React)
+else if (typeof p.productos === 'string') {
+    // Como es un texto, lo mostramos directamente como un ítem de la lista
+    prodHTML += `<li>${safeText(p.productos)}</li>`;
+} 
+else {
+    prodHTML += `<li>Sin detalles de productos</li>`;
+}
+
 prodHTML += "</ul>";
 
         // 💰 Mostrar pagos si existen
@@ -4763,6 +4776,7 @@ function exportSalesPDF() {
 </script>
 </body>
 </html>
+
 
 
 
