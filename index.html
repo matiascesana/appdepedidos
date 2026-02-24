@@ -2799,61 +2799,63 @@ async function fetchOrders() {
         });
 
          // 🧾 Info
+// --- COMIENZO DEL BLOQUE CORREGIDO ---
 const infoDiv = document.createElement("div");
 infoDiv.style.flex = "1";
 
-// 📅 Formatear la fecha (Extraemos solo DD/MM/AAAA)
-// Si tu campo se llama distinto a 'created_at', cámbialo aquí:
-const fechaPedido = p.created_at 
-    ? new Date(p.created_at).toLocaleDateString('es-AR') 
-    : 'Sin fecha';
+const fechaPedido = p.created_at ? new Date(p.created_at).toLocaleDateString('es-AR') : 'Sin fecha';
 
+// Lógica para detectar el tipo de contenido de productos (Array vs String)
 let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-
-// Verificamos si productos es una lista (formato viejo)
 if (Array.isArray(p.productos)) {
+    // Formato manual (Panel Admin)
     p.productos.forEach(pr => {
         prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
     });
-} 
-// Verificamos si productos es un texto (formato nuevo de la tienda React)
-else if (typeof p.productos === 'string') {
-    // Como es un texto, lo mostramos directamente como un ítem de la lista
+} else if (typeof p.productos === 'string' && p.productos.trim() !== "") {
+    // Formato Tienda Online (Texto plano)
     prodHTML += `<li>${safeText(p.productos)}</li>`;
-} 
-else {
+} else {
     prodHTML += `<li>Sin detalles de productos</li>`;
 }
-
 prodHTML += "</ul>";
 
-        // 💰 Mostrar pagos si existen
-        let pagosHTML = "";
-        if (p.pagos && p.pagos.length > 0) {
-          pagosHTML = `
-            <div style="margin-top:8px;background:#f8f9fa;padding:8px;border-radius:6px;">
-              <b>💳 Pagos:</b><br>
-              ${p.pagos
-                .map(pg => `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${pg.monto.toFixed(2)}`)
-                .join("<br>")}
-              ${p.saldo_pendiente > 0
-                ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${p.saldo_pendiente.toFixed(2)}</b>`
-                : ""}
-            </div>
-          `;
-        }
+// Lógica de PAGOS (Aquí incluimos lo que pediste de la tienda)
+let pagosHTML = "";
+const montoTotal = Number(p.total) || 0;
+const totalPagado = Array.isArray(p.pagos) ? p.pagos.reduce((sum, pag) => sum + (Number(pag.monto) || 0), 0) : 0;
+const saldoPendiente = montoTotal - totalPagado;
 
-        infoDiv.innerHTML = `
+if (Array.isArray(p.pagos) && p.pagos.length > 0) {
+    pagosHTML = `
+        <div style="margin-top:8px; background:#f0f7ff; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
+            <b style="font-size:0.9em; color:#2c3e50;">💳 Pagos Registrados:</b><br>
+            ${p.pagos.map(pg => `
+                <div style="display:flex; justify-content:space-between; font-size:0.9em; margin-top:2px;">
+                    <span>• ${pg.metodo} ${pg.destinatario ? `(${pg.destinatario})` : ""}:</span>
+                    <span style="font-weight:bold;">$${Number(pg.monto).toLocaleString()}</span>
+                </div>
+            `).join("")}
+            ${saldoPendiente > 0 ? `
+                <div style="margin-top:5px; text-align:right; border-top:1px dashed #ccc; padding-top:5px;">
+                    <b style="color:#e74c3c;">Saldo pendiente: $${saldoPendiente.toLocaleString()}</b>
+                </div>` : '<div style="color:#27ae60; font-weight:bold; font-size:0.8em; text-align:right;">✓ Pagado totalmente</div>'}
+        </div>`;
+} else {
+    pagosHTML = `<div style="margin-top:8px; color:#888; font-size:0.9em; font-style:italic;">No hay pagos registrados.</div>`;
+}
+
+infoDiv.innerHTML = `
     <div style="display: flex; align-items: baseline; gap: 10px;">
         <strong style="font-size: 1.1em;">${safeText(p.cliente)}</strong>
-        <span style="color: #7f8c8d; font-size: 0.85em; font-weight: normal;">(${fechaPedido})</span>
+        <span style="color: #7f8c8d; font-size: 0.85em;">(${fechaPedido})</span>
     </div>
     <div style="color:#888; margin-bottom:2px; font-size: 0.9em;">Localidad: ${safeText(localidad)}</div>
     ${prodHTML}
-    <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${Number(p.total).toFixed(2)}</span></div>
+    <div style="margin-top:8px;font-weight:bold;">Total: <span style="color:#ff4d4f;">$${montoTotal.toLocaleString()}</span></div>
     ${pagosHTML}
 `;
-
+// --- FIN DEL BLOQUE CORREGIDO ---
 
         // 🎛️ Botones
         const actionsDiv = document.createElement("div");
@@ -3480,8 +3482,7 @@ async function guardarPagosPedido() {
 
 
 
-
-/* ========== MODAL DE EDICIÓN DE PEDIDO CON VALIDACIÓN MANUAL ========== */
+/* ========== MODAL DE EDICIÓN DE PEDIDO CON VALIDACIÓN MANUAL Y MEJORA VISUAL ========== */
 async function editOrderModal(pedido) {
     const { data: localidades } = await supabase.from('localidades').select('*').order('id');
     const { data: productosDB } = await supabase.from('promociones').select('*').order('id');
@@ -3493,11 +3494,16 @@ async function editOrderModal(pedido) {
     let descuentoGeneral = typeof pedido.descuento_general !== 'undefined' ? pedido.descuento_general : 0;
 
     function renderModal(stockMsg = "") {
-        document.getElementById("modalInner").style.maxWidth = "min(90vw, 500px)"; 
-    document.getElementById("modalInner").style.width = "90vw";
+        const modalInner = document.getElementById("modalInner");
+        modalInner.style.maxWidth = "min(90vw, 500px)"; 
+        modalInner.style.width = "90vw";
+        modalInner.style.zIndex = "1001"; // Asegura prioridad
+        
+        // Aplicamos una animación de entrada suave al contenedor
+        modalInner.style.animation = "modalFadeIn 0.3s ease-out";
 
         // Lista de productos en el pedido
-        let listaHTML = `<ul id="productosPedidoList" style="margin-bottom:8px;">`;
+        let listaHTML = `<ul id="productosPedidoList" style="margin-bottom:8px; padding:0; list-style:none;">`;
         productosPedido.forEach((pr, idx) => {
             const prodInfo = productosDB.find(pdb => pdb.id === pr.id);
             const stockActualDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
@@ -3505,110 +3511,118 @@ async function editOrderModal(pedido) {
             const stockBase = stockActualDB + stockOriginal;
 
             listaHTML += `
-                <li style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fafafa;padding:6px 10px;border-radius:8px;">
-                    <span style="font-weight:bold;flex:1;">${safeText(pr.nombre)}</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <button class="qtyMinus" data-idx="${idx}" style="background:#ddd;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;">−</button>
-                        <input type="number" min="1" max="${stockBase}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:50px;text-align:center;">
-                        <button class="qtyPlus" data-idx="${idx}" style="background:#ddd;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;">+</button>
+                <li style="margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:#fafafa; padding:10px; border-radius:10px; border:1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="font-weight:bold; flex:1; min-width:120px;">${safeText(pr.nombre)}</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button class="qtyMinus" data-idx="${idx}" style="background:#fff; border:1px solid #ddd; border-radius:50%; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">−</button>
+                        <input type="number" min="1" max="${stockBase}" value="${pr.cantidad}" data-idx="${idx}" class="editQtyInput" style="width:45px; text-align:center; border:1px solid #ddd; border-radius:4px; padding:3px 0;">
+                        <button class="qtyPlus" data-idx="${idx}" style="background:#fff; border:1px solid #ddd; border-radius:50%; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">+</button>
                         <input type="number" min="0" max="100" value="${pr.descuento || 0}" 
-                               class="editDescuentoInput" data-idx="${idx}" style="width:50px;text-align:center;" placeholder="% Desc">
+                               class="editDescuentoInput" data-idx="${idx}" style="width:50px; text-align:center; border:1px solid #ddd; border-radius:4px; padding:3px 0;" placeholder="% Desc">
                     </div>
-                    <span style="color:#888;">(stock: ${stockBase})</span>
-                    <span style="color:#3498db;font-weight:bold;">$${(pr.precio * pr.cantidad * (1 - (pr.descuento || 0)/100)).toFixed(2)}</span>
-                    <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;">🗑️</button>
+                    <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                        <span style="color:#888; font-size:0.85em;">(stock: ${stockBase})</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="color:#3498db; font-weight:bold;">$${(pr.precio * pr.cantidad * (1 - (pr.descuento || 0)/100)).toFixed(2)}</span>
+                            <button type="button" class="deletePrBtn" data-idx="${idx}" style="background:#ff4d4f; color:#fff; border:none; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🗑️</button>
+                        </div>
+                    </div>
                 </li>
             `;
         });
         listaHTML += `</ul>`;
 
-        // Calculamos total: primero descuentos por producto, luego descuento general
         const totalSinDescuento = productosPedido.reduce((s, p) =>
             s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0
         );
         const totalConDescuento = totalSinDescuento * (1 - (descuentoGeneral || 0) / 100);
 
-        // Abrimos modal con todo el HTML (manteniendo estilo / estructura)
         openModal(`
-            <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
-                <h2 style="margin:0;font-size:1.3em;">Editar Pedido</h2>
+            <style>
+                @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+                .edit-modal-container::-webkit-scrollbar { width: 6px; }
+                .edit-modal-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+                .qtyPlus:hover, .qtyMinus:hover { background: #f0f0f0 !important; }
+            </style>
+            <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:18px;">
+                <h2 style="margin:0; font-size:1.4em; color:#2c3e50;">Editar Pedido</h2>
+                <p style="margin:4px 0 0; color:#7f8c8d; font-size:0.9em;">ID: ${pedido.id}</p>
             </div>
-            <div style="background:#f8f8f8;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);max-height:85vh;overflow-y:auto;">
+            <div class="edit-modal-container" style="background:#fff; border-radius:15px; padding:5px; max-height:80vh; overflow-y:auto;">
                 <div style="margin-bottom:16px;">
-                    <label style="font-weight:500;display:block;margin-bottom:4px;">Cliente</label>
-                    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                    <label style="font-weight:600; display:block; margin-bottom:6px; font-size:0.9em; color:#34495e;">Cliente</label>
+                    <input type="text" id="editPedidoCliente" value="${safeText(pedido.cliente)}" placeholder="Nombre del cliente" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
                 </div>
                 <div style="margin-bottom:16px;">
-                    <label style="font-weight:500;display:block;margin-bottom:4px;">DNI</label>
-                    <input type="text" id="editPedidoDni" value="${safeText(pedido.dni || '')}" placeholder="Ingrese DNI" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                    <label style="font-weight:600; display:block; margin-bottom:6px; font-size:0.9em; color:#34495e;">DNI</label>
+                    <input type="text" id="editPedidoDni" value="${safeText(pedido.dni || '')}" placeholder="Ingrese DNI" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
                 </div>
                 <div style="margin-bottom:16px;">
-                    <label style="font-weight:500;display:block;margin-bottom:4px;">Localidad</label>
-                    <select id="editPedidoLocalidad" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                    <label style="font-weight:600; display:block; margin-bottom:6px; font-size:0.9em; color:#34495e;">Localidad</label>
+                    <select id="editPedidoLocalidad" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; background:white;">
                         <option value="">Seleccione localidad</option>
                         ${localidades.map(l => `<option value="${l.id}" ${l.id === pedido.localidad_id ? 'selected' : ''}>${safeText(l.nombre)}</option>`).join('')}
                     </select>
                 </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:500;display:block;margin-bottom:4px;">Productos</label>
-                    <button type="button" id="openProductSelector" style="background:#eee;color:#333;border:none;padding:10px 14px;border-radius:6px;font-size:16px;cursor:pointer;margin-bottom:10px;">
-                        ➕ Agregar productos
+                
+                <div style="margin-bottom:16px; border-top: 1px solid #eee; pt:16px;">
+                    <label style="font-weight:600; display:block; margin:15px 0 8px; font-size:0.9em; color:#34495e;">Detalle de Productos</label>
+                    <button type="button" id="openProductSelector" style="width:100%; background:#f8f9fa; color:#2c3e50; border:1px dashed #cbd5e0; padding:12px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:12px; transition:0.2s;">
+                        ➕ Agregar / Cambiar Productos
                     </button>
                     ${listaHTML}
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:500;display:block;margin-bottom:4px;">Descuento general (%)</label>
-                        <input type="number" id="editDescuentoGeneral" value="${descuentoGeneral}" min="0" max="100" step="0.01"
-                               style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
-                    </div>
-                    <div style="margin-top:8px;font-weight:bold;">Total: <span id="pedidoTotal" style="color:#ff4d4f;">$${totalConDescuento.toFixed(2)}</span></div>
-                    ${stockMsg ? `<div style="color:#ff4d4f;font-weight:bold;margin-top:10px;">${stockMsg}</div>` : ""}
                 </div>
-                <button id="saveEditPedidoBtn" style="margin-top:10px;background:#3498db;color:#fff;border:none;padding:12px 20px;border-radius:7px;font-size:16px;font-weight:bold;cursor:pointer;">
-                    💾 Guardar cambios
+
+                <div style="background:#fdfdfe; border:1px solid #edf2f7; border-radius:12px; padding:15px; margin-top:20px;">
+                    <div style="margin-bottom:12px;">
+                        <label style="font-weight:600; display:block; margin-bottom:6px; font-size:0.9em; color:#34495e;">Descuento general (%)</label>
+                        <input type="number" id="editDescuentoGeneral" value="${descuentoGeneral}" min="0" max="100" step="0.01"
+                               style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                        <span style="font-weight:bold; font-size:1.1em; color:#2c3e50;">Total Final:</span>
+                        <span id="pedidoTotal" style="font-size:1.4em; font-weight:800; color:#e74c3c;">$${totalConDescuento.toFixed(2)}</span>
+                    </div>
+                </div>
+                ${stockMsg ? `<div style="color:#ff4d4f; font-weight:bold; margin-top:12px; font-size:0.85em; text-align:center;">⚠️ ${stockMsg}</div>` : ""}
+                
+                <button id="saveEditPedidoBtn" style="width:100%; margin-top:20px; background:#3498db; color:#fff; border:none; padding:14px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);">
+                    💾 Guardar Cambios del Pedido
                 </button>
             </div>
         `);
 
-        // ---- IMPORTANT: don't re-run renderModal from this input; only update total ----
+        // ---- EVENTOS ----
         const descuentoInput = document.getElementById("editDescuentoGeneral");
         if (descuentoInput) {
             descuentoInput.oninput = (e) => {
-                let val = parseFloat(e.target.value);
-                if (isNaN(val)) val = 0;
-                if (val < 0) val = 0;
-                if (val > 100) val = 100;
-                descuentoGeneral = val;
-
-                // Recalcular total sin re-renderizar todo el modal
-                const totalSinDesc = productosPedido.reduce((s, p) =>
-                    s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0
-                );
-                const totalConDesc = totalSinDesc * (1 - descuentoGeneral / 100);
-                const totalSpan = document.getElementById("pedidoTotal");
-                if (totalSpan) totalSpan.textContent = `$${totalConDesc.toFixed(2)}`;
+                let val = parseFloat(e.target.value) || 0;
+                descuentoGeneral = Math.min(100, Math.max(0, val));
+                const tSin = productosPedido.reduce((s, p) => s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0);
+                const tCon = tSin * (1 - descuentoGeneral / 100);
+                const tSpan = document.getElementById("pedidoTotal");
+                if (tSpan) tSpan.textContent = `$${tCon.toFixed(2)}`;
             };
         }
 
-        // Abrir submodal para agregar productos
         const openSelectorBtn = document.getElementById("openProductSelector");
         if (openSelectorBtn) openSelectorBtn.onclick = () => openSubModal();
 
-        // Botones + y − por producto
         document.querySelectorAll('.qtyPlus').forEach(btn => {
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx, 10);
-                const prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
-                const stockDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-                const stockOriginal = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
-                const stockBase = stockDB + stockOriginal;
-                if (productosPedido[idx].cantidad < stockBase) {
+                const pInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
+                const sOrig = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const sBase = (pInfo?.stock ?? 0) + sOrig;
+                if (productosPedido[idx].cantidad < sBase) {
                     productosPedido[idx].cantidad++;
                     renderModal();
                 } else {
-                    renderModal(`Stock máximo para "${productosPedido[idx].nombre}" es ${stockBase}.`);
+                    renderModal(`Stock máximo para "${productosPedido[idx].nombre}" es ${sBase}.`);
                 }
             };
         });
+
         document.querySelectorAll('.qtyMinus').forEach(btn => {
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx, 10);
@@ -3618,42 +3632,36 @@ async function editOrderModal(pedido) {
                 }
             };
         });
-        // input cantidad
+
         document.querySelectorAll('.editQtyInput').forEach(input => {
             input.onchange = () => {
                 const idx = parseInt(input.dataset.idx, 10);
-                const prodInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
-                const stockDB = prodInfo ? (prodInfo.stock ?? 0) : 0;
-                const stockOriginal = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
-                const stockBase = stockDB + stockOriginal;
+                const pInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
+                const sOrig = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+                const sBase = (pInfo?.stock ?? 0) + sOrig;
                 let val = Math.max(1, parseInt(input.value, 10) || 1);
-                if (val > stockBase) val = stockBase;
+                if (val > sBase) val = sBase;
                 productosPedido[idx].cantidad = val;
                 renderModal();
             };
         });
-        // input descuento por producto
+
         document.querySelectorAll('.editDescuentoInput').forEach(input => {
             input.onchange = () => {
                 const idx = parseInt(input.dataset.idx, 10);
-                let val = parseFloat(input.value);
-                if (isNaN(val)) val = 0;
-                if (val < 0) val = 0;
-                if (val > 100) val = 100;
-                productosPedido[idx].descuento = val;
-                renderModal();
-            };
-        });
-        // eliminar producto
-        document.querySelectorAll('.deletePrBtn').forEach(btn => {
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx, 10);
-                productosPedido.splice(idx, 1);
+                let val = parseFloat(input.value) || 0;
+                productosPedido[idx].descuento = Math.min(100, Math.max(0, val));
                 renderModal();
             };
         });
 
-        // Guardar cambios con validación manual
+        document.querySelectorAll('.deletePrBtn').forEach(btn => {
+            btn.onclick = () => {
+                productosPedido.splice(parseInt(btn.dataset.idx, 10), 1);
+                renderModal();
+            };
+        });
+
         const saveBtn = document.getElementById('saveEditPedidoBtn');
         if (saveBtn) {
             saveBtn.onclick = () => {
@@ -3666,29 +3674,46 @@ async function editOrderModal(pedido) {
                 if (!localidad_id) return alert("Seleccione la localidad");
                 if (!productosPedido.length) return alert("Agregue productos");
 
-                // Antes de llamar al save, asignamos el descuento general al pedido (persistente en la variable)
                 pedido.descuento_general = descuentoGeneral;
-
                 saveEditPedido(pedido.id, productosPedido, dni);
             };
         }
     }
 
-    // Submodal de selección de productos (igual que antes)
+    /* Submodal de selección de productos CON MEJORA DE Z-INDEX Y VISUAL */
     async function openSubModal() {
-        let html = `
-            <div style="display:flex;flex-direction:column;gap:12px;max-height:80vh;overflow:auto;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <select id="filtroCategoria" style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
-                        <option value="">Todas las categorías</option>
-                        ${categorias.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join('')}
-                    </select>
-                    <input type="text" id="buscadorProducto" placeholder="Buscar producto..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
+        const subOverlay = document.createElement('div');
+        subOverlay.id = "subModalOverlay";
+        subOverlay.style = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; animation: modalFadeIn 0.2s ease-out;
+        `;
+
+        subOverlay.innerHTML = `
+            <div style="background: white; width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0; font-size:1.2em; color:#2c3e50;">Añadir Producto</h3>
+                    <button id="closeSubBtn" style="background:none; border:none; font-size:24px; cursor:pointer; color:#95a5a6;">&times;</button>
                 </div>
-                <div id="listaProductosSubModal"></div>
+                <div style="display:flex; flex-direction:column; gap:12px; max-height:70vh; overflow:auto;">
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <select id="filtroCategoria" style="padding:10px; border-radius:8px; border:1px solid #ddd; background:#f9f9f9;">
+                            <option value="">Todas las categorías</option>
+                            ${categorias.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join('')}
+                        </select>
+                        <input type="text" id="buscadorProducto" placeholder="Buscar producto..." style="padding:10px; border-radius:8px; border:1px solid #ddd;">
+                    </div>
+                    <div id="listaProductosSubModal" style="margin-top:10px;"></div>
+                </div>
             </div>
         `;
-        openModal(html);
+
+        document.body.appendChild(subOverlay);
+
+        const closeSub = () => document.body.removeChild(subOverlay);
+        document.getElementById('closeSubBtn').onclick = closeSub;
 
         const lista = document.getElementById('listaProductosSubModal');
         function renderProductos(filtro = "", cat = "") {
@@ -3697,37 +3722,38 @@ async function editOrderModal(pedido) {
                 (p.nombre.toLowerCase().includes(filtro.toLowerCase()))
             );
             lista.innerHTML = filtrados.map(p => `
-                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:6px 0;">
-                    <span>${safeText(p.nombre)} ($${p.precio}, stock: ${p.stock ?? 0})</span>
-                    <button class="addProdBtn" data-id="${p.id}" style="background:#eee;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Agregar</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:10px 0;">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:600; font-size:14px;">${safeText(p.nombre)}</span>
+                        <span style="font-size:12px; color:#3498db;">$${p.precio} | Stock: ${p.stock ?? 0}</span>
+                    </div>
+                    <button class="addProdBtn" data-id="${p.id}" style="background:#2ecc71; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">+ Add</button>
                 </div>
             `).join('');
+
             document.querySelectorAll('.addProdBtn').forEach(btn => {
                 btn.onclick = () => {
                     const prod = productosDB.find(p => p.id == btn.dataset.id);
                     if (!productosPedido.some(pp => pp.id == prod.id)) {
-                        // mantenemos estructura original, añadimos campo descuento por defecto 0
                         productosPedido.push({ id: prod.id, nombre: prod.nombre, cantidad: 1, precio: prod.precio, descuento: 0 });
-                        closeModal();
+                        closeSub();
                         renderModal();
+                    } else {
+                        alert("Este producto ya está en el pedido");
                     }
                 };
             });
         }
         renderProductos();
 
-        const buscador = document.getElementById('buscadorProducto');
-        const filtro = document.getElementById('filtroCategoria');
-        if (buscador) buscador.oninput = e => renderProductos(e.target.value, filtro ? filtro.value : "");
-        if (filtro) filtro.onchange = e => renderProductos(buscador ? buscador.value : "", e.target.value);
+        document.getElementById('buscadorProducto').oninput = e => renderProductos(e.target.value, document.getElementById('filtroCategoria').value);
+        document.getElementById('filtroCategoria').onchange = e => renderProductos(document.getElementById('buscadorProducto').value, e.target.value);
     }
 
-    // Guardado con ajuste de stock (igual que antes) — ahora guarda descuento_general y recalcula total correctamente
     window.saveEditPedido = async function(id, nuevosProductos, dni) {
         const cliente = document.getElementById('editPedidoCliente').value.trim();
         const localidad_id = document.getElementById('editPedidoLocalidad').value;
 
-        // Obtener pedido original para restaurar/ajustar stock
         const { data: pedidoOriginal } = await supabase.from('pedidos').select('*').eq('id', id).single();
         const productosOriginal = pedidoOriginal.productos || [];
         const mapOriginal = {};
@@ -3746,13 +3772,11 @@ async function editOrderModal(pedido) {
             }
         }
 
-        // Recalcular total considerando descuentos por producto y descuento general
         const totalSinDescuento = nuevosProductos.reduce((s, p) =>
             s + p.precio * p.cantidad * (1 - (p.descuento || 0) / 100), 0
         );
         const totalConDescuento = totalSinDescuento * (1 - (descuentoGeneral || 0) / 100);
 
-        // Guardar en supabase incluyendo descuento_general
         const { error } = await supabase.from('pedidos').update({
             cliente,
             dni,
@@ -3770,28 +3794,45 @@ async function editOrderModal(pedido) {
         showToast('Pedido actualizado correctamente');
     };
 
-    // Render inicial
     renderModal();
 }
+/* ========== ELIMINAR PEDIDO (CORREGIDO) ========== */
+async function deleteOrder(id) {
+    if (!confirm('¿Eliminar pedido?')) return;
 
-
-/* ========== ELIMINAR PEDIDO ========== */
-async function deleteOrder(id){
-    if(!confirm('Eliminar pedido?')) return;
+    // Obtener los datos del pedido antes de borrarlo
     const { data } = await supabase.from('pedidos').select('*').eq('id', id).single();
-    if(data.productos && data.productos.length){
-        for(const pr of data.productos){
+
+    if (data.productos && data.productos.length) {
+        for (const pr of data.productos) {
+            
+            // --- NUEVA VALIDACIÓN ---
+            // Si el item es una "Visita sin venta", saltamos la restauración de stock
+            if (pr.id === "VISITA_999") {
+                console.log("Registro de visita detectado: omitiendo restauración de stock.");
+                continue; // Salta a la siguiente iteración del for
+            }
+            // ------------------------
+
             const promo = await getPromoById(pr.id);
-            const newStock = (promo.stock || 0) + pr.cantidad;
-            await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+            
+            // Verificamos que la promo exista realmente en la DB antes de actualizar
+            if (promo) {
+                const newStock = (promo.stock || 0) + pr.cantidad;
+                await supabase.from('promociones').update({ stock: newStock }).eq('id', pr.id);
+            }
         }
     }
-    await supabase.from('pedidos').delete().eq('id', id);
-    await fetchOrders();
-    await fetchPromos(); // Actualizar lista de promociones para reflejar stock
-    showToast('Pedido eliminado y stock restaurado');
-}
 
+    // Borrar el pedido de la tabla
+    await supabase.from('pedidos').delete().eq('id', id);
+    
+    // Actualizar las vistas
+    await fetchOrders();
+    await fetchPromos(); 
+    
+    showToast('Pedido eliminado correctamente');
+}
 
 // =========================================================
 // 🧾 EXPORTAR PEDIDO A PDF (Versión estable tipo descargarPDF)
