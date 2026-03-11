@@ -1691,8 +1691,8 @@ async function savePromotionChanges() {
         // 5. Recargar la lista para reflejar cambios
         // Se asume la existencia de renderPromosByFilter
         const currentCategoryId = document.getElementById('promoCategoriaFilter').value; 
-        await renderPromosByFilter(currentCategoryId);
-
+		await renderPromosByFilter([currentCategoryId]);
+		
     } catch (err) {
         console.error('Error al guardar cambios:', err);
         alert('Error al guardar cambios: ' + err.message);
@@ -5898,3 +5898,4 @@ async function cargarCategoriasEnSelects() {
 
 </body>
 </html>
+
