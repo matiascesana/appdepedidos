@@ -4,24 +4,116 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Panel Administrativo Completo</title>
+
+
     <style>
         :root {
-            --sidebar-bg: #2c3e50;
-            --sidebar-hover: #34495e;
-            --accent: #ff4d4f;
-            --card-bg: #fff;
-            --text-muted: #555;
-        }
-        body { margin: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
-        .sidebar { width: 220px; background: var(--sidebar-bg); color: #fff; display: flex; flex-direction: column; padding-top: 20px; flex-shrink: 0; transition: transform 0.3s ease; z-index: 9000; }
-        .sidebar h2 { text-align: center; margin-bottom: 20px; font-size: 22px; }
-        .sidebar button { background: none; border: none; color: white; text-align: left; padding: 12px 20px; cursor: pointer; font-size: 16px; width: 100%; transition: 0.2s; }
-        .sidebar button:hover, .sidebar button.active { background: var(--sidebar-hover); }
-        .content { flex: 1; padding: 20px; overflow-y: auto; }
-        .section {
-  	display: none !important;}
-	.section.active {
-  	display: block !important;}
+    /* Paleta de Colores SaaS Moderno */
+    --primary: #6366f1;         /* Indigo Brillante */
+    --primary-hover: #4f46e5;
+    --secondary: #0f172a;       /* Slate 900 */
+    --accent: #f43f5e;          /* Rose para alertas/borrar */
+    --success: #10b981;         /* Esmeralda para confirmar */
+    --bg-main: #f8fafc;         /* Fondo ultra limpio */
+    --sidebar-bg: #111827;      /* Gris casi negro */
+    --sidebar-hover: #1f2937;
+    --card-bg: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --glass: rgba(255, 255, 255, 0.7);
+}
+        /* Tipografía y Scroll */
+body { 
+    margin: 0; 
+    font-family: 'Inter', -apple-system, sans-serif; 
+    display: flex; 
+    height: 100vh; 
+    background: var(--bg-main); 
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+
+        /* Sidebar Premium */
+.sidebar { 
+    width: 250px; 
+    background: var(--sidebar-bg); 
+    color: #fff; 
+    display: flex; 
+    flex-direction: column; 
+    padding: 24px 16px; 
+    flex-shrink: 0; 
+    box-shadow: 10px 0 30px rgba(0,0,0,0.05);
+    z-index: 9000;
+}
+
+.sidebar h2 { 
+    font-size: 1.1rem; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    letter-spacing: 0.1em;
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.sidebar button { 
+    background: transparent; 
+    border: none; 
+    color: #94a3b8; 
+    text-align: left; 
+    padding: 12px 16px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    font-weight: 500;
+    margin-bottom: 6px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar button:hover { 
+    background: var(--sidebar-hover); 
+    color: #fff; 
+    transform: translateX(4px);
+}
+
+.sidebar button.active { 
+    background: var(--primary); 
+    color: white; 
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+
+
+        /* Contenido Principal */
+.content { 
+    flex: 1; 
+    padding: 32px; 
+    overflow-y: auto; 
+    scroll-behavior: smooth;
+}
+
+
+
+.section { display: none !important; animation: fadeIn 0.4s ease-out; }
+.section.active { display: block !important; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
         h1 { margin-top: 0; margin-bottom: 15px; }
         .card { display: flex; align-items: center; gap: 15px; background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #ddd; transition: 0.3s; }
         .card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); }
@@ -84,7 +176,7 @@
     flex-direction: column;
     align-items: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    /* Se elimina el width fijo: width: 200px; */ 
+    /* Se elimina el width fijo: width: 300px; */ 
 }
 
 /* Estilos para el Desplegable */
@@ -200,79 +292,19 @@
 
 
 
-<div id="tiendaCliente">
-    <h2>Tienda</h2>
-    <div id="productosContainer" class="productos-container"></div>
-    <div class="pedido-footer">
-    <button onclick="confirmarPedido()">Confirmar Pedido</button>
-    </div>
-</div>
-
-
-<div id="resumenCarrito" style="padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
-    
-    <h4>🛒 Mi Pedido (<span id="carritoCount">0</span>)</h4>
-    
-    <div id="carritoLista" style="margin-bottom: 10px;">
-        <span class="text-muted">No hay productos seleccionados</span>
-    </div>
-
-    <hr style="border: none; border-top: 1px dashed #ddd;">
-
-    <p style="margin-top:8px; font-weight:bold;">
-        Total: 
-        <span id="carritoTotal" style="float: right;">$0.00</span>
-    </p>
-
-    <button onclick="abrirModalPedido()" style="width: 100%; margin-top: 15px;">
-        Confirmar y Enviar Pedido
-    </button>
-</div>
-
-
-
-
-
-
-<div id="carritoModal">
-    <h3>Mi Pedido</h3>
-    
-   
-    <div class="modal-content">
-    <h3>Confirmar Pedido</h3>
-    <label>Nombre:</label>
-    <input id="modalClienteNombre" type="text" placeholder="Nombre completo">
-    
-    <label>Localidad:</label>
-    <select id="modalLocalidadSelect"></select>
-    
-    <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
-      <button id="cancelarPedidoBtn" onclick="document.getElementById('pedidoModal').style.display='none'">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-
-
-
-
-.categorias-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
+/* Categorías Estilo "Pills" */
+.category-button-label {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 99px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
 }
-.categoria-btn {
-  padding: 8px 14px;
-  border: none;
-  background: #3498db;
-  color: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.categoria-btn:hover {
-  background: #2980b9;
-}
+
+
+
 
 #productosContainer {
     /* 1. Activa Flexbox para colocar los hijos uno al lado del otro */
@@ -414,6 +446,17 @@
 
 
 
+#quickSearchList .card {
+    background: #fdfdfd;
+    transition: all 0.2s ease;
+}
+
+#quickSearchList .card:focus-within {
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
 
 
 /* --------------------
@@ -454,6 +497,143 @@
     
     gap: 10px;
     margin-bottom: 20px;
+}
+
+
+.button-primary, #addPromoBtn, #exportPromoPDF {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.button-primary:hover {
+    background-color: var(--primary-hover) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Botones de acción dentro de las tarjetas (Editar/Eliminar) */
+.promo-card button, .pedido-card button {
+    border-radius: 8px;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+/* Botón Editar (Estilo Slate como la sidebar) */
+button[onclick*="openEditModal"], button[onclick*="edit"] {
+    background-color: var(--secondary) !important; /* #0f172a */
+    color: white !important;
+}
+
+/* Botón Eliminar (Acento Rose/Rojo suave) */
+button[onclick*="delete"] {
+    background-color: var(--accent) !important; /* #f43f5e */
+    color: white !important;
+}
+
+.content {
+    max-width: 95% !important; /* Ocupa el 95% de la pantalla */
+    margin: 0 auto;
+    padding: 20px;
+}
+
+#pedidoList {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%; /* Ocupa todo el ancho disponible */
+    padding: 0;
+}
+
+.pedido-card-new {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;      /* ✅ mucho más razonable */
+    margin-bottom: 12px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid #e2e8f0;
+    width: 100%; 
+    box-sizing: border-box;
+}
+
+
+/* Estilo de botones unificado con la Sidebar */
+.btn-pago-indigo {
+    background-color: var(--primary) !important; /* Indigo */
+    color: white !important;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-detalle-slate {
+    background-color: var(--secondary) !important; /* Slate (Gris oscuro) */
+    color: white !important;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-pago-indigo:hover, .btn-detalle-slate:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+
+.pedido-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+/* Unificación de Botones con la Sidebar */
+.pedido-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+/* Botón principal (Indigo como la Sidebar Active) */
+.pedido-card .btn-pago {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+}
+
+/* Botón secundario (Slate como la Sidebar Base) */
+.pedido-card .btn-detalle {
+    background-color: var(--secondary) !important;
+    color: white !important;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pedido-card button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
 
 /* --------------------
@@ -535,33 +715,9 @@
 
 /* 4. Estilo de SELECCIONADO (VISTOSO) */
 /* Aplicado cuando el checkbox DENTRO del label está marcado */
-.category-checkbox:checked + label {
-    /* El selector + label no funciona aquí porque el checkbox no está antes del label, está dentro. 
-       Usaremos el selector padre: */
-}
-
-.category-checkbox:checked {
-    /* Para ocultar el checkbox por defecto si quieres que solo se vea el color del label */
-    /* display: none; */ 
-}
-
-/* Estilo para el label cuando el checkbox DENTRO está chequeado. */
-/* Como el checkbox es el primer hijo, debemos usar un selector más complejo si queremos 
-   cambiar el estilo del padre. La forma más sencilla es usar la clase y el selector :has() 
-   (si es soportado) o cambiar ligeramente la estructura. 
-   
-   Por simplicidad y compatibilidad: El estilo se aplicará al label cuando el checkbox esté checked. */
-
-/* Estilo simple (si no ocultas el checkbox): */
-.category-checkbox:checked + .category-button-label { /* Esto requiere que el label esté DENTRO del input, o el checkbox esté FUERA. */
-    
-}
-/* La estructura actual es: <label><input type="checkbox">Texto</label>
-   El CSS debe ser: */
-.category-button-label:has(.category-checkbox:checked) {
-    background-color: #007bff; /* Color de selección azul vibrante */
-    color: white;
-    border-color: #0056b3;
+.category-checkbox {
+    /* Estilos opcionales para checkbox */
+    accent-color: #007bff;
 }
 
 
@@ -591,8 +747,106 @@
 }
 
 
+/* tarjeta */
+.quick-card{
+    background:#fff;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:12px;
+    border:1px solid #e5e7eb;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
+    transition:all .15s;
+}
+
+.quick-card:hover{
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* grids */
+.quick-grid-top{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:14px;
+    margin-bottom:12px;
+}
+
+.quick-grid-bottom{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:14px;
+    align-items:end;
+}
+
+/* campos */
+.quick-field{
+    display:flex;
+    flex-direction:column;
+}
+
+.quick-field label{
+    font-size:11px;
+    font-weight:600;
+    color:#6b7280;
+    margin-bottom:3px;
+    letter-spacing:.4px;
+}
+
+.quick-field input{
+    border:1px solid #d1d5db;
+    border-radius:6px;
+    padding:7px 8px;
+    font-size:14px;
+    transition:.15s;
+}
+
+.quick-field input:focus{
+    outline:none;
+    border-color:#3b82f6;
+    box-shadow:0 0 0 2px rgba(59,130,246,0.15);
+}
+
+/* botón */
+.quick-save{
+    background:#1d72d8;
+    color:#fff;
+    border:none;
+    padding:9px 18px;
+    border-radius:7px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.15s;
+}
+
+.quick-save:hover{
+    background:#155ab6;
+    transform:translateY(-1px);
+}
+
+.quick-no-results{
+    padding:12px;
+    color:#6b7280;
+}
+
+
+
+#modalPago {
+    display: none; 
+    position: fixed; 
+    z-index: 12000; /* Aumentado para estar sobre todo */
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0,0,0,0.6); 
+    justify-content: center;
+    align-items: center;
+}
+
 
     </style>
+
+
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -606,13 +860,14 @@
  <nav class="sidebar">
   <h2>MENU</h2>
   <ul style="list-style:none; padding:0; margin:0;">
+    <li><button class="tab-btn" data-tab="promos">Promociones</button></li>
     <li><button class="tab-btn" data-tab="pedidos">Pedidos</button></li>
     <li><button class="tab-btn" data-tab="pedidosArchivados">Pedidos Archivados</button></li>
-    <li><button class="tab-btn active" data-tab="promos">Promociones</button></li>
+    <li><button class="tab-btn" data-tab="ctaCte">Cuenta Corriente</button></li>
     <li><button class="tab-btn" data-tab="reporteVentas">Reporte de Ventas</button></li>
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
     <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
-    <li><button class="tab-btn" data-tab="cuentasCorrientes">Cuentas Corrientes</button></li>
+    <li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
   </ul>
 </nav>
    
@@ -621,31 +876,82 @@
 <div class="content">
 <!-- 🔹 Agregar este botón junto al de Exportar -->
 <div>
-<button id="addPromoBtn" 
-  style="margin-left:10px;padding:6px 12px;background:#2ecc71;color:#fff;
-  border:none;border-radius:6px;cursor:pointer;">
-  ➕ Nueva Promoción
-</div>
+<button id="addPromoBtn" style="..."> ➕ Nueva Promoción </button>
         <div id="promos" class="section active">
 	<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">
-        <label style="font-weight: bold; display: block; margin-bottom: 5px;">🔍 Buscador de Edición Rápida (Todas las categorías):</label>
-        <input type="text" id="promoQuickSearch" placeholder="Escriba el nombre del producto..." 
-               style="width: 100%; padding: 10px; font-size: 16px; border: 2px solid #3498db; border-radius: 6px;"
-               oninput="handleQuickSearch(this.value)">
-        <div id="quickSearchResults" style="margin-top: 10px; display: none;">
-            <p style="font-size: 0.9em; color: #666;">Resultados encontrados:</p>
-            <div id="quickSearchList" style="display: grid; gap: 10px;"></div>
-        </div>
+       
+    
+<div style="margin-bottom:20px;">
+    <label style="font-weight: bold; display: block; margin-bottom: 5px;">🔍 Buscador de Edición Rápida:</label>
+    <input type="text" id="quickSearchInput" placeholder="Escribe el nombre de un producto..." 
+        style="width: 100%; padding: 12px; border: 2px solid #3498db; border-radius: 8px;"
+        oninput="handleQuickSearch(this.value)" 
     </div>
-        <div style="margin-bottom:20px;">
-	<div id="promoCategoriaFilter" style="margin-bottom: 50px;">
-    	</div>
-        </select>
+<div id="quickSearchResults" style="display:none; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+    <div id="quickSearchList"></div>
+</div>
+
+
+  
+
+
+
+
+
+<div style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #3498db; background-color: #f0f7ff;">
+    <h4 style="margin-top: 0; color: #2c3e50;">⚡ Actualización Masiva por Categoría</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: flex-end;">
+        
+        <div>
+            <label style="font-size: 11px; font-weight: bold;">1. Categoría:</label>
+            <select id="bulkCategory" style="width: 100%; padding: 8px; border-radius: 6px;"></select>
+        </div>
+
+        <div>
+            <label style="font-size: 11px; font-weight: bold;">2. Qué actualizar:</label>
+            <select id="bulkTarget" style="width: 100%; padding: 8px; border-radius: 6px;">
+                <option value="precio">Precio Actual</option>
+                <option value="precio_anterior">Precio Anterior (Tachado)</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size: 11px; font-weight: bold;">3. Tipo:</label>
+            <select id="bulkType" style="width: 100%; padding: 8px; border-radius: 6px;">
+                <option value="porcentaje">Aumento %</option>
+                <option value="fijo">Precio Fijo $</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size: 11px; font-weight: bold;">4. Valor:</label>
+            <input type="number" id="bulkValue" placeholder="Ej: 10" style="width: 100%; padding: 8px; border-radius: 6px;">
+        </div>
+
+        <button onclick="applyBulkUpdate()" class="button-primary" style="background-color: #27ae60; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; color: white;">
+            Aplicar
+        </button>
+    </div>
+</div>
+
+
+
+     <div style="margin-bottom:20px;">
+    <label style="font-weight: bold; display: block; margin-bottom: 5px;">Filtrar por Categoría:</label>
+    <select id="promoCategoriaFilter" style="width: 100%; padding: 10px; border-radius: 6px;" onchange="handlePromoFilterChange()">
         <option value="">Todas las categorías</option>
         </select>
-        <button id="exportPromoPDF" style="margin-left:10px;padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;">Exportar 	seleccionados</button>
+</div>
+
+<div id="promoList" style="display:grid; gap:16px;">
         </div>
-        <div id="promoList" style="display:grid; grid-template-rows: repeat(auto-fill,minmax(250px,1fr)); gap:16px;"></div>
+
+</div>
+
+
+        <button id="exportPromoPDF" style="margin-left:10px;padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;">Exportar Seleccionados</button>
+        </div>
+	<div id="promoList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:16px;"></div>
         </div>
 	<div id="editPromoModal" class="modal">
     	<div class="modal-content">
@@ -706,7 +1012,7 @@
             <form id="pedidoForm" onsubmit="return false;" 
       style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
 <!-- Cliente: más largo -->
-    <div style=""width:40%; min-width:50px; display:flex; flex-direction:column;">
+    <div style="width:40%;" min-width:50px; display:flex; flex-direction:column;">
         <label>Cliente</label>
         <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:500px;" /> <div>
 	</div>
@@ -716,7 +1022,7 @@
   <input id="pedidoDni" type="text" placeholder="Documento del cliente" style="width:500px;" />
 </div>
 <!-- Localidad -->
-    	<div style=""width:30%; min-width:180px; display:flex; flex-direction:column;">
+    	<div style="width:30%;" min-width:180px; display:flex; flex-direction:column;">
         <label>Localidad</label>
         <select id="pedidoLocalidad" style="width:500px;"></select> <div>
 	</div>
@@ -741,25 +1047,24 @@
     	</div>
 	</div>	
 <div id="pedidosContenedorLista" class="tab-content" data-section="pedidos">
-    <h2>Pedidos Activos</h2>
+<h2>Pedidos Activos</h2>
 
-    <div style="margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-        <label for="orderSearch" style="display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50;">Buscar Cliente:</label>
-        <input 
-            type="text" 
-            id="orderSearch" 
-            placeholder="Escriba nombre, apellido o DNI del cliente..." 
-            oninput="debounceFetchOrders()"
-            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1em;"
-        >
-    </div>
-    <div id="totalesPedidos"></div>
-    <div id="pedidoList">
-        </div>
+<div style="margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <label for="orderSearch" style="display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50;">Buscar Cliente:</label>
+    <input 
+        type="text" 
+        id="orderSearch" 
+        placeholder="Escriba nombre, apellido o DNI del cliente..." 
+        oninput="debounceFetchOrders()"
+        style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1em;"
+    >
+</div>
+<div id="totalesPedidos"></div>
+<div id="pedidoList"></div>
 </div>
 
-	<h2>Lista de Pedidos</h2>
-	<div id="pedidoList"></div>
+<h2 style="display:none;">Lista de Pedidos</h2>
+<div id="pedidoListDuplicate" style="display:none;"></div>
 	<div id="botonArchivarMesActual" style="margin-top:25px; text-align: right;">
     <button id="archiveButton" onclick="archiveCurrentMonthOrders()" class="action-button" style="background-color: #f39c12; padding: 10px 20px;">
         📦 Archivar Pedidos del Mes Actual
@@ -789,6 +1094,7 @@
     
     <div id="listadoArchivados"></div>
 </section>
+
 
 
 
@@ -824,21 +1130,29 @@
     </div>
 </section>
 
-
-
-<section id="cuentasCorrientes" class="section">
-    <h2>💳 Cuentas Corrientes de Clientes</h2>
-    <p style="color:#555;">Detalle histórico de ventas, pagos y saldos por cliente.</p>
-
-    <div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">
-        <label style="font-weight: bold; display: block; margin-bottom: 5px;">🔍 Buscar Cliente o DNI:</label>
-        <input type="text" id="ccSearch" placeholder="Nombre o documento..." 
-               style="width: 100%; padding: 10px; font-size: 16px; border: 2px solid #3498db; border-radius: 6px;"
-               oninput="fetchCuentasCorrientes()">
+<section id="ctaCte" class="section">
+    <h2>📋 Cuenta Corriente de Clientes</h2>
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="ctaCteSearch" placeholder="Buscar por cliente o ID de pedido..." 
+               style="width: 100%; padding: 10px;" oninput="renderCtaCte()">
     </div>
-
-    <div id="ccTableContainer" style="overflow-x: auto;">
-        </div>
+    <div id="ctaCteTableContainer">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>ID Pedido</th>
+                    <th>Monto Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="ctaCteBody">
+                </tbody>
+        </table>
+    </div>
 </section>
 
 
@@ -1121,7 +1435,93 @@ if (typeof supabaseClient === 'undefined') {
 var supabase = window.supabaseClient;
 
 
+
+
+
+async function renderCtaCte() {
+    const searchInput = document.getElementById('ctaCteSearch');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+    const container = document.getElementById('ctaCteBody');
+    
+    // Mostramos un indicador de carga opcional
+    container.innerHTML = "<tr><td colspan='7'>Cargando datos...</td></tr>";
+
+    try {
+        // Traemos pedidos con sus pagos asociados
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select(`
+                id, 
+                cliente, 
+                total, 
+                archivado,
+                pagos (monto)
+            `);
+
+        if (error) throw error;
+
+        container.innerHTML = "";
+
+        // Filtrado
+        const pedidosFiltrados = pedidos.filter(p => 
+            p.cliente?.toLowerCase().includes(searchTerm) || 
+            p.id.toString().includes(searchTerm)
+        );
+
+        if (pedidosFiltrados.length === 0) {
+            container.innerHTML = "<tr><td colspan='7'>No se encontraron resultados</td></tr>";
+            return;
+        }
+
+        pedidosFiltrados.forEach(p => {
+            // Calcular el total pagado sumando el array de la relación
+            const totalPagado = p.pagos ? p.pagos.reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0) : 0;
+            const saldo = p.total - totalPagado;
+            const estadoLabel = p.archivado ? '📦 Archivad' : '📑 Activo';
+
+            const tr = document.createElement('tr');
+            
+            // Usamos interpolación limpia. 
+            // IMPORTANTE: saldo lo pasamos como número puro a abrirModalPago
+            tr.innerHTML = `
+                <td>${p.cliente}</td>
+                <td>#${p.id} <br><small>${estadoLabel}</small></td>
+                <td>$${p.total.toLocaleString()}</td>
+                <td style="color: green; font-weight:bold;">$${totalPagado.toLocaleString()}</td>
+                <td style="color: ${saldo > 0 ? '#e74c3c' : '#27ae60'}; font-weight: bold;">
+                    $${saldo.toLocaleString()}
+                </td>
+                <td>
+                    <span class="badge ${saldo <= 0 ? 'bg-success' : 'bg-warning'}">
+                        ${saldo <= 0 ? '✅ Saldado' : '⏳ Pendiente'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-action" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">
+                        ➕ Pago
+                    </button>
+                </td>
+            `;
+
+            // Asignamos el evento de forma segura mediante JS, no mediante el atributo HTML
+            const btn = tr.querySelector('.btn-action');
+            btn.onclick = () => abrirModalPago(p.id, saldo);
+
+            container.appendChild(tr);
+        });
+
+    } catch (err) {
+        console.error("Error en Cta Cte:", err);
+        container.innerHTML = `<tr><td colspan='7' style="color:red;">Error: ${err.message}</td></tr>`;
+    }
+}
+
+
+
 let availableCategorias = [];
+
+
+
 
 
 
@@ -1353,67 +1753,89 @@ function limpiarContenedoresTienda() {
 }
 
 
-// Función única para manejar el cambio de secciones
+// Función única para manejar el cambio de secciones y estado visual de la sidebar
 function activateSection(tab) {
-  
-  // 💥 PASO 1: Si no vamos a la tienda, limpiamos sus elementos inyectados 💥
-  if (tab !== 'clienteTienda') {
-      limpiarContenedoresTienda();
-  }
-
-// === 💡 NUEVA LÓGICA: MANEJO DE VISIBILIDAD DEL BOTÓN "AGREGAR PROMOCIÓN" ===
-  const addPromoBtn = document.getElementById('addPromoBtn');
-
-  // 1. Ocultar el botón por defecto para todas las secciones
-  if (addPromoBtn) {
-      addPromoBtn.style.display = 'none';
-  }
-  
-  // 2. Mostrar el botón SÓLO si la pestaña es 'promos'
-  if (tab === 'promos') {
-      if (addPromoBtn) {
-          addPromoBtn.style.display = 'block'; 
-          // O 'inline-block' si así lo deseas, pero 'block' suele funcionar para botones.
-      }
-  }
-
     
-  // 2. Quita 'active' de todas las secciones
-  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+    // 1. Limpieza de elementos de la tienda si no estamos en ella
+    if (tab !== 'clienteTienda') {
+        if (typeof limpiarContenedoresTienda === 'function') {
+            limpiarContenedoresTienda();
+        }
+    }
 
-  // 3. Activa la sección seleccionada
-  const section = document.getElementById(tab);
-  if (section) section.classList.add('active');
-  
-  // 4. Carga los datos específicos
-  if (tab === 'promos') fetchPromos();  
-  else if (tab === 'pedidos') fetchOrders();
-  else if (tab === 'categorias') fetchCategorias();
-  else if (tab === 'clienteTienda') cargarTiendaCliente();
-  else if (tab === 'reporteVentas') fetchSalesData(); 
-  else if (tab === 'cuentasCorrientes') fetchCuentasCorrientes();
+    // 2. Manejo de visibilidad del botón "Agregar Promoción"
+    const addPromoBtn = document.getElementById('addPromoBtn');
+    if (addPromoBtn) {
+        addPromoBtn.style.display = (tab === 'promos') ? 'block' : 'none';
+    }
+
+    // 3. CAMBIO VISUAL EN LA SIDEBAR (Marcar botón activo)
+    // Quitamos la clase 'active' de todos los botones de la sidebar
+    document.querySelectorAll('.sidebar-item, .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        
+        // Si el botón tiene un atributo 'data-tab' que coincide con la sección actual, lo marcamos
+        if (btn.getAttribute('data-tab') === tab) {
+            btn.classList.add('active');
+        } 
+        // Alternativa: Si usas onclick="activateSection('tab')" directamente en el HTML
+        else if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tab}'`)) {
+            btn.classList.add('active');
+        }
+    });
+
+    // 4. Activar la sección de contenido
+    document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+    const section = document.getElementById(tab);
+    if (section) {
+        section.classList.add('active');
+    } else {
+        console.warn(`La sección con ID "${tab}" no existe en el HTML.`);
+    }
+
+    // 5. Carga de datos según la sección
+    switch (tab) {
+        case 'promos':
+            cargarCategoriasEnSelects();
+            break;
+        case 'pedidos':
+            if (typeof fetchOrders === 'function') fetchOrders();
+            break;
+        case 'categorias':
+            if (typeof fetchCategorias === 'function') fetchCategorias();
+            break;
+        case 'clienteTienda':
+            if (typeof cargarTiendaCliente === 'function') cargarTiendaCliente();
+            break;
+        case 'reporteVentas':
+            if (typeof fetchSalesData === 'function') fetchSalesData();
+            break;
+    }
 }
 
+// Configuración de eventos para los botones de la pestaña
+document.querySelectorAll('.sidebar-item, .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-tab') || 
+                    (btn.getAttribute('onclick') ? btn.getAttribute('onclick').match(/'([^']+)'/)[1] : null);
+        
+        if (tab) {
+            activateSection(tab);
+        }
 
-
-// Asigna los eventos de clic (versión CORRECTA)
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.getAttribute('data-tab');
-    // activar la pestaña indicada por el data-tab del botón
-    activateSection(tab);
-
-    // cerrar sidebar en móviles si estaba abierto
-    if (window.innerWidth <= 500 && document.querySelector('.sidebar').classList.contains('open')) {
-      toggleSidebar();
-    }
-  });
+        // Cerrar sidebar en móviles tras hacer clic
+        const sidebar = document.querySelector('.sidebar');
+        if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('open')) {
+            if (typeof toggleSidebar === 'function') toggleSidebar();
+        }
+    });
 });
 
+// Inicialización: Mostrar Promos por defecto al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    activateSection('promos');
+});
 
-
-// Mostrar Promos por defecto
-activateSection('promos');
 
 /* =========================================================
    Variables globales
@@ -1618,55 +2040,39 @@ async function openEditModal(promoId) {
 
 
 
-
-
-
-// ----------------------------------------------------------------------
-
-/**
- * Muestra u oculta y actualiza la barra de progreso.
- * @param {string} containerId - ID del contenedor de la barra (e.g., 'progressBarContainer').
- * @param {number} progress - Progreso en porcentaje (0-100).
- * @param {string} text - Texto a mostrar.
- * @param {boolean} visible - Si debe ser visible.
- */
-function updateProgressBar(containerId, progress, text, visible = true) {
+function updateProgressBar(containerId, percent, text, keepVisible = true) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    if (visible) {
-        // Asegurar que la barra existe dentro del contenedor (si no existe, la crea)
-        let bar = container.querySelector('.progress-bar');
-        let barText = container.querySelector('.progress-text');
-        
-        if (!bar) {
-            // Estructura mínima de la barra (con estilos inline para simplicidad)
-            container.innerHTML = `
-                <div class="progress-bar-inner" style="height: 10px; background-color: #f3f3f3; border-radius: 5px; margin-top: 5px;">
-                    <div class="progress-bar" style="height: 100%; width: 0%; background-color: #007bff; border-radius: 5px; transition: width 0.3s;"></div>
-                </div>
-                <div class="progress-text" style="font-size: 0.8em; margin-top: 2px;"></div>
-            `;
-            bar = container.querySelector('.progress-bar');
-            barText = container.querySelector('.progress-text');
-        }
+    container.innerHTML = `
+        <div style="width:100%;background:#eee;border-radius:6px;overflow:hidden;">
+            <div style="width:${percent}%;height:8px;background:#007bff;transition:width .25s;"></div>
+        </div>
+        <div style="font-size:11px;margin-top:4px;color:#555;">${text}</div>
+    `;
 
-        container.style.display = 'block';
-        if (bar) bar.style.width = `${progress}%`;
-        if (barText) barText.textContent = text;
-        
-    } else {
-        // Ocultar al finalizar la carga
-        container.style.display = 'none';
+    // Cuando finaliza la carga podemos ocultarla
+    if (!keepVisible && percent >= 100) {
+        setTimeout(() => {
+            if (container) container.innerHTML = "";
+        }, 1200);
     }
 }
+
 
 
 /* =========================================================
    Promociones: carga y render (CORREGIDO PARA AGRUPACIÓN Y ESTILO)
    ========================================================= */
 
-async function fetchPromos() {
+async function fetchPromos(categoriaId = null) {
+    let query = supabase.from('promociones').select('*');
+    
+    if (categoriaId !== "") {
+            query = query.is('categoria_id', null);
+        }
+    
+    const { data, error } = await query.order('nombre');
     try {
         const { data: categorias = [], error: catError } = await supabase.from("categorias").select("id,nombre").order("nombre");
         if (catError) throw catError;
@@ -1676,7 +2082,7 @@ async function fetchPromos() {
         
         // 🆕 APLICAR ESTILOS DE CONTENEDOR FLEXBOX
         container.className = 'category-buttons-container';
-        container.innerHTML = '';
+        
         // ---------------------------------------------
         
         // 🆕 Botón para mostrar las categorías seleccionadas
@@ -1760,21 +2166,25 @@ function handleCategorySingleClick(e, allCategoryIds) {
     renderPromosByFilter([clickedCheckbox.value]);
 }
 
-function handlePromoFilterChange() {
-    const sel = document.getElementById('promoCategoriaFilter');
-    const selectedIds = Array.from(sel.options)
-                            .filter(option => option.selected)
-                            .map(option => option.value);
-    renderPromosByFilter(selectedIds);
-}
+async function handlePromoFilterChange() {
+    const selector = document.getElementById('promoCategoriaFilter');
+    const categoriaId = selector.value;
 
+    // Si el valor es vacío (""), enviamos un array con string vacío para "Todas"
+    // Si no, enviamos el ID en un array.
+    const filterArray = categoriaId === "" ? [""] : [categoriaId];
+    
+    await renderPromosByFilter(filterArray);
+}
 
 async function renderPromosByFilter(categoryIds = []) {
     const container = document.getElementById('promoList');
     if (!container) return;
 
+    // 1. Limpieza inicial del contenedor de productos
     container.innerHTML = '<p style="padding: 20px;">Cargando promociones...</p>';
 
+    // 2. Validación de selección vacía
     if (categoryIds.length === 0) {
         container.innerHTML = '<p style="padding: 20px;">Selecciona una o más categorías para ver las promociones.</p>';
         return;
@@ -1783,11 +2193,13 @@ async function renderPromosByFilter(categoryIds = []) {
     let query = supabase.from("promociones").select("*").order("id");
     let categoryName = 'Promociones Filtradas';
 
+    // 3. Clasificación de los IDs recibidos
     const specificCategoryIds = categoryIds.filter(id => id !== 'sin_categoria' && id !== '');
     const isSinCategoriaSelected = categoryIds.includes('sin_categoria');
     const isTodasSelected = categoryIds.includes('');
     let filterApplied = false;
 
+    // 4. Determinación del nombre de la categoría para el encabezado
     if (categoryIds.length === 1) {
         const id = categoryIds[0];
         if (id === '') {
@@ -1802,34 +2214,35 @@ async function renderPromosByFilter(categoryIds = []) {
         categoryName = `Múltiples Categorías (${categoryIds.length} seleccionadas)`;
     }
 
+    // 5. APLICACIÓN DE FILTROS (CORRECCIÓN DE ERROR 400 - PostgREST eq.null)
     if (isTodasSelected) {
+        // No aplicamos filtro de categoría para mostrar todo el catálogo
         categoryName = 'Todas las Promociones';
         filterApplied = true;
-    } else if (specificCategoryIds.length > 0) {
+    } 
+    else if (specificCategoryIds.length > 0 && isSinCategoriaSelected) {
+        // Caso: Mezcla de categorías específicas e ítems sin categoría
+        query = query.or(`categoria_id.in.(${specificCategoryIds.join(',')}),categoria_id.is.null`);
+        categoryName = "Categorías y Sin Categoría";
+        filterApplied = true;
+    }
+    else if (specificCategoryIds.length > 0) {
+        // Caso: Solo categorías con ID asignado
         query = query.in('categoria_id', specificCategoryIds);
-        categoryName = `Múltiples Categorías (${specificCategoryIds.length})`;
         filterApplied = true;
     } 
-    
-    if (isSinCategoriaSelected) {
-        if (filterApplied) {
-            categoryName = "Categorías y Sin Categoría";
-        } else {
-            query = query.is('categoria_id', null);
-            categoryName = "Sin Categoría";
-            filterApplied = true;
-        }
-    }
-    
-    if (!filterApplied && specificCategoryIds.length === 0 && !isSinCategoriaSelected) {
-        container.innerHTML = '<p style="padding: 20px;">Selecciona una o más categorías para ver las promociones.</p>';
-        return;
+    else if (isSinCategoriaSelected) {
+        // ✅ SOLUCIÓN AL ERROR: Se usa .is('campo', null) en lugar de .eq()
+        query = query.is('categoria_id', null); 
+        categoryName = "Sin Categoría";
+        filterApplied = true;
     }
 
+    // 6. Ejecución de la consulta a Supabase
     const { data: promos = [], error: promoError } = await query;
     if (promoError) {
         console.error("Error al obtener promociones:", promoError);
-        container.innerHTML = 'Error al cargar las promociones.';
+        container.innerHTML = '<p style="padding: 20px; color: red;">Error al conectar con la base de datos.</p>';
         return;
     }
     
@@ -1840,7 +2253,7 @@ async function renderPromosByFilter(categoryIds = []) {
         return;
     }
     
-    // ✅ Corrección 1: agregar texto al título
+    // 7. Renderizado del Título de la Sección
     const catTitle = document.createElement('h2');
     catTitle.textContent = categoryName;
     catTitle.style.marginTop = "0px"; 
@@ -1851,9 +2264,10 @@ async function renderPromosByFilter(categoryIds = []) {
     catTitle.style.fontSize = "18px";
     container.appendChild(catTitle);
     
-    // ✅ Corrección 3: ID único para la barra de progreso
+    // 8. Barra de Progreso dinámica con ID único
     const progressBarContainer = document.createElement('div');
-    progressBarContainer.id = `renderProgressBarContainer_${Date.now()}`;
+    const pBarId = `renderProgressBarContainer_${Date.now()}`;
+    progressBarContainer.id = pBarId;
     progressBarContainer.style.marginTop = '0px'; 
     progressBarContainer.style.marginBottom = '10px'; 
     container.appendChild(progressBarContainer);
@@ -1861,13 +2275,16 @@ async function renderPromosByFilter(categoryIds = []) {
     const promoContainer = document.createElement('div');
     promoContainer.className = "promo-group-container"; 
     promoContainer.style.marginTop = '0px';
-    promos.sort((a,b)=>a.id-b.id);
+    
+    // Ordenar por ID para mantener consistencia visual
+    promos.sort((a, b) => a.id - b.id);
     
     const totalPromos = promos.length; 
     let renderedCount = 0;
     
+    // 9. Ciclo de renderizado de tarjetas de promoción
     for (const p of promos) {
-        // ✅ Corrección 2: obtener URL pública sin generar signedUrl por cada una
+        // Obtención de URL pública para evitar exceso de peticiones firmadas
         let imgSrc = p.imagen_url || '';
         if (p.imagen) { 
             try {
@@ -1881,95 +2298,94 @@ async function renderPromosByFilter(categoryIds = []) {
         const imgEl = document.createElement('img');
         imgEl.alt = p.nombre || '';
         imgEl.src = imgSrc || '';
-	imgEl.crossOrigin = 'anonymous';
+        imgEl.crossOrigin = 'anonymous';
         imgEl.style.width = '80%';
         imgEl.style.height = '100px'; 
         imgEl.style.objectFit = 'contain';
         imgEl.style.borderRadius = '6px';
         imgEl.style.marginBottom = '6px';
+        imgEl.style.display = 'block';
+        imgEl.style.margin = '0 auto 6px auto';
 
-        
         const div = document.createElement('div');
         div.className = 'promo-card';
         div.style.position = 'relative'; 
 
         div.innerHTML = `
-    <input type="checkbox" class="promo-select" data-promo-id="${p.id}" checked>
+            <input type="checkbox" class="promo-select" data-promo-id="${p.id}" checked>
 
-    <!-- Botones flotantes (EDITAR + ELIMINAR) -->
-    <div style="
-        position: absolute; 
-        top: 5px; 
-        right: 5px; 
-        z-index: 10; 
-        display: flex; 
-        flex-direction: column; 
-        align-items: flex-end; 
-        gap: 4px;
-    ">
-        <button 
-            onclick="openEditModal(${p.id})" 
-            style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px; transition: background 0.3s;"
-            onmouseover="this.style.background='#0056b3'"
-            onmouseout="this.style.background='#007bff'"
-            type="button"
-        >
-            Editar ✏️
-        </button>
-        <button 
-            onclick="deletePromo(${p.id})" 
-            style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px; transition: background 0.3s;"
-            onmouseover="this.style.background='#a71d2a'"
-            onmouseout="this.style.background='#dc3545'"
-            type="button"
-        >
-            Eliminar 🗑️
-        </button>
-    </div>
+            <div style="
+                position: absolute; 
+                top: 5px; 
+                right: 5px; 
+                z-index: 10; 
+                display: flex; 
+                flex-direction: column; 
+                align-items: flex-end; 
+                gap: 4px;
+            ">
+                <button 
+                    onclick="openEditModal(${p.id})" 
+                    style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px; transition: background 0.3s;"
+                    onmouseover="this.style.background='#0056b3'"
+                    onmouseout="this.style.background='#007bff'"
+                    type="button"
+                >
+                    Editar ✏️
+                </button>
+                <button 
+                    onclick="deletePromo(${p.id})" 
+                    style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px; transition: background 0.3s;"
+                    onmouseover="this.style.background='#a71d2a'"
+                    onmouseout="this.style.background='#dc3545'"
+                    type="button"
+                >
+                    Eliminar 🗑️
+                </button>
+            </div>
 
-    <!-- Contenido de la tarjeta -->
-    <div style="text-align:center; margin-top: 10px;">
-        <b>${safeText(p.nombre || '')}</b>
-    </div>
+            <div style="text-align:center; margin-top: 10px;">
+                <b>${safeText(p.nombre || '')}</b>
+            </div>
 
-    <div style="text-align:center; margin-top:4px;">
-        ${
-            p.precio_anterior && Number(p.precio_anterior) > Number(p.precio)
-                ? `<del style="color:#888;">$${Number(p.precio_anterior).toFixed(2)}</del> 
-                   <span style="color:red;font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
-                : `<span style="font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
-        }
-    </div>
+            <div style="text-align:center; margin-top:4px;">
+                ${
+                    p.precio_anterior && Number(p.precio_anterior) > Number(p.precio)
+                        ? `<del style="color:#888;">$${Number(p.precio_anterior).toFixed(2)}</del> 
+                           <span style="color:red;font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
+                        : `<span style="font-weight:bold;">$${Number(p.precio).toFixed(2)}</span>`
+                }
+            </div>
 
-    <div style="text-align:center; margin-top:4px; font-size:0.9em; color:${p.stock <= 5 ? 'red' : '#333'};">
-        Stock: <b>${p.stock !== null && p.stock !== undefined ? p.stock : 'N/A'}</b>
-    </div>
-`;
+            <div style="text-align:center; margin-top:4px; font-size:0.9em; color:${p.stock <= 5 ? 'red' : '#333'};">
+                Stock: <b>${p.stock !== null && p.stock !== undefined ? p.stock : 'N/A'}</b>
+            </div>
+        `;
 
-
+        // Insertar imagen de forma segura al inicio
         if (imgSrc) {
-    const nameElement = div.querySelector('b');
-    if (nameElement && nameElement.parentNode) {
-        nameElement.parentNode.parentNode.insertBefore(imgEl, nameElement.parentNode);
-    } else {
-        div.insertBefore(imgEl, div.firstChild);
-    }
-}
-
- 
+            const nameElement = div.querySelector('b');
+            if (nameElement && nameElement.parentNode) {
+                nameElement.parentNode.parentNode.insertBefore(imgEl, nameElement.parentNode);
+            } else {
+                div.prepend(imgEl);
+            }
+        }
 
         promoContainer.appendChild(div);
         
+        // Actualizar barra de progreso por cada ítem renderizado
         renderedCount++;
         const progress = Math.round((renderedCount / totalPromos) * 100);
-        updateProgressBar(progressBarContainer.id, progress, `Cargando Promociones: ${renderedCount} de ${totalPromos}`, true);
+        updateProgressBar(pBarId, progress, `Cargando Promociones: ${renderedCount} de ${totalPromos}`, true);
     }
     
     container.appendChild(promoContainer);
-    updateProgressBar(progressBarContainer.id, 100, `Carga completa (${totalPromos} promociones).`, false);
+    // Finalizar barra de progreso
+    updateProgressBar(pBarId, 100, `Carga completa (${totalPromos} promociones).`, false);
 }
 
-fetchPromos();
+
 
 // =========================================================
 // 🗑️ Eliminar promoción individual + imagen del storage
@@ -2324,6 +2740,26 @@ function renderQuantityControls(id, qty, price, stock) {
     `;
 }
 
+
+async function registrarNuevoPago(pedidoId, monto, metodo, destinatario) {
+    const { error } = await supabase
+        .from('pedidos')
+        .insert([{
+            pedido_id: pedidoId,
+            monto: parseFloat(monto),
+            metodo: metodo,
+            destinatario: destinatario,
+            fecha: new Date().toISOString().split('T')[0]
+        }]);
+
+    if (error) {
+        alert("Error al registrar pago: " + error.message);
+    } else {
+        showToast("✅ Pago imputado correctamente");
+        renderCtaCte(); // Refrescar vista
+    }
+}
+
 // Agrega los event listeners a los botones de + y -
 function addQuantityControlListeners() {
     // Es mejor remover y re-agregar listeners para asegurar que solo haya uno por botón
@@ -2671,17 +3107,35 @@ document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
 /* ========== OBTENER LOCALIDAD ========== */
 async function getLocalidadNombre(id) {
     if (!id) return "";
-    const { data } = await supabase.from('localidades').select('*').order('id');
-    return (data && data.nombre) ? data.nombre : "";
+    try {
+        const { data, error } = await supabase
+            .from('localidades')
+            .select('nombre')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error) {
+            console.warn('Error obteniendo localidad:', error);
+            return "";
+        }
+        return data?.nombre || "";
+    } catch (err) {
+        console.error("Error en getLocalidadNombre:", err);
+        return "";
+    }
 }
 
 
 
 
 /* ================== LISTADO DE PEDIDOS OPTIMIZADO CON ESTADO ================== */
-let isFetchingOrders = false;
-let pedidoSeleccionado = null;
-let pagosActuales = [];
+if (typeof lastOrdersScrollPosition === 'undefined') {
+    window.lastOrdersScrollPosition = 0;
+}
+
+if (typeof isFetchingOrders === 'undefined') {
+    window.isFetchingOrders = false;
+}
 
 
 async function fetchOrders() {
@@ -2886,10 +3340,11 @@ infoDiv.innerHTML = `
         const pdfBtn = document.createElement("button");
         pdfBtn.textContent = "📄 Exportar PDF";
         Object.assign(pdfBtn.style, {
-          background: "#2ecc71",
+          background: "#3498db",
           color: "#fff",
           border: "none",
-          padding: "8px 18px",
+          width: "200px",         // ancho fijo
+  	  height: "40px",         // altura opcional
           borderRadius: "7px",
           fontWeight: "bold",
           cursor: "pointer",
@@ -2902,7 +3357,8 @@ infoDiv.innerHTML = `
           background: "#3498db",
           color: "#fff",
           border: "none",
-          padding: "8px 18px",
+          width: "200px",         // ancho fijo
+  	  height: "40px",         // altura opcional
           borderRadius: "7px",
           fontWeight: "bold",
           cursor: "pointer",
@@ -2912,31 +3368,34 @@ infoDiv.innerHTML = `
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "🗑️ Eliminar";
         Object.assign(deleteBtn.style, {
-          background: "#ff4d4f",
+          background: "#3498db",
           color: "#fff",
           border: "none",
-          padding: "8px 18px",
+          width: "200px",         // ancho fijo
+  	  height: "40px",         // altura opcional
           borderRadius: "7px",
           fontWeight: "bold",
           cursor: "pointer",
         });
         deleteBtn.onclick = () => deleteOrder(p.id);
 
-        // 💰 Botón Medios de Pago
-        const pagoBtn = document.createElement("button");
-        pagoBtn.textContent = "💰 Medios de Pago";
-        Object.assign(pagoBtn.style, {
-          background: "#27ae60",
-          color: "#fff",
-          border: "none",
-          padding: "8px 18px",
-          borderRadius: "7px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          width: "300px",
-          textAlign: "center",
-        });
-        pagoBtn.onclick = () => abrirModalPago(p);
+       // 💰 Botón Medios de Pago (CORREGIDO)
+const pagoBtn = document.createElement("button");
+pagoBtn.textContent = "💰 Medios de Pago";
+Object.assign(pagoBtn.style, {
+    background: "#3498db",
+    color: "#fff",
+    border: "none",
+    width: "200px",         // ancho fijo
+    height: "40px",         // altura opcional
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    textAlign: "center",
+});
+
+// La variable debe ser 'pagoBtn', no 'btn'
+pagoBtn.onclick = () => abrirModalPago(p.id, saldoPendiente);
 
         // 🔹 Botón Estado
         const estadoBtn = document.createElement("button");
@@ -2945,13 +3404,13 @@ infoDiv.innerHTML = `
           background: p.estado === "entregado" ? "#ff4d4f" : "#2ecc71",
           color: "#fff",
           border: "none",
-          padding: "8px 18px",
+          width: "200px",         // ancho fijo
+   	  height: "40px",         // altura opcional
           borderRadius: "7px",
           fontWeight: "bold",
           cursor: "pointer",
-          width: "300px",
           textAlign: "center",
-          marginTop: "10px",
+          marginTop: "5px",
         });
         estadoBtn.onclick = async () => {
           p.estado = p.estado === "entregado" ? "pendiente" : "entregado";
@@ -2964,14 +3423,14 @@ infoDiv.innerHTML = `
         const archiveIndividualBtn = document.createElement("button");
         archiveIndividualBtn.textContent = "📦 Archivar";
         Object.assign(archiveIndividualBtn.style, {
-            background: "#95a5a6", // Color gris suave para archivar
+            background: "#3498db", 
             color: "#fff",
             border: "none",
-            padding: "8px 18px",
+            width: "200px",         // ancho fijo
+   	    height: "40px",         // altura opcional
             borderRadius: "7px",
             fontWeight: "bold",
             cursor: "pointer",
-            width: "300px",
             textAlign: "center",
         });
         archiveIndividualBtn.onclick = () => archiveIndividualOrder(p.id);
@@ -3041,6 +3500,48 @@ function renderPedidosTotales(pedidos) {
         </div>`;
     }
 }
+
+
+async function guardarPagoDesdeModal() {
+    const pedidoId = document.getElementById('inputPedidoIdPago').value;
+    const monto = document.getElementById('montoPagoInput').value;
+    const metodo = document.getElementById('metodoPagoInput').value;
+    const destinatario = "Administración"; // Puedes añadir un input para esto si lo deseas
+
+    if (!monto || monto <= 0) {
+        return alert("Por favor, ingresa un monto válido.");
+    }
+
+    try {
+        const { error } = await supabase
+            .from('pagos')
+            .insert([{
+                pedido_id: pedidoId,
+                monto: parseFloat(monto),
+                metodo: metodo,
+                destinatario: destinatario,
+                fecha: new Date().toISOString().split('T')[0]
+            }]);
+
+        if (error) throw error;
+
+        showToast("✅ Pago registrado con éxito");
+        document.getElementById('modalPago').style.display = 'none';
+        
+        // Refrescamos la lista para ver el nuevo saldo
+        fetchOrders(); 
+        
+        // Si la pestaña de Cta Cte existe, también la refrescamos
+        if (typeof renderCtaCte === 'function') renderCtaCte();
+
+    } catch (err) {
+        console.error("Error al guardar pago:", err);
+        alert("Error: " + err.message);
+    }
+}
+
+
+
 
 // 2. Función para abrir el modal (Corregida)
 function abrirModalTotalesPorDia() {
@@ -3150,6 +3651,12 @@ async function fetchArchivedOrders() {
     const year = document.getElementById('archiveYear').value;
     const searchTerm = document.getElementById('archiveSearchTerm').value.trim(); // Captura el término de búsqueda
     const container = document.getElementById("listadoArchivados");
+    if (!container) {
+        console.warn("listadoArchivados container not found");
+        return;
+    }
+    
+    // Limpiar contenedor y mostrar estado de carga
     container.innerHTML = "Cargando pedidos archivados...";
 
     // Verifica que el mes y el año estén seleccionados
@@ -3185,20 +3692,23 @@ async function fetchArchivedOrders() {
 
         // 4. Manejar caso de no resultados
         if (!pedidos?.length) {
-            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados para ${meses[month-1].name} de ${year} ${searchTerm ? `con el término "${searchTerm}"` : ""}.</p>`;
+            // "meses" debe estar definido globalmente, de lo contrario usar month directamente
+            const nombreMes = (typeof meses !== 'undefined' && meses[month-1]) ? meses[month-1].name : `Mes ${month}`;
+            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados para ${nombreMes} de ${year} ${searchTerm ? `con el término "${typeof safeText === 'function' ? safeText(searchTerm) : searchTerm}"` : ""}.</p>`;
             return;
         }
 
         container.innerHTML = '';
         
-        // 5. Inicializar variables para el resumen de totales del mes archivado
+        // 5. Inicializar variables para el resumen de totales
         let totalVentasMes = 0;
         let totalPagadoMes = 0;
 
-        // Agregar el resumen de Totales del mes archivado al inicio
+        // Agregar el contenedor del resumen al inicio
+        const nombreMesResumen = (typeof meses !== 'undefined' && meses[month-1]) ? meses[month-1].name : `Mes ${month}`;
         const resumenHTML = `
             <div style="margin-bottom:20px; padding:15px; background:#fff; border-radius:8px; border-left: 5px solid #2980b9; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <h3 style="margin:0 0 10px 0;">Resumen ${meses[month-1].name} / ${year}</h3>
+                <h3 style="margin:0 0 10px 0;">Resumen ${nombreMesResumen} / ${year}</h3>
                 <div id="resumenTotalesArchivados"></div>
             </div>
         `;
@@ -3208,14 +3718,19 @@ async function fetchArchivedOrders() {
 
         // 6. Renderizar la lista de pedidos archivados
         for (const p of pedidos) {
-            // Calcular totales para el resumen
-            totalVentasMes += p.total || 0;
-            // Sumar pagos registrados
-            const totalPagos = (p.pagos || []).reduce((sum, pago) => sum + (pago.monto || 0), 0);
-            totalPagadoMes += totalPagos;
+            // --- CORRECCIÓN DE CÁLCULOS ---
+            const totalPedido = Number(p.total || 0);
+            const saldoPendiente = Number(p.saldo_pendiente || 0);
             
-            // Suponiendo que tienes una función getLocalidadNombre definida
-            const localidad = await getLocalidadNombre(p.localidad_id);
+            // Acumular para el resumen global
+            totalVentasMes += totalPedido;
+            
+            // Sumar pagos registrados de forma segura
+            const totalPagosRealizados = (p.pagos || []).reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
+            totalPagadoMes += totalPagosRealizados;
+            
+            // Obtener nombre de localidad (asíncrono)
+            const localidad = (typeof getLocalidadNombre === 'function') ? await getLocalidadNombre(p.localidad_id) : "N/A";
             
             const div = document.createElement("div");
             Object.assign(div.style, { 
@@ -3229,27 +3744,30 @@ async function fetchArchivedOrders() {
                 border: "1px solid #ddd",
             }); 
             
+            // Renderizar productos
             let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
-            // Suponiendo que tienes una función safeText definida
-            p.productos.forEach(pr => { 
-                prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${(pr.precio * pr.cantidad).toFixed(2)}</span></li>`;
+            (Array.isArray(p.productos) ? p.productos : []).forEach(pr => { 
+                const subtotalProd = Number(pr.precio || 0) * Number(pr.cantidad || 0);
+                prodHTML += `<li>${safeText(pr.nombre)} x ${pr.cantidad} <span style="color:#3498db;">$${subtotalProd.toFixed(2)}</span></li>`;
             }); 
             prodHTML += "</ul>";
 
+            // Renderizar Pagos (CORREGIDO)
             let pagosHTML = "";
             if (p.pagos && p.pagos.length > 0) {
                 pagosHTML = `
                     <div style="margin-top:8px;background:#eef;padding:8px;border-radius:6px;">
-                        <b>💳 Pagos Registrados:</b><br> 
-                        ${p.pagos
-                            .map(pg => `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${pg.monto.toFixed(2)}`)
-                            .join("<br>")}
-                        ${p.saldo_pendiente > 0 ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${p.saldo_pendiente.toFixed(2)}</b>` : ""}
+                        <b>💳 Pagos Registrados:</b><br>
+                        ${p.pagos.map(pg => {
+                            const montoPago = Number(pg.monto || 0);
+                            return `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${montoPago.toFixed(2)}`;
+                        }).join("<br>")}
+                        ${saldoPendiente > 0 ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${saldoPendiente.toFixed(2)}</b>` : ""}
                     </div>
                 `;
             }
-            
-            const estadoTexto = p.estado === 'Completado' ? '✅ Completado' : p.saldo_pendiente > 0 ? '⚠️ Pendiente de Pago' : '⏳ Pendiente';
+
+            const estadoTexto = p.estado === 'Completado' ? '✅ Completado' : saldoPendiente > 0 ? '⚠️ Pendiente de Pago' : '⏳ Pendiente';
             
             div.innerHTML = ` 
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -3259,39 +3777,40 @@ async function fetchArchivedOrders() {
                         <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
                     </div>
                     <div style="text-align:right;">
-                        <span style="font-weight:bold; font-size:1.2em; color:#2c3e50;">Total: $${Number(p.total || 0).toFixed(2)}</span>
-                        <div style="font-size:0.9em; color:${p.saldo_pendiente > 0 ? '#e74c3c' : '#27ae60'};">${estadoTexto}</div>
+                        <span style="font-weight:bold; font-size:1.2em; color:#2c3e50;">Total: $${totalPedido.toFixed(2)}</span>
+                        <div style="font-size:0.9em; color:${saldoPendiente > 0 ? '#e74c3c' : '#27ae60'};">${estadoTexto}</div>
                     </div>
                 </div>
                 ${prodHTML} 
                 ${pagosHTML}
                 
                 <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:10px; display:flex; justify-content:flex-end; gap: 10px;">
-                    
                     <button class="button-secondary" onclick='exportPedidoPDF(${JSON.stringify(p).replace(/"/g, '&quot;')})'
-                        style="padding: 6px 12px; font-size: 13px; border: 1px solid #3498db; color: #3498db; background: none;">
+                        style="padding: 6px 12px; font-size: 13px; border: 1px solid #3498db; color: #3498db; background: none; cursor:pointer;">
                         📄 Ver PDF
                     </button>
                     
                     <button class="button-primary" onclick='unarchiveOrder(${p.id})'
-                        style="padding: 6px 12px; font-size: 13px; background: #27ae60; color: white; border: none;">
+                        style="padding: 6px 12px; font-size: 13px; background: #27ae60; color: white; border: none; cursor:pointer;">
                         🔄 Desarchivar
                     </button>
-                    
                 </div>
             `;
             container.appendChild(div);
         }
         
-        // 7. Actualizar resumen de totales
+        // 7. Actualizar resumen de totales (CORREGIDO)
+        const totalVentasFinal = Number(totalVentasMes || 0);
+        const totalPagadoFinal = Number(totalPagadoMes || 0);
+        const saldoFinal = totalVentasFinal - totalPagadoFinal;
+
         resumenDiv.innerHTML = `
-            <p style="margin:5px 0;"><strong>Ventas Totales:</strong> <span style="float:right; font-weight:bold; color:#ff4d4f;">$${totalVentasMes.toFixed(2)}</span></p>
-            <p style="margin:5px 0;"><strong>Total Pagado:</strong> <span style="float:right; font-weight:bold; color:#3498db;">$${totalPagadoMes.toFixed(2)}</span></p>
+            <p style="margin:5px 0;"><strong>Ventas Totales:</strong> <span style="float:right; font-weight:bold; color:#ff4d4f;">$${totalVentasFinal.toFixed(2)}</span></p>
+            <p style="margin:5px 0;"><strong>Total Pagado:</strong> <span style="float:right; font-weight:bold; color:#3498db;">$${totalPagadoFinal.toFixed(2)}</span></p>
             <hr style="border:none; border-top:1px dashed #ccc;">
-            <p style="margin:5px 0;"><strong>Saldo Pendiente:</strong> <span style="float:right; font-weight:bold; color:#e74c3c;">$${(totalVentasMes - totalPagadoMes).toFixed(2)}</span></p>
+            <p style="margin:5px 0;"><strong>Saldo Pendiente:</strong> <span style="float:right; font-weight:bold; color:#e74c3c;">$${saldoFinal.toFixed(2)}</span></p>
         `;
 
-        
     } catch (err) {
         console.error("Error al cargar pedidos archivados:", err);
         container.innerHTML = `<p style="color:#e74c3c;">Error al cargar pedidos: ${err.message}</p>`;
@@ -3340,35 +3859,58 @@ async function unarchiveOrder(orderId) {
 
 
 
-function abrirModalPago(pedido) {
-  pedidoSeleccionado = pedido;
-  pagosActuales = pedido.pagos || [];
+async function abrirModalPago(pedidoId, saldoTotal) {
+    // Validar que los elementos existan antes de usarlos
+    const listaPagos = document.getElementById('listaPagosPedido');
+    const txtSaldo = document.getElementById('montoPendienteTexto');
+    const modal = document.getElementById('modalPago');
+    const inputId = document.getElementById('inputPedidoIdPago');
 
-  // Mostrar datos del pedido
-  document.getElementById("totalPedido").textContent = Number(pedido.total || 0).toFixed(2);
-  document.getElementById("estadoPedido").textContent = pedido.estado || "Pendiente";
+    if (!listaPagos || !modal) {
+        console.error("Error: Elementos del modal de pago no encontrados en el DOM.");
+        return;
+    }
 
-  // Limpiar lista de pagos
-  const lista = document.getElementById("listaPagos");
-  lista.innerHTML = "";
+    try {
+        const { data: pagosData, error } = await supabase
+            .from('pagos')
+            .select('*')
+            .eq('pedido_id', pedidoId);
 
-  // Crear filas existentes o una vacía
-  if (pagosActuales.length > 0) {
-    pagosActuales.forEach((p, i) => crearFilaPago(i, p.metodo, p.monto, p.destinatario));
-  } else {
-    crearFilaPago(0);
-  }
+        if (error) throw error;
 
-  // Recalcular totales
-  recalcularPagos();
+        // Limpiar y llenar lista
+        listaPagos.innerHTML = "";
+        if (!pagosData || pagosData.length === 0) {
+            listaPagos.innerHTML = "<li style='color:#888; font-size:0.85em;'>No hay pagos registrados</li>";
+        } else {
+            pagosData.forEach(pago => {
+                const li = document.createElement('li');
+                li.style.fontSize = "0.85em";
+                li.style.borderBottom = "1px solid #f9f9f9";
+                li.innerHTML = `<span>${new Date(pago.fecha).toLocaleDateString()}:</span> <b>$${pago.monto.toLocaleString()}</b> (${pago.metodo})`;
+                listaPagos.appendChild(li);
+            });
+        }
 
-  // Mostrar modal
-  document.getElementById("modalPago").style.display = "block";
+        // Mostrar datos
+        txtSaldo.textContent = `Saldo pendiente: $${saldoTotal.toLocaleString()}`;
+        inputId.value = pedidoId;
+        modal.style.display = 'flex';
+
+    } catch (err) {
+        console.error("Error al obtener pagos:", err.message);
+    }
 }
 
 
+
 function recalcularPagos() {
-  const lista = document.getElementById("listaPagos");
+if (!pedidoExistenteId) {
+        console.warn("Operación de pago general (sin pedido específico)");
+        return; 
+    }  
+const lista = document.getElementById("listaPagos");
   let totalPagos = 0;
 
   lista.querySelectorAll(".fila-pago").forEach(fila => {
@@ -3813,6 +4355,7 @@ async function editOrderModal(pedido) {
 
     renderModal();
 }
+
 /* ========== ELIMINAR PEDIDO (CORREGIDO) ========== */
 async function deleteOrder(id) {
     if (!confirm('¿Eliminar pedido?')) return;
@@ -4075,25 +4618,35 @@ async function exportPedidoPDF(pedido) {
 
 /* ========================================================= Utilidades Faltantes ========================================================= */
 
-// 💥 FUNCIONES FALTANTES AÑADIDAS 💥
-
-// 1. Placeholder para showToast (Puedes personalizarla con un div modal si lo deseas)
 function showToast(message, duration = 3000) {
     console.log("TOAST:", message);
-    alert(message); // Usamos alert temporalmente para evitar el error
+    // Si tienes un elemento toast en el HTML, úsalo aquí. Por ahora, alert:
+    alert(message); 
 }
 
-// 2. Placeholder para safeText (Simplemente devuelve el texto para evitar el error)
-function safeText(text) {
-    return String(text);
-}
-
-// 3. Placeholder de función de navegación (Para evitar errores en la estructura)
 function navigateTo(section) {
     console.log("Navegando a:", section);
-    // document.getElementById(section).classList.add('active'); // Lógica real de activación
+    if(typeof activateSection === 'function') activateSection(section);
 }
 
+// Versión robusta de seguridad
+function safeText(str) {
+    if (typeof str !== 'string') return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 
 
@@ -4858,86 +5411,96 @@ function exportSalesPDF() {
  * Realiza la búsqueda en todas las categorías y renderiza la edición rápida
  */
 async function handleQuickSearch(term) {
-    const resultsContainer = document.getElementById('quickSearchResults');
     const listContainer = document.getElementById('quickSearchList');
-    
-    if (term.length < 2) {
-        resultsContainer.style.display = 'none';
+    const resultsWrapper = document.getElementById('quickSearchResults');
+
+    // Cambiado 'query' por 'term' que es lo que recibe la función
+    if (!term || term.length < 2) {
+        resultsWrapper.style.display = 'none';
+        listContainer.innerHTML = ''; 
         return;
     }
-
-    resultsContainer.style.display = 'block';
-    listContainer.innerHTML = '<p>Buscando...</p>';
 
     try {
         const { data, error } = await supabase
             .from('promociones')
-            .select('id, nombre, precio, stock')
-            .ilike('nombre', `%${term}%`)
-            .limit(10); // Limitamos para rapidez
+            .select('*')
+            .ilike('nombre', `%${term}%`) // Usamos 'term'
+            .limit(10);
 
         if (error) throw error;
 
-        if (data.length === 0) {
-            listContainer.innerHTML = '<p>No se encontraron productos.</p>';
-            return;
+        resultsWrapper.style.display = 'block';
+
+        if (data && data.length > 0) {
+            listContainer.innerHTML = data.map(p => `
+                <div class="quick-card">
+                    <div class="quick-grid-top">
+                        <div class="quick-field">
+                            <label>NOMBRE</label>
+                            <input type="text" id="qs-name-${p.id}" value="${p.nombre}">
+                        </div>
+                        <div class="quick-field">
+                            <label>PRECIO ANTERIOR ($)</label>
+                            <input type="number" id="qs-oldprice-${p.id}" value="${p.precio_anterior || 0}">
+                        </div>
+                    </div>
+                    <div class="quick-grid-bottom">
+                        <div class="quick-field">
+                            <label>PRECIO ACTUAL ($)</label>
+                            <input type="number" id="qs-price-${p.id}" value="${p.precio}">
+                        </div>
+                        <div class="quick-field">
+                            <label>STOCK</label>
+                            <input type="number" id="qs-stock-${p.id}" value="${p.stock}">
+                        </div>
+                        <div class="quick-actions">
+                            <button onclick="saveQuickEdit('${p.id}')" class="quick-save">
+                                💾 Guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listContainer.innerHTML = "<p class='quick-no-results'>No se encontraron productos.</p>";
         }
-
-        listContainer.innerHTML = data.map(p => `
-            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f9f9f9; border-radius: 6px; border-left: 4px solid #3498db;">
-                <span style="flex: 2; font-weight: bold;">${p.nombre}</span>
-                
-                <div style="flex: 1; display: flex; flex-direction: column;">
-                    <label style="font-size: 0.7em;">Precio ($)</label>
-                    <input type="number" value="${p.precio}" id="qs-p-${p.id}" style="padding: 4px; width: 80px;">
-                </div>
-
-                <div style="flex: 1; display: flex; flex-direction: column;">
-                    <label style="font-size: 0.7em;">Stock</label>
-                    <input type="number" value="${p.stock}" id="qs-s-${p.id}" style="padding: 4px; width: 60px;">
-                </div>
-
-                <button onclick="saveQuickEdit(${p.id})" 
-                        style="background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">
-                    💾 Guardar
-                </button>
-            </div>
-        `).join('');
-
     } catch (err) {
-        console.error('Error en búsqueda rápida:', err);
+        console.error("Error en buscador:", err);
     }
 }
 
-/**
- * Guarda los cambios de precio y stock inmediatamente
- */
+
 async function saveQuickEdit(id) {
-    const newPrice = document.getElementById(`qs-p-${id}`).value;
-    const newStock = document.getElementById(`qs-s-${id}`).value;
-
+    const btn = event.currentTarget; // Captura el botón presionado
     try {
-        const { error } = await supabase
-            .from('promociones')
-            .update({ precio: parseFloat(newPrice), stock: parseInt(newStock) })
-            .eq('id', id);
+        const datos = {
+            nombre: document.getElementById(`qs-name-${id}`).value,
+            precio: parseFloat(document.getElementById(`qs-price-${id}`).value),
+            precio_anterior: parseFloat(document.getElementById(`qs-oldprice-${id}`).value),
+            stock: parseInt(document.getElementById(`qs-stock-${id}`).value)
+        };
 
+        const { error } = await supabase.from('promociones').update(datos).eq('id', id);
         if (error) throw error;
 
-        showToast("✅ Cambios guardados correctamente");
+        // Feedback visual en el botón
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "✅ ¡Listo!";
+        btn.style.backgroundColor = "#10b981";
         
-        // Refrescar el renderizado principal si hay categorías seleccionadas
-        const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked')).map(cb => cb.value);
-        if (selectedIds.length > 0) renderPromosByFilter(selectedIds);
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.backgroundColor = ""; // Vuelve al color original de tu CSS
+        }, 2000);
+
+        showToast("✅ Cambios guardados");
         
     } catch (err) {
-        alert("Error al guardar: " + err.message);
+        console.error(err);
+        alert("Error: " + err.message);
     }
 }
-
-
-
-
 
 
 /* =========================================================
@@ -4945,8 +5508,13 @@ async function saveQuickEdit(id) {
    ========================================================= */
 
 async function fetchCuentasCorrientes() {
-    const searchTerm = document.getElementById('ccSearch').value.toLowerCase();
+    const searchInput = document.getElementById('ccSearch');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
     const container = document.getElementById("ccTableContainer");
+    if (!container) {
+        console.warn("ccTableContainer no encontrado");
+        return;
+    }
     container.innerHTML = "<p>Cargando datos...</p>";
 
     try {
@@ -5111,16 +5679,21 @@ function verDetallePagosCC(pedido) {
 
 // Función auxiliar para mostrar/ocultar destinatario
 function toggleDestinatarioCC(val) {
-    document.getElementById('wrapperDestinatarioCC').style.display = (val === 'Transferencia') ? 'block' : 'none';
+    const wrap = document.getElementById('wrapperDestinatarioCC');
+    if (!wrap) return;
+    wrap.style.display = (val === 'Transferencia') ? 'block' : 'none';
 }
 
 
 
 
 async function guardarNuevoPagoCC(pedidoId) {
-    const monto = parseFloat(document.getElementById('newPagoMonto').value);
-    const metodo = document.getElementById('newPagoMetodo').value;
-    const destinatario = document.getElementById('newPagoDestinatario').value;
+    const montoInput = document.getElementById('newPagoMonto');
+    const monto = montoInput ? parseFloat(montoInput.value) : NaN;
+    const metodoEl = document.getElementById('newPagoMetodo');
+    const metodo = metodoEl ? metodoEl.value : "Efectivo";
+    const destEl = document.getElementById('newPagoDestinatario');
+    const destinatario = destEl ? destEl.value : "";
 
     if (!monto || monto <= 0) {
         alert("Por favor, ingresa un monto válido.");
@@ -5173,6 +5746,110 @@ async function guardarNuevoPagoCC(pedidoId) {
 
 
 
+
+// Cargar categorías en el select al iniciar
+// Cargar categorías en el select al iniciar
+async function loadBulkCategories() {
+    try {
+        const { data, error } = await supabase.from('categorias').select('*').order('nombre');
+        if (error) throw error;
+        
+        const select = document.getElementById('bulkCategory');
+        if (!select) {
+            console.warn("bulkCategory select no encontrado");
+            return;
+        }
+        select.innerHTML = data.map(cat => `<option value="${cat.id}">${cat.nombre}</option>`).join('');
+    } catch (err) {
+        console.error("Error cargando categorías para bulk:", err);
+    }
+}
+
+// Función para actualización masiva de precios
+async function applyBulkUpdate() {
+    const categoryId = document.getElementById('bulkCategory').value;
+    const targetField = document.getElementById('bulkTarget').value;
+    const type = document.getElementById('bulkType').value;
+    const value = parseFloat(document.getElementById('bulkValue').value);
+
+    if (!categoryId || isNaN(value)) {
+        alert("Por favor, completa todos los campos correctamente.");
+        return;
+    }
+
+    if (!confirm(`¿Seguro que quieres actualizar el ${targetField} de esta categoría?`)) return;
+
+    try {
+        const { data: productos, error } = await supabase
+            .from('promociones')
+            .select(`id, ${targetField}`)
+            .is('categoria_id', null);
+
+        if (error) throw error;
+
+        const updates = productos.map(p => {
+            let nuevoValor = type === 'porcentaje' ? p[targetField] * (1 + (value / 100)) : value;
+            const updateData = {};
+            updateData[targetField] = Math.round(nuevoValor);
+            return supabase.from('promociones').update(updateData).eq('id', p.id);
+        });
+
+        await Promise.all(updates);
+        showToast("✅ Actualización masiva completada");
+        fetchPromos();
+    } catch (err) {
+        console.error(err);
+        alert("Error al actualizar: " + err.message);
+    }
+}
+
+
+
+
+
+
+async function cargarCategoriasEnSelects() {
+    const filterSelect = document.getElementById('promoCategoriaFilter');
+    const bulkSelect = document.getElementById('bulkCategory');
+    const modalSelect = document.getElementById('modalCategoria'); // También para el modal de edición
+
+    // Si los elementos no existen en el DOM actual, salimos para evitar errores
+    if (!filterSelect && !bulkSelect) return;
+
+    try {
+        const { data: categorias, error } = await supabase
+            .from('categorias')
+            .select('id, nombre')
+            .order('nombre', { ascending: true });
+
+        if (error) throw error;
+
+        // Función interna para llenar un select específico de forma segura
+        const llenarUnSelect = (selectElement, defaultText) => {
+    if (!selectElement) return;
+
+    // Si ya tiene más de 1 opción, significa que ya fue cargado
+    if (selectElement.options.length > 1) return;
+
+    selectElement.innerHTML = `<option value="">${defaultText}</option>`;
+
+    categorias.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.nombre;
+        selectElement.appendChild(option);
+    });
+};
+
+        llenarUnSelect(filterSelect, "Todas las categorías");
+        llenarUnSelect(bulkSelect, "Seleccione una categoría...");
+        llenarUnSelect(modalSelect, "Seleccionar categoría...");
+
+    } catch (err) {
+        console.error('Error cargando categorías:', err);
+    }
+}
+
 </script>
 
 <div id="modalTotalesPorDia" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
@@ -5185,10 +5862,39 @@ async function guardarNuevoPagoCC(pedidoId) {
     </div>
 </div>
 
+
+
+<div id="modalPago" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
+    <div class="modal-content" style="background:#fff; padding:20px; border-radius:12px; width:90%; max-width:450px; position:relative;">
+        <span class="close-button" onclick="document.getElementById('modalPago').style.display='none'" style="position:absolute; right:15px; top:10px; cursor:pointer; font-size:24px;">&times;</span>
+        
+        <h3>Registrar Pago</h3>
+        <p id="montoPendienteTexto" style="font-weight:bold; color:#e74c3c;"></p>
+        
+        <div style="margin: 15px 0; border: 1px solid #eee; padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto;">
+            <small><b>Historial de pagos:</b></small>
+            <ul id="listaPagosPedido" style="list-style:none; padding:0; margin-top:5px;"></ul>
+        </div>
+        
+        <input type="hidden" id="inputPedidoIdPago">
+        
+        <label>Monto a entregar:</label>
+        <input type="number" id="montoPagoInput" placeholder="$ 0.00" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:6px;">
+        
+        <label>Método:</label>
+        <select id="metodoPagoInput" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:6px;">
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Tarjeta">Tarjeta</option>
+        </select>
+
+        <button onclick="guardarPagoDesdeModal()" style="width:100%; background:#27ae60; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:10px;">
+            💾 Confirmar Pago
+        </button>
+    </div>
+</div>
+
+
+
 </body>
 </html>
-
-
-
-
-
