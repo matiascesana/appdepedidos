@@ -1266,6 +1266,10 @@ background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:999
     <h3>Registrar Medios de Pago</h3>
     <div id="listaPagos"></div>
  Total: $<span id="pagoTotal">0.00</span>
+<div style="margin-top:15px;">
+  <b>Historial de pagos</b>
+  <ul id="listaPagosPedido" style="list-style:none;padding:0;margin-top:8px;"></ul>
+</div>
     <button onclick="agregarMedioPago()" 
       style="margin:10px 0;background:#2ecc71;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
       + Agregar método
@@ -1277,13 +1281,11 @@ background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:999
     <p><b>Estado del Pedido:</b> $<span id="estadoPedido">Pendiente</span></p>
     <div style="text-align:right;margin-top:15px;">
       <button onclick="cerrarModalPago()" style="padding:8px 12px;">Cancelar</button>
-      <button onclick="guardarPagosPedido()" 
-        style="padding:8px 12px;background:#3498db;color:white;border:none;border-radius:6px;">Guardar</button>
-    </div>
-  </div>
-</div>
-
-
+<button 
+onclick="guardarPagosPedido()" 
+style="padding:8px 12px;background:#3498db;color:white;border:none;border-radius:6px;">
+Guardar
+</button>
 
 <div id="addPromoModal" class="modal" style="display:none;">
   <div class="modal-content">
@@ -1455,7 +1457,7 @@ async function renderCtaCte() {
                 cliente, 
                 total, 
                 archivado,
-                pagos (monto)
+                pagos
             `);
 
         if (error) throw error;
@@ -1475,7 +1477,9 @@ async function renderCtaCte() {
 
         pedidosFiltrados.forEach(p => {
             // Calcular el total pagado sumando el array de la relación
-            const totalPagado = p.pagos ? p.pagos.reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0) : 0;
+            const totalPagado = Array.isArray(p.pagos)
+    ? p.pagos.reduce((sum, pago) => sum + Number(pago.monto || 0), 0)
+    : 0;
             const saldo = p.total - totalPagado;
             const estadoLabel = p.archivado ? '📦 Archivad' : '📑 Activo';
 
@@ -1505,7 +1509,7 @@ async function renderCtaCte() {
 
             // Asignamos el evento de forma segura mediante JS, no mediante el atributo HTML
             const btn = tr.querySelector('.btn-action');
-            btn.onclick = () => abrirModalPago(p.id, saldo);
+            btn.onclick = () => abrirModalPago(p.id);
 
             container.appendChild(tr);
         });
@@ -1691,8 +1695,8 @@ async function savePromotionChanges() {
         // 5. Recargar la lista para reflejar cambios
         // Se asume la existencia de renderPromosByFilter
         const currentCategoryId = document.getElementById('promoCategoriaFilter').value; 
-		await renderPromosByFilter([currentCategoryId]);
-		
+        await renderPromosByFilter([currentCategoryId]);
+
     } catch (err) {
         console.error('Error al guardar cambios:', err);
         alert('Error al guardar cambios: ' + err.message);
@@ -1842,6 +1846,7 @@ document.addEventListener('DOMContentLoaded', () => {
    ========================================================= */
 let selectedProducts = [];
 let editingOrderId = null;
+let pedidoSeleccionado = null;
 let promociones = [];
 let categorias = [];
 let localidadSeleccionada = null; // Para la confirmación del pedido
@@ -3394,8 +3399,19 @@ Object.assign(pagoBtn.style, {
     textAlign: "center",
 });
 
-// La variable debe ser 'pagoBtn', no 'btn'
-pagoBtn.onclick = () => abrirModalPago(p.id, saldoPendiente);
+console.log("Datos del pedido p:", p); 
+
+// calcular saldo restante del pedido
+const saldoRestante = Math.max(0, totalPedido - totalPagado);
+
+// Si tu objeto de pedido se llama 'p', verifica que tenga 'id'
+pagoBtn.onclick = () => {
+    if (p && p.id) {
+        abrirModalPago(p.id, saldoRestante);
+    } else {
+        console.error("El objeto pedido 'p' no tiene id:", p);
+    }
+};
 
         // 🔹 Botón Estado
         const estadoBtn = document.createElement("button");
@@ -3503,43 +3519,52 @@ function renderPedidosTotales(pedidos) {
 
 
 async function guardarPagoDesdeModal() {
+
     const pedidoId = document.getElementById('inputPedidoIdPago').value;
     const monto = document.getElementById('montoPagoInput').value;
     const metodo = document.getElementById('metodoPagoInput').value;
-    const destinatario = "Administración"; // Puedes añadir un input para esto si lo deseas
+    const destinatario = "Administración";
 
     if (!monto || monto <= 0) {
         return alert("Por favor, ingresa un monto válido.");
     }
 
     try {
+
         const { error } = await supabase
-            .from('pagos')
+            .from('pedidos')
             .insert([{
-                pedido_id: pedidoId,
-                monto: parseFloat(monto),
-                metodo: metodo,
-                destinatario: destinatario,
-                fecha: new Date().toISOString().split('T')[0]
+                id: pedidoId,
+                total: parseFloat(monto),
+                pagos: pagos,
+                created_at: new Date().toISOString().split('T')[0]
             }]);
 
         if (error) throw error;
 
         showToast("✅ Pago registrado con éxito");
-        document.getElementById('modalPago').style.display = 'none';
-        
-        // Refrescamos la lista para ver el nuevo saldo
-        fetchOrders(); 
-        
-        // Si la pestaña de Cta Cte existe, también la refrescamos
-        if (typeof renderCtaCte === 'function') renderCtaCte();
+
+        // limpiar input
+        document.getElementById('montoPagoInput').value = "";
+
+        // actualizar datos del modal
+        await cargarDatosPagoModal(pedidoId);
+        await cargarHistorialPagos(pedidoId);
+
+        // refrescar listas del sistema
+        fetchOrders();
+
+        if (typeof renderCtaCte === 'function') {
+            renderCtaCte();
+        }
 
     } catch (err) {
+
         console.error("Error al guardar pago:", err);
         alert("Error: " + err.message);
+
     }
 }
-
 
 
 
@@ -3720,7 +3745,10 @@ async function fetchArchivedOrders() {
         for (const p of pedidos) {
             // --- CORRECCIÓN DE CÁLCULOS ---
             const totalPedido = Number(p.total || 0);
-            const saldoPendiente = Number(p.saldo_pendiente || 0);
+	const pagado = (p.pagos || []).reduce((acc,x)=>acc + Number(x.monto || 0),0);
+    const saldoCalculado = totalPedido - pagado;
+
+    console.log("Enviando al modal:", p.id, saldoCalculado);
             
             // Acumular para el resumen global
             totalVentasMes += totalPedido;
@@ -3857,75 +3885,111 @@ async function unarchiveOrder(orderId) {
 
 
 
+async function registrarPagoPedido(pedidoId) {
 
+    const montoInput = document.getElementById("montoPagoInput");
+    const metodoInput = document.getElementById("metodoPagoInput");
 
-async function abrirModalPago(pedidoId, saldoTotal) {
-    // Validar que los elementos existan antes de usarlos
-    const listaPagos = document.getElementById('listaPagosPedido');
-    const txtSaldo = document.getElementById('montoPendienteTexto');
-    const modal = document.getElementById('modalPago');
-    const inputId = document.getElementById('inputPedidoIdPago');
+    const monto = Number(montoInput.value);
+    const metodo = metodoInput.value;
 
-    if (!listaPagos || !modal) {
-        console.error("Error: Elementos del modal de pago no encontrados en el DOM.");
+    if (!monto || monto <= 0) {
+        alert("Ingrese un monto válido");
         return;
     }
 
     try {
-        const { data: pagosData, error } = await supabase
-            .from('pagos')
-            .select('*')
-            .eq('pedido_id', pedidoId);
+
+        // 1️⃣ traer pagos actuales
+        const { data, error } = await supabase
+            .from("pedidos")
+            .select("pagos")
+            .eq("id", pedidoId)
+            .single();
 
         if (error) throw error;
 
-        // Limpiar y llenar lista
-        listaPagos.innerHTML = "";
-        if (!pagosData || pagosData.length === 0) {
-            listaPagos.innerHTML = "<li style='color:#888; font-size:0.85em;'>No hay pagos registrados</li>";
-        } else {
-            pagosData.forEach(pago => {
-                const li = document.createElement('li');
-                li.style.fontSize = "0.85em";
-                li.style.borderBottom = "1px solid #f9f9f9";
-                li.innerHTML = `<span>${new Date(pago.fecha).toLocaleDateString()}:</span> <b>$${pago.monto.toLocaleString()}</b> (${pago.metodo})`;
-                listaPagos.appendChild(li);
-            });
-        }
+        const pagosActuales = Array.isArray(data.pagos) ? data.pagos : [];
 
-        // Mostrar datos
-        txtSaldo.textContent = `Saldo pendiente: $${saldoTotal.toLocaleString()}`;
-        inputId.value = pedidoId;
-        modal.style.display = 'flex';
+        // 2️⃣ crear nuevo pago
+        const nuevoPago = {
+            monto: monto,
+            metodo: metodo,
+            fecha: new Date().toISOString()
+        };
+
+        // 3️⃣ agregar pago al array
+        const pagosActualizados = [...pagosActuales, nuevoPago];
+
+        // 4️⃣ guardar en supabase
+        const { error: updateError } = await supabase
+            .from("pedidos")
+            .update({ pagos: pagosActualizados })
+            .eq("id", pedidoId);
+
+        if (updateError) throw updateError;
+
+        alert("Pago registrado correctamente");
+
+        // limpiar input
+        montoInput.value = "";
+
+        // recargar datos del modal
+        await cargarDatosPagoModal(pedidoId);
+        await cargarHistorialPagos(pedidoId);
 
     } catch (err) {
-        console.error("Error al obtener pagos:", err.message);
+
+        console.error("Error registrando pago:", err);
+        alert("Error al registrar el pago");
+
     }
+
 }
 
+async function abrirModalPago(pedidoId) {
 
+    const modal = document.getElementById('modalPago');
+    const inputId = document.getElementById('inputPedidoIdPago');
+
+    // guardar id del pedido
+    if (inputId) inputId.value = pedidoId;
+
+    // mostrar modal
+    modal.style.display = 'flex';
+
+    // cargar datos del pedido
+    await cargarDatosPagoModal(pedidoId);
+
+    // cargar historial de pagos
+    if (typeof cargarHistorialPagos === "function") {
+        await cargarHistorialPagos(pedidoId);
+    }
+
+}
 
 function recalcularPagos() {
-if (!pedidoExistenteId) {
-        console.warn("Operación de pago general (sin pedido específico)");
-        return; 
-    }  
-const lista = document.getElementById("listaPagos");
-  let totalPagos = 0;
+    if (!pedidoSeleccionado) return;
 
-  lista.querySelectorAll(".fila-pago").forEach(fila => {
-    const montoInput = fila.querySelector('input[placeholder="Monto"]');
-    const monto = montoInput ? parseFloat(montoInput.value) || 0 : 0;
-    totalPagos += monto;
-  });
+    const listaEdicion = document.getElementById("listaPagos");
+    let totalNuevosPagos = 0;
 
-  document.getElementById("totalPagado").textContent = totalPagos.toFixed(2);
+    // Sumar lo que el usuario está escribiendo en los inputs
+    listaEdicion.querySelectorAll(".fila-pago").forEach(fila => {
+        const monto = parseFloat(fila.querySelector('input[type="number"]').value) || 0;
+        totalNuevosPagos += monto;
+    });
 
-  const totalPedido = Number(pedidoSeleccionado.total || 0);
-  const saldoPendiente = Math.max(0, totalPedido - totalPagos);
-  document.getElementById("saldoPendiente").textContent = saldoPendiente.toFixed(2);
+    // Supongamos que pedidoSeleccionado.total es el costo total y 
+    // pedidoSeleccionado.pago_acumulado es lo que ya se pagó antes
+    const yaPagado = Number(pedidoSeleccionado.pago_acumulado || 0);
+    const totalPedido = Number(pedidoSeleccionado.total || 0);
+    
+const saldoRestante = Math.max(0, totalPedido - (yaPagado + totalNuevosPagos));
+
+    document.getElementById("totalPagado").textContent = totalNuevosPagos.toFixed(2);
+    document.getElementById("saldoPendiente").textContent = Math.max(0, saldoRestante).toFixed(2);
 }
-
 
 
 function cerrarModalPago() {
@@ -4000,46 +4064,245 @@ function agregarMedioPago() {
 
 
 async function guardarPagosPedido() {
-  if (!pedidoSeleccionado) return alert("No hay pedido seleccionado");
 
-  const lista = document.getElementById("listaPagos");
-  const pagos = [];
+    const pedidoId = document.getElementById("inputPedidoIdPago").value;
 
-  lista.querySelectorAll(".fila-pago").forEach(fila => {
-    const metodoSelect = fila.querySelector("select");
-    const metodo = metodoSelect ? metodoSelect.value : "";
+if (!pedidoId) {
+    alert("No hay pedido seleccionado");
+    return;
+}
 
-    const montoInput = fila.querySelector('input[placeholder="Monto"]');
-    const monto = montoInput ? parseFloat(montoInput.value) || 0 : 0;
+    const filas = document.querySelectorAll(".fila-pago");
+    const nuevosPagos = [];
 
-    const destInput = fila.querySelector('input[placeholder="Destinatario"]');
-    const destinatario = destInput ? destInput.value : "";
+    filas.forEach(fila => {
 
-    if (metodo && monto > 0) {
-      pagos.push({ metodo, monto, destinatario });
+        const metodo = fila.querySelector("select").value;
+        const monto = parseFloat(fila.querySelector('input[type="number"]').value) || 0;
+        const destinatario = fila.querySelector('input[type="text"]').value;
+
+        if (monto > 0) {
+
+            nuevosPagos.push({
+                metodo,
+                monto,
+                destinatario,
+                fecha: new Date().toISOString()
+            });
+
+        }
+
+    });
+
+    if (nuevosPagos.length === 0) {
+        alert("No hay pagos nuevos para agregar");
+        return;
     }
-  });
 
-  const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
-  const saldo_pendiente = Math.max(0, pedidoSeleccionado.total - totalPagos);
+    try {
 
-  // Guardar en Supabase
-  const { error } = await supabase
+        const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("pagos")
+        .eq("id", pedidoId)
+        .single();
+
+        let pagosActuales = pedido?.pagos || [];
+
+        pagosActuales = pagosActuales.concat(nuevosPagos);
+
+        const { error } = await supabase
+        .from("pedidos")
+        .update({ pagos: pagosActuales })
+        .eq("id", pedidoId);
+
+        if (error) throw error;
+
+        alert("Pagos registrados");
+
+        cerrarModalPago();
+        fetchOrders();
+
+    } catch (err) {
+
+        console.error(err);
+        alert("Error al guardar pagos");
+
+    }
+
+}
+
+
+
+async function cargarHistorialPagos(pedidoId) {
+
+    const lista = document.getElementById("listaPagosPedido");
+    if (!lista) return;
+
+    lista.innerHTML = "Cargando pagos...";
+
+    try {
+
+        const { data: pedido, error } = await supabase
+.from("pedidos")
+.select("pagos")
+.eq("id", pedidoId)
+.single();
+
+const pagos = pedido?.pagos || [];
+
+        if (error) throw error;
+
+        if (!pagos || pagos.length === 0) {
+            lista.innerHTML = "<li>No hay pagos registrados</li>";
+            return;
+        }
+
+        lista.innerHTML = pagos.map((p,i) => {
+
+const metodoSeguro = JSON.stringify(p.metodo);
+
+return `
+<li style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+
+<span>
+${new Date(p.fecha).toLocaleDateString("es-AR")}
+- $${Number(p.monto).toLocaleString("es-AR")}
+(${p.metodo})
+</span>
+
+<span>
+
+<button onclick="editarPago('${p.id}')" 
+style="background:#f1c40f;color:white;border:none;padding:6px 8px;border-radius:6px;cursor:pointer;margin-right:4px;">
+✏️
+</button>
+
+<button onclick="eliminarPago('${p.id}')" 
+style="background:#e74c3c;color:white;border:none;padding:6px 8px;border-radius:6px;cursor:pointer;">
+🗑
+</button>
+
+</span>
+
+</li>
+`;
+
+}).join("");
+
+    } catch (err) {
+
+        console.error("Error cargando pagos:", err);
+        lista.innerHTML = "Error cargando pagos";
+
+    }
+}
+
+async function eliminarPago(pagoIndex){
+
+    if(!confirm("¿Eliminar este pago?")) return;
+
+    const pedidoId = document.getElementById("inputPedidoIdPago").value;
+
+    const { data: pedido } = await supabase
     .from("pedidos")
-    .update({ pagos, saldo_pendiente })
-    .eq("id", pedidoSeleccionado.id);
+    .select("pagos")
+    .eq("id", pedidoId)
+    .single();
 
-  if (error) return alert("Error al guardar pagos: " + error.message);
+    let pagos = pedido.pagos || [];
 
-  // Cerrar modal y refrescar
-  cerrarModalPago();
-  fetchOrders();
-  alert("Pagos guardados correctamente");
+    pagos.splice(pagoIndex,1);
+
+    await supabase
+    .from("pedidos")
+    .update({ pagos })
+    .eq("id", pedidoId);
+
+    await cargarHistorialPagos(pedidoId);
+    await cargarDatosPagoModal(pedidoId);
+
+    fetchOrders();
+}
+
+
+async function editarPago(pagoIndex){
+
+const pedidoId = document.getElementById("inputPedidoIdPago").value;
+
+const { data: pedido } = await supabase
+.from("pedidos")
+.select("pagos")
+.eq("id", pedidoId)
+.single();
+
+let pagos = pedido.pagos || [];
+
+const montoActual = pagos[pagoIndex].monto;
+const metodoActual = pagos[pagoIndex].metodo;
+
+const nuevoMonto = prompt("Nuevo monto:", montoActual);
+if(nuevoMonto === null) return;
+
+const nuevoMetodo = prompt("Método:", metodoActual);
+if(nuevoMetodo === null) return;
+
+pagos[pagoIndex].monto = parseFloat(nuevoMonto);
+pagos[pagoIndex].metodo = nuevoMetodo;
+
+await supabase
+.from("pedidos")
+.update({ pagos })
+.eq("id", pedidoId);
+
+await cargarHistorialPagos(pedidoId);
+await cargarDatosPagoModal(pedidoId);
+
+fetchOrders();
 }
 
 
 
 
+async function cargarDatosPagoModal(pedidoId) {
+
+    try {
+
+        const { data: pedido, error } = await supabase
+            .from("pedidos")
+	    .select("total, estado, pagos")
+            .eq("id", pedidoId)
+            .single();
+
+        if (error) throw error;
+
+        const pagos = pedido.pagos || [];
+
+        const totalPedido = Number(pedido.total) || 0;
+
+        const totalPagado = pagos.reduce((acc,p)=>acc + Number(p.monto || 0),0);
+
+        const saldoPendiente = totalPedido - totalPagado;
+
+        document.getElementById("totalPedido").innerText =
+            totalPedido.toLocaleString("es-AR");
+
+        document.getElementById("totalPagado").innerText =
+            totalPagado.toLocaleString("es-AR");
+
+        document.getElementById("saldoPendiente").innerText =
+            saldoPendiente.toLocaleString("es-AR");
+
+        document.getElementById("estadoPedido").innerText =
+            saldoPendiente <= 0 ? "Pagado" : "Pendiente";
+
+    } catch (err) {
+
+        console.error("Error cargando datos del pedido:", err);
+
+    }
+
+}
 
 /* ========== MODAL DE EDICIÓN DE PEDIDO CON VALIDACIÓN MANUAL Y MEJORA VISUAL ========== */
 async function editOrderModal(pedido) {
@@ -5609,142 +5872,152 @@ async function fetchCuentasCorrientes() {
 
 
 
+/**
+ * Abre el modal de gestión de pagos de Cuenta Corriente
+ * @param {Object} pedido - El objeto completo del pedido desde la tabla
+ */
+
+
+
 function verDetallePagosCC(pedido) {
-    // Aseguramos que pagos sea un array
+    // 1. Validar que recibimos un pedido
+    if (!pedido || !pedido.id) {
+        console.error("Error: Pedido no válido recibido en el modal.");
+        return;
+    }
+
+    // 2. Guardar en la variable global para que guardarNuevoPagoCC sepa el ID
+    pedidoSeleccionado = pedido;
+
+    // 3. Procesar historial (si el objeto pedido ya trae los pagos)
     let listaPagos = [];
     try {
-        listaPagos = Array.isArray(pedido.pagos) ? pedido.pagos : (typeof pedido.pagos === 'string' ? JSON.parse(pedido.pagos) : []);
-    } catch (e) { listaPagos = []; }
+        if (pedido.pagos) {
+            listaPagos = typeof pedido.pagos === 'string' ? JSON.parse(pedido.pagos) : pedido.pagos;
+        }
+    } catch (e) { 
+        listaPagos = []; 
+    }
 
     const totalVenta = Number(pedido.total || 0);
     const totalPagado = listaPagos.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
     const saldoFinal = totalVenta - totalPagado;
 
+    // 4. Generar el contenido del modal
     let pagosHTML = `
-    <div style="text-align:left; font-family: Arial, sans-serif;">
-        <h3 style="margin-top:0; color:#2c3e50;">💳 Gestión de Cuenta: ${pedido.cliente}</h3>
-        <p style="margin-bottom:5px;"><b>Pedido ID:</b> #${pedido.id} | <b>Fecha:</b> ${new Date(pedido.created_at).toLocaleDateString()}</p>
+    <div style="text-align:left; font-family: sans-serif; padding:15px;">
+        <h3 style="margin-top:0;">💳 Gestión de Pago: ${pedido.cliente}</h3>
+        <p><b>ID Pedido:</b> #${pedido.id}</p>
         
-        <div style="background:#fdf2f2; padding:10px; border-radius:8px; border:1px solid #feb2b2; margin-bottom:15px;">
-            <span style="font-size:1.2em;">Saldo Pendiente: <b style="color:#e74c3c;">$${saldoFinal.toLocaleString()}</b></span>
+        <div style="background:#fff5f5; padding:15px; border-radius:8px; border:1px solid #feb2b2; text-align:center; margin-bottom:15px;">
+            <span style="color:#c53030; font-size:12px; font-weight:bold;">SALDO PENDIENTE</span><br>
+            <span style="font-size:24px; font-weight:bold; color:#e74c3c;">$${saldoFinal.toLocaleString()}</span>
         </div>
 
         <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">
-            <h4 style="margin:0 0 10px 0;">➕ Registrar Nuevo Pago</h4>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div>
-                    <label style="font-size:12px;">Monto:</label>
-                    <input type="number" id="newPagoMonto" placeholder="Ej: 5000" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                </div>
-                <div>
-                    <label style="font-size:12px;">Método:</label>
-                    <select id="newPagoMetodo" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" onchange="toggleDestinatarioCC(this.value)">
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Transferencia">Transferencia</option>
-                    </select>
-                </div>
-            </div>
-            <div id="wrapperDestinatarioCC" style="display:none; margin-top:10px;">
-                <label style="font-size:12px;">Destinatario (Banco/Nombre):</label>
-                <input type="text" id="newPagoDestinatario" placeholder="Ej: Mercado Pago / Jorge" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-            </div>
-            <button onclick="guardarNuevoPagoCC('${pedido.id}')" style="width:100%; margin-top:12px; background:#27ae60; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; font-weight:bold;">
-                Registrar Pago
+            <h4 style="margin:0 0 10px 0;">Registrar Nuevo Pago</h4>
+            <input type="number" id="newPagoMonto" placeholder="Monto $" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+            <select id="newPagoMetodo" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+            </select>
+            <button onclick="guardarNuevoPagoCC()" style="width:100%; background:#27ae60; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                Guardar Pago
             </button>
         </div>
 
-        <h4 style="margin:0 0 10px 0;">Historial de Entregas</h4>
-        <div style="max-height:150px; overflow-y:auto;">
+        <h4>Historial</h4>
+        <div style="max-height:150px; overflow-y:auto; border:1px solid #eee;">
             <table style="width:100%; border-collapse: collapse; font-size:13px;">
-                <thead style="background:#eee;">
-                    <tr><th style="padding:5px;">Método</th><th style="padding:5px;">Monto</th><th style="padding:5px;">Destino</th></tr>
+                <thead style="background:#f1f1f1;">
+                    <tr><th style="padding:8px; text-align:left;">Método</th><th style="padding:8px; text-align:right;">Monto</th></tr>
                 </thead>
                 <tbody>
-                    ${listaPagos.length === 0 ? '<tr><td colspan="3" style="text-align:center; padding:10px;">No hay pagos</td></tr>' : 
+                    ${listaPagos.length === 0 ? '<tr><td colspan="2" style="text-align:center; padding:10px;">No hay pagos previos</td></tr>' : 
                       listaPagos.map(pg => `
                         <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:5px;">${pg.metodo}</td>
-                            <td style="padding:5px;"><b>$${Number(pg.monto).toLocaleString()}</b></td>
-                            <td style="padding:5px;"><small>${pg.destinatario || '-'}</small></td>
+                            <td style="padding:8px;">${pg.metodo}</td>
+                            <td style="padding:8px; text-align:right;">$${Number(pg.monto).toLocaleString()}</td>
                         </tr>`).join('')}
                 </tbody>
             </table>
         </div>
-
-        <button onclick="closeModal()" class="button" style="margin-top:15px; width:100%; background:#7f8c8d; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">Cerrar</button>
+        <button onclick="closeModal()" style="margin-top:15px; width:100%; border:none; padding:10px; cursor:pointer;">Cerrar</button>
     </div>`;
 
     openModal(pagosHTML);
 }
 
-// Función auxiliar para mostrar/ocultar destinatario
+// Función auxiliar necesaria para el desplegable de transferencia
 function toggleDestinatarioCC(val) {
-    const wrap = document.getElementById('wrapperDestinatarioCC');
-    if (!wrap) return;
-    wrap.style.display = (val === 'Transferencia') ? 'block' : 'none';
+    const wrapper = document.getElementById('wrapperDestinatarioCC');
+    if (wrapper) wrapper.style.display = (val === 'Transferencia') ? 'block' : 'none';
 }
 
 
-
-
-async function guardarNuevoPagoCC(pedidoId) {
+async function guardarNuevoPagoCC() {
+    // 1. Obtener valores de los inputs del modal generado
     const montoInput = document.getElementById('newPagoMonto');
-    const monto = montoInput ? parseFloat(montoInput.value) : NaN;
-    const metodoEl = document.getElementById('newPagoMetodo');
-    const metodo = metodoEl ? metodoEl.value : "Efectivo";
-    const destEl = document.getElementById('newPagoDestinatario');
-    const destinatario = destEl ? destEl.value : "";
+    const metodoInput = document.getElementById('newPagoMetodo');
+    const monto = parseFloat(montoInput.value);
+    const metodo = metodoInput.value;
 
+    // 2. Validaciones básicas
     if (!monto || monto <= 0) {
         alert("Por favor, ingresa un monto válido.");
         return;
     }
 
+    if (!pedidoSeleccionado) {
+        alert("Error: No se ha seleccionado ningún pedido.");
+        return;
+    }
+
     try {
-        // 1. Obtener el pedido actual para no pisar otros pagos
-        const { data: pedido, error: fetchError } = await supabase
-            .from('pedidos')
-            .select('pagos')
-            .eq('id', pedidoId)
-            .single();
-
-        if (fetchError) throw fetchError;
-
-        // 2. Preparar el nuevo array de pagos
-        let pagosActuales = [];
+        // 3. Preparar el historial de pagos actual
+        let historialActual = [];
         try {
-            pagosActuales = Array.isArray(pedido.pagos) ? pedido.pagos : (typeof pedido.pagos === 'string' ? JSON.parse(pedido.pagos) : []);
-        } catch (e) { pagosActuales = []; }
+            if (pedidoSeleccionado.pagos) {
+                historialActual = typeof pedidoSeleccionado.pagos === 'string' 
+                    ? JSON.parse(pedidoSeleccionado.pagos) 
+                    : pedidoSeleccionado.pagos;
+            }
+        } catch (e) { historialActual = []; }
 
+        // 4. Agregar el nuevo pago al array
         const nuevoPago = {
-            monto: monto,
-            metodo: metodo,
-            destinatario: metodo === 'Transferencia' ? destinatario : '',
-            fecha: new Date().toISOString()
+            pagos: pagos,
+            created_at: new Date().toISOString()
         };
+        const nuevoHistorial = [...historialActual, nuevoPago];
 
-        const pagosActualizados = [...pagosActuales, nuevoPago];
+        // 5. Calcular nuevo saldo pendiente
+        const totalPagado = nuevoHistorial.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+        const nuevoSaldo = Math.max(0, Number(pedidoSeleccionado.total) - totalPagado);
 
-        // 3. Actualizar en Supabase
-        const { error: updateError } = await supabase
+        // 6. Actualizar Supabase
+        const { error } = await supabase
             .from('pedidos')
-            .update({ pagos: pagosActualizados })
+            .update({ 
+                pagos: nuevoHistorial, // Se guarda el array actualizado
+                saldo_pendiente: nuevoSaldo 
+            })
             .eq('id', pedidoId);
 
-        if (updateError) throw updateError;
+        if (error) throw error;
 
-        // 4. Éxito: Cerrar modal y refrescar tabla
-        showToast("✅ Pago registrado con éxito");
+        // 7. Éxito: Feedback al usuario y refrescar datos
+        alert("Pago registrado correctamente.");
         closeModal();
-        fetchCuentasCorrientes(); // Refresca la lista de cuentas corrientes
+        
+        // Si tienes una función para refrescar la lista principal, llámala aquí
+        if (typeof fetchOrders === 'function') fetchOrders();
 
     } catch (err) {
-        console.error("Error al registrar pago:", err);
-        alert("No se pudo registrar el pago: " + err.message);
+        console.error("Error al guardar el pago:", err.message);
+        alert("No se pudo guardar el pago: " + err.message);
     }
 }
-
-
 
 
 // Cargar categorías en el select al iniciar
@@ -5898,4 +6171,8 @@ async function cargarCategoriasEnSelects() {
 
 </body>
 </html>
+
+
+
+
 
