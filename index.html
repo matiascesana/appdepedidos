@@ -1259,33 +1259,6 @@ button[onclick*="delete"] {
 
 
 
-<!-- Modal Medios de Pago -->
-<div id="modalPago" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9999;">
-  <div style="background:white;padding:25px;border-radius:10px;max-width:500px;width:90%;text-align:left;">
-    <h3>Registrar Medios de Pago</h3>
-    <div id="listaPagos"></div>
- Total: $<span id="pagoTotal">0.00</span>
-<div style="margin-top:15px;">
-  <b>Historial de pagos</b>
-  <ul id="listaPagosPedido" style="list-style:none;padding:0;margin-top:8px;"></ul>
-</div>
-    <button onclick="agregarMedioPago()" 
-      style="margin:10px 0;background:#2ecc71;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
-      + Agregar método
-    </button>
-    <hr>
-    <p><b>Total pedido:</b> $<span id="totalPedido"></span></p>
-    <p><b>Total abonado:</b> $<span id="totalPagado">0.00</span></p>
-    <p><b>Saldo pendiente:</b> $<span id="saldoPendiente">0.00</span></p>
-    <p><b>Estado del Pedido:</b> $<span id="estadoPedido">Pendiente</span></p>
-    <div style="text-align:right;margin-top:15px;">
-      <button onclick="cerrarModalPago()" style="padding:8px 12px;">Cancelar</button>
-<button 
-onclick="guardarPagosPedido()" 
-style="padding:8px 12px;background:#3498db;color:white;border:none;border-radius:6px;">
-Guardar
-</button>
 
 <div id="addPromoModal" class="modal" style="display:none;">
   <div class="modal-content">
@@ -3518,53 +3491,9 @@ function renderPedidosTotales(pedidos) {
 }
 
 
-async function guardarPagoDesdeModal() {
 
-    const pedidoId = document.getElementById('inputPedidoIdPago').value;
-    const monto = document.getElementById('montoPagoInput').value;
-    const metodo = document.getElementById('metodoPagoInput').value;
-    const destinatario = "Administración";
 
-    if (!monto || monto <= 0) {
-        return alert("Por favor, ingresa un monto válido.");
-    }
 
-    try {
-
-        const { error } = await supabase
-            .from('pedidos')
-            .insert([{
-                id: pedidoId,
-                total: parseFloat(monto),
-                pagos: pagos,
-                created_at: new Date().toISOString().split('T')[0]
-            }]);
-
-        if (error) throw error;
-
-        showToast("✅ Pago registrado con éxito");
-
-        // limpiar input
-        document.getElementById('montoPagoInput').value = "";
-
-        // actualizar datos del modal
-        await cargarDatosPagoModal(pedidoId);
-        await cargarHistorialPagos(pedidoId);
-
-        // refrescar listas del sistema
-        fetchOrders();
-
-        if (typeof renderCtaCte === 'function') {
-            renderCtaCte();
-        }
-
-    } catch (err) {
-
-        console.error("Error al guardar pago:", err);
-        alert("Error: " + err.message);
-
-    }
-}
 
 
 
@@ -3745,7 +3674,7 @@ async function fetchArchivedOrders() {
         for (const p of pedidos) {
             // --- CORRECCIÓN DE CÁLCULOS ---
             const totalPedido = Number(p.total || 0);
-	const pagado = (p.pagos || []).reduce((acc,x)=>acc + Number(x.monto || 0),0);
+	const pagado = calcularTotalPagado(p.pagos);
     const saldoCalculado = totalPedido - pagado;
 
     console.log("Enviando al modal:", p.id, saldoCalculado);
@@ -3885,424 +3814,152 @@ async function unarchiveOrder(orderId) {
 
 
 
-async function registrarPagoPedido(pedidoId) {
 
-    const montoInput = document.getElementById("montoPagoInput");
-    const metodoInput = document.getElementById("metodoPagoInput");
 
-    const monto = Number(montoInput.value);
-    const metodo = metodoInput.value;
 
-    if (!monto || monto <= 0) {
-        alert("Ingrese un monto válido");
-        return;
-    }
 
-    try {
 
-        // 1️⃣ traer pagos actuales
+
+
+
+async function abrirModalPago(pedido) {
+    // Si lo que recibimos es un número o string (el ID directamente)
+    if (typeof pedido === 'string' || typeof pedido === 'number') {
+        console.log("Recibido ID directo, buscando pedido...");
         const { data, error } = await supabase
-            .from("pedidos")
-            .select("pagos")
-            .eq("id", pedidoId)
+            .from('pedidos')
+            .select('*')
+            .eq('id', pedido)
             .single();
-
-        if (error) throw error;
-
-        const pagosActuales = Array.isArray(data.pagos) ? data.pagos : [];
-
-        // 2️⃣ crear nuevo pago
-        const nuevoPago = {
-            monto: monto,
-            metodo: metodo,
-            fecha: new Date().toISOString()
-        };
-
-        // 3️⃣ agregar pago al array
-        const pagosActualizados = [...pagosActuales, nuevoPago];
-
-        // 4️⃣ guardar en supabase
-        const { error: updateError } = await supabase
-            .from("pedidos")
-            .update({ pagos: pagosActualizados })
-            .eq("id", pedidoId);
-
-        if (updateError) throw updateError;
-
-        alert("Pago registrado correctamente");
-
-        // limpiar input
-        montoInput.value = "";
-
-        // recargar datos del modal
-        await cargarDatosPagoModal(pedidoId);
-        await cargarHistorialPagos(pedidoId);
-
-    } catch (err) {
-
-        console.error("Error registrando pago:", err);
-        alert("Error al registrar el pago");
-
+        
+        if (error || !data) return alert("No se pudo cargar el pedido " + pedido);
+        pedidoSeleccionado = data;
+    } else {
+        // Si recibimos el objeto completo
+        pedidoSeleccionado = pedido;
     }
 
+    if (!pedidoSeleccionado || !pedidoSeleccionado.id) {
+        console.error("Error crítico: Pedido sin ID", pedidoSeleccionado);
+        return alert("Error al abrir el pago: ID no encontrado.");
+    }
+
+    // A partir de aquí, el resto de tu lógica de "otro proyecto"
+    document.getElementById("totalPedido").textContent = Number(pedidoSeleccionado.total || 0).toFixed(2);
+    
+    const lista = document.getElementById("listaPagos");
+    lista.innerHTML = "";
+
+    const pagosActuales = pedidoSeleccionado.pagos || [];
+    if (pagosActuales.length > 0) {
+        pagosActuales.forEach((p, i) => crearFilaPago(i, p.metodo, p.monto, p.destinatario));
+    } else {
+        crearFilaPago(0);
+    }
+
+    recalcularPagos();
+    document.getElementById("modalPago").style.display = "flex";
 }
 
-async function abrirModalPago(pedidoId) {
 
-    const modal = document.getElementById('modalPago');
-    const inputId = document.getElementById('inputPedidoIdPago');
 
-    // guardar id del pedido
-    if (inputId) inputId.value = pedidoId;
+function crearFilaPago(index, metodo = 'Efectivo', monto = 0, destinatario = '') {
+    const lista = document.getElementById("listaPagos");
+    const fila = document.createElement("div");
+    fila.className = "fila-pago";
+    fila.style = "display:flex; gap:5px; margin-bottom:8px; align-items:center;";
 
-    // mostrar modal
-    modal.style.display = 'flex';
-
-    // cargar datos del pedido
-    await cargarDatosPagoModal(pedidoId);
-
-    // cargar historial de pagos
-    if (typeof cargarHistorialPagos === "function") {
-        await cargarHistorialPagos(pedidoId);
-    }
-
+    fila.innerHTML = `
+        <select style="flex:1; padding:8px; border-radius:5px; border:1px solid #ccc;">
+            <option value="Efectivo" ${metodo === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+            <option value="Transferencia" ${metodo === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+            <option value="Tarjeta" ${metodo === 'Tarjeta' ? 'selected' : ''}>Tarjeta</option>
+        </select>
+        <input type="number" placeholder="Monto" value="${monto}" oninput="recalcularPagos()" style="flex:1; padding:8px; border-radius:5px; border:1px solid #ccc;">
+        <input type="text" placeholder="Destinatario" value="${destinatario}" style="flex:1; padding:8px; border-radius:5px; border:1px solid #ccc;">
+        <button onclick="this.parentElement.remove(); recalcularPagos();" style="background:none; border:none; cursor:pointer;">❌</button>
+    `;
+    lista.appendChild(fila);
 }
 
 function recalcularPagos() {
     if (!pedidoSeleccionado) return;
+    const lista = document.getElementById("listaPagos");
+    let totalPagado = 0;
 
-    const listaEdicion = document.getElementById("listaPagos");
-    let totalNuevosPagos = 0;
-
-    // Sumar lo que el usuario está escribiendo en los inputs
-    listaEdicion.querySelectorAll(".fila-pago").forEach(fila => {
+    lista.querySelectorAll(".fila-pago").forEach(fila => {
         const monto = parseFloat(fila.querySelector('input[type="number"]').value) || 0;
-        totalNuevosPagos += monto;
+        totalPagado += monto;
     });
 
-    // Supongamos que pedidoSeleccionado.total es el costo total y 
-    // pedidoSeleccionado.pago_acumulado es lo que ya se pagó antes
-    const yaPagado = Number(pedidoSeleccionado.pago_acumulado || 0);
+    document.getElementById("totalPagado").textContent = totalPagado.toFixed(2);
     const totalPedido = Number(pedidoSeleccionado.total || 0);
-    
-const saldoRestante = Math.max(0, totalPedido - (yaPagado + totalNuevosPagos));
-
-    document.getElementById("totalPagado").textContent = totalNuevosPagos.toFixed(2);
-    document.getElementById("saldoPendiente").textContent = Math.max(0, saldoRestante).toFixed(2);
+    document.getElementById("saldoPendiente").textContent = Math.max(0, totalPedido - totalPagado).toFixed(2);
 }
-
-
-function cerrarModalPago() {
-  const modal = document.getElementById("modalPago");
-  if (modal) {
-    modal.style.display = "none";
-  }
-}
-
-
-
-function crearFilaPago(index, metodo = '', monto = 0, destinatario = '') {
-  const lista = document.getElementById("listaPagos");
-
-  const fila = document.createElement("div");
-  fila.className = "fila-pago";
-  fila.style.display = "flex";
-  fila.style.gap = "10px";
-  fila.style.marginBottom = "8px";
-  fila.style.alignItems = "center";
-
-  // Select método de pago
-  const selectMetodo = document.createElement("select");
-  const opciones = ["Transferencia", "Efectivo"];
-  opciones.forEach(op => {
-    const option = document.createElement("option");
-    option.value = op;
-    option.textContent = op;
-    if (op === metodo) option.selected = true;
-    selectMetodo.appendChild(option);
-  });
-
-  // Input monto
-  const inputMonto = document.createElement("input");
-  inputMonto.type = "number";
-  inputMonto.placeholder = "Monto";
-  inputMonto.value = monto;
-  inputMonto.min = 0;
-  inputMonto.step = "0.01";
-  inputMonto.oninput = recalcularPagos; // recalcular al cambiar
-
-  // Input destinatario
-  const inputDest = document.createElement("input");
-  inputDest.type = "text";
-  inputDest.placeholder = "Destinatario";
-  inputDest.value = destinatario;
-
-  // Botón eliminar
-  const btnEliminar = document.createElement("button");
-  btnEliminar.textContent = "❌";
-  btnEliminar.onclick = () => {
-    lista.removeChild(fila);
-    recalcularPagos();
-  };
-
-  fila.append(selectMetodo, inputMonto, inputDest, btnEliminar);
-  lista.appendChild(fila);
-}
-
 
 function agregarMedioPago() {
-  // Llama a la función que crea una fila de pago vacía
-  crearFilaPago(); 
-  
-  // Opcional: enfocar el input de monto de la nueva fila para mejor UX
-  const nuevaFila = document.getElementById("listaPagos").lastElementChild;
-  const inputMonto = nuevaFila ? nuevaFila.querySelector('input[placeholder="Monto"]') : null;
-  if (inputMonto) {
-    inputMonto.focus();
-  }
+    crearFilaPago();
 }
-
 
 async function guardarPagosPedido() {
-
-    const pedidoId = document.getElementById("inputPedidoIdPago").value;
-
-if (!pedidoId) {
-    alert("No hay pedido seleccionado");
-    return;
-}
-
-    const filas = document.querySelectorAll(".fila-pago");
-    const nuevosPagos = [];
-
-    filas.forEach(fila => {
-
-        const metodo = fila.querySelector("select").value;
-        const monto = parseFloat(fila.querySelector('input[type="number"]').value) || 0;
-        const destinatario = fila.querySelector('input[type="text"]').value;
-
-        if (monto > 0) {
-
-            nuevosPagos.push({
-                metodo,
-                monto,
-                destinatario,
-                fecha: new Date().toISOString()
-            });
-
-        }
-
-    });
-
-    if (nuevosPagos.length === 0) {
-        alert("No hay pagos nuevos para agregar");
+    // VALIDACIÓN PROFESIONAL: Evita el error 400
+    if (!pedidoSeleccionado || !pedidoSeleccionado.id) {
+        alert("Error de sistema: No se detectó el ID del pedido. Reabre el modal.");
         return;
     }
 
-    try {
+    const lista = document.getElementById("listaPagos");
+    const pagos = [];
 
-        const { data: pedido } = await supabase
-        .from("pedidos")
-        .select("pagos")
-        .eq("id", pedidoId)
-        .single();
+    lista.querySelectorAll(".fila-pago").forEach(fila => {
+        const metodo = fila.querySelector("select").value;
+        const montoInput = fila.querySelector('input[type="number"]');
+        const monto = montoInput ? parseFloat(montoInput.value) || 0 : 0;
+        const destinatarioInput = fila.querySelector('input[type="text"]');
+        const destinatario = destinatarioInput ? destinatarioInput.value : "";
 
-        let pagosActuales = pedido?.pagos || [];
-
-        pagosActuales = pagosActuales.concat(nuevosPagos);
-
-        const { error } = await supabase
-        .from("pedidos")
-        .update({ pagos: pagosActuales })
-        .eq("id", pedidoId);
-
-        if (error) throw error;
-
-        alert("Pagos registrados");
-
-        cerrarModalPago();
-        fetchOrders();
-
-    } catch (err) {
-
-        console.error(err);
-        alert("Error al guardar pagos");
-
-    }
-
-}
-
-
-
-async function cargarHistorialPagos(pedidoId) {
-
-    const lista = document.getElementById("listaPagosPedido");
-    if (!lista) return;
-
-    lista.innerHTML = "Cargando pagos...";
-
-    try {
-
-        const { data: pedido, error } = await supabase
-.from("pedidos")
-.select("pagos")
-.eq("id", pedidoId)
-.single();
-
-const pagos = pedido?.pagos || [];
-
-        if (error) throw error;
-
-        if (!pagos || pagos.length === 0) {
-            lista.innerHTML = "<li>No hay pagos registrados</li>";
-            return;
+        if (monto > 0) {
+            pagos.push({ metodo, monto, destinatario });
         }
+    });
 
-        lista.innerHTML = pagos.map((p,i) => {
-
-const metodoSeguro = JSON.stringify(p.metodo);
-
-return `
-<li style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-
-<span>
-${new Date(p.fecha).toLocaleDateString("es-AR")}
-- $${Number(p.monto).toLocaleString("es-AR")}
-(${p.metodo})
-</span>
-
-<span>
-
-<button onclick="editarPago('${p.id}')" 
-style="background:#f1c40f;color:white;border:none;padding:6px 8px;border-radius:6px;cursor:pointer;margin-right:4px;">
-✏️
-</button>
-
-<button onclick="eliminarPago('${p.id}')" 
-style="background:#e74c3c;color:white;border:none;padding:6px 8px;border-radius:6px;cursor:pointer;">
-🗑
-</button>
-
-</span>
-
-</li>
-`;
-
-}).join("");
-
-    } catch (err) {
-
-        console.error("Error cargando pagos:", err);
-        lista.innerHTML = "Error cargando pagos";
-
-    }
-}
-
-async function eliminarPago(pagoIndex){
-
-    if(!confirm("¿Eliminar este pago?")) return;
-
-    const pedidoId = document.getElementById("inputPedidoIdPago").value;
-
-    const { data: pedido } = await supabase
-    .from("pedidos")
-    .select("pagos")
-    .eq("id", pedidoId)
-    .single();
-
-    let pagos = pedido.pagos || [];
-
-    pagos.splice(pagoIndex,1);
-
-    await supabase
-    .from("pedidos")
-    .update({ pagos })
-    .eq("id", pedidoId);
-
-    await cargarHistorialPagos(pedidoId);
-    await cargarDatosPagoModal(pedidoId);
-
-    fetchOrders();
-}
-
-
-async function editarPago(pagoIndex){
-
-const pedidoId = document.getElementById("inputPedidoIdPago").value;
-
-const { data: pedido } = await supabase
-.from("pedidos")
-.select("pagos")
-.eq("id", pedidoId)
-.single();
-
-let pagos = pedido.pagos || [];
-
-const montoActual = pagos[pagoIndex].monto;
-const metodoActual = pagos[pagoIndex].metodo;
-
-const nuevoMonto = prompt("Nuevo monto:", montoActual);
-if(nuevoMonto === null) return;
-
-const nuevoMetodo = prompt("Método:", metodoActual);
-if(nuevoMetodo === null) return;
-
-pagos[pagoIndex].monto = parseFloat(nuevoMonto);
-pagos[pagoIndex].metodo = nuevoMetodo;
-
-await supabase
-.from("pedidos")
-.update({ pagos })
-.eq("id", pedidoId);
-
-await cargarHistorialPagos(pedidoId);
-await cargarDatosPagoModal(pedidoId);
-
-fetchOrders();
-}
-
-
-
-
-async function cargarDatosPagoModal(pedidoId) {
+    const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
+    const saldo_pendiente = Math.max(0, Number(pedidoSeleccionado.total || 0) - totalPagos);
 
     try {
-
-        const { data: pedido, error } = await supabase
+        const { error } = await supabase
             .from("pedidos")
-	    .select("total, estado, pagos")
-            .eq("id", pedidoId)
-            .single();
+            .update({ 
+                pagos: pagos, 
+                saldo_pendiente: saldo_pendiente 
+            })
+            .eq("id", pedidoSeleccionado.id); // Aquí ya no será undefined
 
         if (error) throw error;
 
-        const pagos = pedido.pagos || [];
-
-        const totalPedido = Number(pedido.total) || 0;
-
-        const totalPagado = pagos.reduce((acc,p)=>acc + Number(p.monto || 0),0);
-
-        const saldoPendiente = totalPedido - totalPagado;
-
-        document.getElementById("totalPedido").innerText =
-            totalPedido.toLocaleString("es-AR");
-
-        document.getElementById("totalPagado").innerText =
-            totalPagado.toLocaleString("es-AR");
-
-        document.getElementById("saldoPendiente").innerText =
-            saldoPendiente.toLocaleString("es-AR");
-
-        document.getElementById("estadoPedido").innerText =
-            saldoPendiente <= 0 ? "Pagado" : "Pendiente";
+        alert("✅ Pagos actualizados correctamente");
+        cerrarModalPago();
+        
+        // Refrescar datos
+        if (typeof fetchOrders === 'function') await fetchOrders();
+        if (typeof renderCtaCte === 'function') renderCtaCte();
 
     } catch (err) {
-
-        console.error("Error cargando datos del pedido:", err);
-
+        console.error("Error en Supabase:", err);
+        alert("Error al guardar: " + err.message);
     }
-
 }
+
+
+
+function cerrarModalPago() {
+    document.getElementById("modalPago").style.display = "none";
+}
+
+
+
+
+
 
 /* ========== MODAL DE EDICIÓN DE PEDIDO CON VALIDACIÓN MANUAL Y MEJORA VISUAL ========== */
 async function editOrderModal(pedido) {
@@ -6137,37 +5794,42 @@ async function cargarCategoriasEnSelects() {
 
 
 
-<div id="modalPago" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
-    <div class="modal-content" style="background:#fff; padding:20px; border-radius:12px; width:90%; max-width:450px; position:relative;">
-        <span class="close-button" onclick="document.getElementById('modalPago').style.display='none'" style="position:absolute; right:15px; top:10px; cursor:pointer; font-size:24px;">&times;</span>
+<div id="modalPago" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999;">
+    <div class="modal-content" style="background:white; padding:25px; border-radius:12px; width:95%; max-width:550px; position:relative;">
+        <span onclick="cerrarModalPago()" style="position:absolute; right:15px; top:10px; cursor:pointer; font-size:24px;">&times;</span>
         
-        <h3>Registrar Pago</h3>
-        <p id="montoPendienteTexto" style="font-weight:bold; color:#e74c3c;"></p>
+        <h3 style="margin-top:0;">Gestión de Pagos</h3>
         
-        <div style="margin: 15px 0; border: 1px solid #eee; padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto;">
-            <small><b>Historial de pagos:</b></small>
-            <ul id="listaPagosPedido" style="list-style:none; padding:0; margin-top:5px;"></ul>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; background:#f8fafc; padding:15px; border-radius:10px; margin-bottom:20px; text-align:center;">
+            <div>
+                <small>Total Pedido</small>
+                <div id="totalPedido" style="font-weight:bold;">0.00</div>
+            </div>
+            <div>
+                <small>Total Pagado</small>
+                <div id="totalPagado" style="font-weight:bold; color:#10b981;">0.00</div>
+            </div>
+            <div>
+                <small>Saldo Pendiente</small>
+                <div id="saldoPendiente" style="font-weight:bold; color:#f43f5e;">0.00</div>
+            </div>
         </div>
-        
-        <input type="hidden" id="inputPedidoIdPago">
-        
-        <label>Monto a entregar:</label>
-        <input type="number" id="montoPagoInput" placeholder="$ 0.00" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:6px;">
-        
-        <label>Método:</label>
-        <select id="metodoPagoInput" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:6px;">
-            <option value="Efectivo">Efectivo</option>
-            <option value="Transferencia">Transferencia</option>
-            <option value="Tarjeta">Tarjeta</option>
-        </select>
 
-        <button onclick="guardarPagoDesdeModal()" style="width:100%; background:#27ae60; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:10px;">
-            💾 Confirmar Pago
-        </button>
+        <p style="font-size:12px; margin-bottom:10px;">Estado: <span id="estadoPedido" style="font-weight:bold;"></span></p>
+
+        <div id="listaPagos" style="margin-bottom:20px; max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:8px;">
+            </div>
+
+        <div style="display:flex; gap:10px;">
+            <button onclick="agregarMedioPago()" style="flex:1; background:#6366f1; color:white; padding:12px; border:none; border-radius:8px; cursor:pointer;">
+                + Agregar Pago
+            </button>
+            <button onclick="guardarPagosPedido()" style="flex:1; background:#10b981; color:white; padding:12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
+                Guardar Cambios
+            </button>
+        </div>
     </div>
 </div>
-
-
 
 </body>
 </html>
