@@ -1597,38 +1597,43 @@ async function renderCtaCte() {
     const container = document.getElementById("ctaCteList");
     if (!container) return;
 
-    try {
-        // Traemos todos los pedidos no archivados
-        const { data: pedidos, error } = await supabase
-            .from("pedidos")
-            .select("*")
-            .eq("archivado", false);
+   try {
+    // 1. Traemos todos los pedidos sin filtros
+    const { data: pedidos, error } = await supabase
+        .from("pedidos")
+        .select("*");
 
-        if (error) throw error;
+    if (error) throw error;
 
-        const clientesAgrupados = {};
+    const clientesAgrupados = {};
 
-        pedidos.forEach(p => {
-            const dniKey = p.dni ? p.dni.toString().trim() : null;
-            const nombreKey = p.cliente.toLowerCase().trim();
-            const groupKey = dniKey || nombreKey;
+    pedidos.forEach(p => {
+        const groupKey = p.dni ? p.dni.toString().trim() : p.cliente.toLowerCase().trim();
 
-            const totalPedido = Number(p.total || 0);
-            const pagado = (p.pagos || []).reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
-            const saldoPedido = totalPedido - pagado;
+        // 2. CORRECCIÓN: Validar que pagos sea un Array antes de usar reduce
+        // Si p.pagos no existe o no es una lista, usamos un array vacío []
+        const listaPagos = Array.isArray(p.pagos) ? p.pagos : [];
+        
+        const pagado = listaPagos.reduce((acc, pago) => {
+            return acc + Number(pago.monto || 0);
+        }, 0);
 
-            if (!clientesAgrupados[groupKey]) {
-                clientesAgrupados[groupKey] = {
-                    nombreDisplay: p.cliente,
-                    dni: p.dni || "S/D",
-                    saldoTotal: 0,
-                    cantidadPedidos: 0
-                };
-            }
-            
-            clientesAgrupados[groupKey].saldoTotal += saldoPedido;
-            clientesAgrupados[groupKey].cantidadPedidos += 1;
-        });
+        const totalPedido = Number(p.total || 0);
+        const saldoPedido = totalPedido - pagado;
+
+        if (!clientesAgrupados[groupKey]) {
+            clientesAgrupados[groupKey] = {
+                nombreDisplay: p.cliente,
+                dni: p.dni || "S/D",
+                saldoTotal: 0,
+                cantidadPedidos: 0,
+		ultimoPedidoId: p.id
+            };
+        }
+        
+        clientesAgrupados[groupKey].saldoTotal += saldoPedido;
+        clientesAgrupados[groupKey].cantidadPedidos += 1;
+    });
 
         const resultadosFiltrados = Object.values(clientesAgrupados).filter(cliente => {
             return cliente.nombreDisplay.toLowerCase().includes(searchTerm) || 
@@ -1646,11 +1651,16 @@ async function renderCtaCte() {
                     $${c.saldoTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                 </td>
                 <td style="padding: 12px; text-align:center;">
-                    <button onclick="verDetalleCliente('${c.dni !== 'S/D' ? c.dni : c.nombreDisplay}')" 
-                            style="background:#3498db; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">
-                        👁️ Ver Pedidos
-                    </button>
-                </td>
+    <button onclick="abrirModalPago('${c.ultimoPedidoId}')" 
+            style="background:#27ae60; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;">
+        💵 Pagos
+    </button>
+
+    <button onclick="verDetalleCliente('${c.dni !== 'S/D' ? c.dni : c.nombreDisplay}')" 
+            style="background:#3498db; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">
+        👁️ Ver Pedidos
+    </button>
+</td>
             </tr>
         `).join("");
 
@@ -6017,8 +6027,8 @@ async function verDetalleCliente(identificador) {
         const { data: pedidos, error } = await supabase
             .from('pedidos')
             .select('*')
-            .or(`dni.eq.${identificador},cliente.eq.${identificador}`)
-            .eq('archivado', false);
+            .or(`dni.eq.${identificador},cliente.eq.${identificador}`);
+            
 
         if (error) throw error;
 
