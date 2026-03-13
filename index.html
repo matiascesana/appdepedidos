@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Panel Administrativo Completo</title>
+<link rel="icon" href="data:,">
 
 
     <style>
@@ -301,6 +302,33 @@ body {
     font-size: 13px;
     font-weight: 500;
     transition: all 0.2s;
+}
+
+
+
+#editOrderModal {
+    display: none; 
+    position: fixed; /* Esto lo saca del flujo normal y lo fija a la pantalla */
+    z-index: 9999 !important; /* Por encima de la sidebar y del header */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Oscurece todo el fondo, sidebar incluida */
+    
+    /* Para que el contenido interno se centre correctamente */
+    align-items: center;
+    justify-content: center;
+}
+
+/* Asegúrate de que el contenido interno tenga un fondo sólido */
+#editOrderModal .modal-content {
+    background-color: #fff;
+    margin: auto;
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+    z-index: 10000; /* Un punto más que el fondo del modal */
 }
 
 
@@ -876,7 +904,9 @@ button[onclick*="delete"] {
 <div class="content">
 <!-- 🔹 Agregar este botón junto al de Exportar -->
 <div>
-<button id="addPromoBtn" style="..."> ➕ Nueva Promoción </button>
+<button id="addPromoBtn" onclick="abrirModalNuevaPromo()" style="background:var(--primary); color:white; padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; margin-bottom:15px;">
+    ➕ Nueva Promoción
+</button>
         <div id="promos" class="section active">
 	<div style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">
        
@@ -1132,29 +1162,28 @@ button[onclick*="delete"] {
 
 <section id="ctaCte" class="section">
     <h2>📋 Cuenta Corriente de Clientes</h2>
+    
     <div style="margin-bottom: 20px;">
-        <input type="text" id="ctaCteSearch" placeholder="Buscar por cliente o ID de pedido..." 
-               style="width: 100%; padding: 10px;" oninput="renderCtaCte()">
+        <input type="text" id="ctaCteSearch" placeholder="Buscar por cliente o DNI..." 
+               style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;" 
+               oninput="renderCtaCte()">
     </div>
-    <div id="ctaCteTableContainer">
-        <table class="table">
-            <thead>
+
+    <div class="card" style="margin-top: 20px; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: #f1f5f9;">
                 <tr>
-                    <th>Cliente</th>
-                    <th>ID Pedido</th>
-                    <th>Monto Total</th>
-                    <th>Pagado</th>
-                    <th>Saldo</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style="text-align: left; padding: 12px;">Cliente</th>
+                    <th style="text-align: center; padding: 12px;">Pedidos</th>
+                    <th style="text-align: right; padding: 12px;">Saldo Total</th>
+                    <th style="text-align: center; padding: 12px;">Acción</th>
                 </tr>
             </thead>
-            <tbody id="ctaCteBody">
+            <tbody id="ctaCteList">
                 </tbody>
         </table>
     </div>
 </section>
-
 
 
 <div id="imageModal" 
@@ -1260,39 +1289,69 @@ button[onclick*="delete"] {
 
 
 
-<div id="addPromoModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <span class="close-button" onclick="document.getElementById('addPromoModal').style.display='none'">&times;</span>
-    <h3>Nueva Promoción</h3>
+<div id="addPromoModal" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
+    <div class="modal-content" style="background-color:#fff; margin:5% auto; padding:25px; border-radius:12px; width:90%; max-width:500px; position:relative;">
+        <span class="close-button" onclick="document.getElementById('addPromoModal').style.display='none'" style="position:absolute; right:20px; top:15px; font-size:24px; cursor:pointer;">&times;</span>
+        <h3 style="margin-top:0; color:var(--secondary);">➕ Nueva Promoción</h3>
 
-    <label for="newPromoNombre">Nombre de la promoción:</label>
-   <input type="text" id="newPromoNombre" placeholder="Nombre" />
+        <div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+            <div>
+                <label style="display:block; font-size:14px; color:var(--text-muted);">Nombre de la promoción</label>
+                <input type="text" id="newPromoNombre" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="Ej: Combo Color + Corte">
+            </div>
 
-    <label for="newPromoPrecio">Precio ($):</label>
-    <input type="number" id="newPromoPrecio" min="0" step="0.01" />
-<label for="newPromoPrecioAnterior">Precio anterior ($):</label>
-<input type="number" id="newPromoPrecioAnterior" min="0" step="0.01">
-    <label for="newPromoStock">Stock (unidades):</label>
-    <input type="number" id="newPromoStock" name="stock" min="0">
-    <label for="newPromoCategoria">Categoría:</label>
-    <select id="newPromoCategoria"></select>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:14px; color:var(--text-muted);">Precio ($)</label>
+                    <input type="number" id="newPromoPrecio" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:14px; color:var(--text-muted);">Precio Anterior ($)</label>
+                    <input type="number" id="newPromoPrecioAnterior" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                </div>
+            </div>
 
-    <label for="newPromoImagen">Imagen:</label>
-    <input type="file" id="newPromoImagen" accept="image/*">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:14px; color:var(--text-muted);">Stock</label>
+                    <input type="number" id="newPromoStock" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:14px; color:var(--text-muted);">Categoría</label>
+                    <select id="newPromoCategoria" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <option value="PELUQUERIA">PELUQUERIA</option>
+                        <option value="ESTETICA">ESTETICA</option>
+                    </select>
+                </div>
+            </div>
 
-    <div style="margin-top: 20px; text-align: right;">
-      <button onclick="document.getElementById('addPromoModal').style.display='none'" class="cancel-btn">Cancelar</button>
-      <button onclick="guardarNuevaPromo()" class="save-btn">Guardar</button>
+            <div>
+                <label style="display:block; font-size:14px; color:var(--text-muted);">Imagen promocional</label>
+                <input type="file" id="newPromoImagen" accept="image/*" style="width:100%; padding:10px;">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button onclick="document.getElementById('addPromoModal').style.display='none'" style="flex:1; padding:12px; border:none; border-radius:8px; cursor:pointer; background:#eee;">Cancelar</button>
+                <button onclick="guardarNuevaPromo()" style="flex:1; padding:12px; border:none; border-radius:8px; cursor:pointer; background:var(--primary); color:white; font-weight:bold;">Guardar Promoción</button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
-
 
 
 <script>
 
 
+// Suma los montos de la columna jsonb 'pagos'
+function calcularTotalPagado(pagos) {
+    if (!pagos || !Array.isArray(pagos)) return 0;
+    return pagos.reduce((acc, pago) => acc + (parseFloat(pago.monto) || 0), 0);
+}
 
+// Evita errores si el texto es null o undefined
+function safeText(text) {
+    return text ? text.toString() : "";
+}
 
 document.getElementById("addPromoBtn").addEventListener("click", async () => {
   // Cargar categorías para el select
@@ -1303,34 +1362,75 @@ document.getElementById("addPromoBtn").addEventListener("click", async () => {
 });
 
 async function guardarNuevaPromo() {
-  const nombre = document.getElementById("newPromoNombre").value.trim();
-  const precio = parseFloat(document.getElementById("newPromoPrecio").value);
-const precio_anterior = parseFloat(document.getElementById("newPromoPrecioAnterior").value) || null;
-  const stock = parseInt(document.getElementById("newPromoStock").value);
-  const categoria_id = document.getElementById("newPromoCategoria").value || null;
-  const file = document.getElementById("newPromoImagen").files[0];
+    // 1. Capturar los valores del modal
+    const nombre = document.getElementById('newPromoNombre').value;
+    const precio = parseFloat(document.getElementById('newPromoPrecio').value);
+    const precioAnterior = parseFloat(document.getElementById('newPromoPrecioAnterior').value) || 0;
+    const stock = parseInt(document.getElementById('newPromoStock').value) || 0;
+    const categoriaId = document.getElementById('newPromoCategoria').value; 
+    const imagenFile = document.getElementById('newPromoImagen').files[0];
 
-  if (!nombre || isNaN(precio) || isNaN(stock)) {
-    alert("Completa todos los campos obligatorios.");
-    return;
-  }
+    // Validación básica
+    if (!nombre || isNaN(precio) || !imagenFile) {
+        alert("Por favor, completa los campos obligatorios y selecciona una imagen.");
+        return;
+    }
 
-  let imagenPath = null;
-  if (file) {
-    const fileName = `promo_${Date.now()}_${file.name}`;
-    const { error: uploadError } = await supabase.storage.from("promo_images").upload(fileName, file);
-    if (uploadError) return alert("Error al subir la imagen: " + uploadError.message);
-    imagenPath = fileName;
-  }
+    try {
+        if (typeof showToast === 'function') showToast("Subiendo imagen...");
 
+        // 2. Subir la imagen al bucket CORRECTO: 'promo_images'
+        const fileExt = imagenFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `promos/${fileName}`;
 
+        const { error: uploadError } = await supabase.storage
+            .from('promo_images') // <--- NOMBRE ACTUALIZADO
+            .upload(filePath, imagenFile);
 
-  const { error } = await supabase.from("promociones").insert([{ nombre, precio, precio_anterior, stock, categoria_id, imagen: imagenPath }]);
-  if (error) return alert("Error al guardar: " + error.message);
+        if (uploadError) throw uploadError;
 
-  document.getElementById("addPromoModal").style.display = "none";
-  showToast("✅ Promoción agregada correctamente");
-  fetchPromos(); // Refrescar lista
+        // 3. Obtener la URL pública de la imagen
+        const { data: urlData } = supabase.storage
+            .from('promo_images')
+            .getPublicUrl(filePath);
+        
+        const imageUrl = urlData.publicUrl;
+
+        // 4. Insertar en la tabla 'promociones' con tus columnas exactas
+        const { error: insertError } = await supabase
+    .from('promociones')
+    .insert([
+        { 
+            // ELIMINA LA LÍNEA DEL ID, Supabase lo asignará solo
+            nombre: nombre, 
+            precio: precio, 
+            stock: stock, 
+            imagen_url: imageUrl,
+            imagen: fileName, 
+            categoria_id: categoriaId,
+            "precio anterior": precioAnterior 
+        }
+    ]);
+
+        if (insertError) throw insertError;
+
+        // 5. Éxito y Limpieza
+        if (typeof showToast === 'function') showToast("✅ Promoción creada con éxito");
+        document.getElementById('addPromoModal').style.display = 'none';
+        
+        // Refrescar la lista para ver la nueva promo
+        if (typeof renderPromosByFilter === 'function') {
+            const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked')).map(cb => cb.value);
+            renderPromosByFilter(selectedIds);
+        } else {
+            location.reload();
+        }
+
+    } catch (error) {
+        console.error("Error en Supabase:", error);
+        alert("Error al guardar: " + (error.message || "Verifica la consola"));
+    }
 }
 
 // 🔹 Limpiar campos para cargar una nueva promo
@@ -1410,86 +1510,153 @@ if (typeof supabaseClient === 'undefined') {
 var supabase = window.supabaseClient;
 
 
+// Función para abrir el modal limpiando los campos
+function abrirModalNuevaPromo() {
+    document.getElementById('newPromoNombre').value = "";
+    document.getElementById('newPromoPrecio').value = "";
+    document.getElementById('newPromoPrecioAnterior').value = "";
+    document.getElementById('newPromoStock').value = "";
+    document.getElementById('newPromoImagen').value = "";
+    document.getElementById('addPromoModal').style.display = 'flex';
+}
+
+async function guardarNuevaPromo() {
+    // 1. Capturar valores del modal
+    const nombre = document.getElementById('newPromoNombre').value;
+    const precio = parseFloat(document.getElementById('newPromoPrecio').value);
+    const precioAnterior = parseFloat(document.getElementById('newPromoPrecioAnterior').value) || 0;
+    const stock = parseInt(document.getElementById('newPromoStock').value) || 0;
+    const categoriaId = document.getElementById('newPromoCategoria').value; 
+    const imagenFile = document.getElementById('newPromoImagen').files[0];
+
+    // Validación
+    if (!nombre || isNaN(precio) || !imagenFile) {
+        alert("Por favor, completa los campos obligatorios y selecciona una imagen.");
+        return;
+    }
+
+    try {
+        if (typeof showToast === 'function') showToast("Subiendo imagen a promo_images...");
+
+        // 2. Subir imagen al bucket 'promo_images'
+        const fileExt = imagenFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `promos/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('promo_images')
+            .upload(filePath, imagenFile);
+
+        if (uploadError) throw uploadError;
+
+        // 3. Obtener URL pública
+        const { data: urlData } = supabase.storage
+            .from('promo_images')
+            .getPublicUrl(filePath);
+        
+        const imageUrl = urlData.publicUrl;
+
+        // 4. Insertar en la tabla 'promociones' (ID 903 y columnas exactas)
+        const { error: insertError } = await supabase
+            .from('promociones')
+            .insert([
+                { 
+                    nombre: nombre, 
+                    precio: precio, 
+                    stock: stock, 
+                    imagen_url: imageUrl,
+                    imagen: fileName, 
+                    categoria_id: categoriaId,
+                    precio_anterior: precioAnterior 
+                }
+            ]);
+
+        if (insertError) throw insertError;
+
+        // 5. Éxito
+        if (typeof showToast === 'function') showToast("✅ Promoción 903 creada con éxito");
+        document.getElementById('addPromoModal').style.display = 'none';
+        
+        // Refrescar lista
+        if (typeof renderPromosByFilter === 'function') {
+            renderPromosByFilter([]); 
+        } else {
+            location.reload();
+        }
+
+    } catch (error) {
+        console.error("Error completo:", error);
+        alert("Error al guardar: " + (error.message || "Verifica la consola"));
+    }
+}
 
 
 
 async function renderCtaCte() {
-    const searchInput = document.getElementById('ctaCteSearch');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-    const container = document.getElementById('ctaCteBody');
-    
-    // Mostramos un indicador de carga opcional
-    container.innerHTML = "<tr><td colspan='7'>Cargando datos...</td></tr>";
+    const searchTerm = document.getElementById("ctaCteSearch").value.toLowerCase().trim();
+    const container = document.getElementById("ctaCteList");
+    if (!container) return;
 
     try {
-        // Traemos pedidos con sus pagos asociados
+        // Traemos todos los pedidos no archivados
         const { data: pedidos, error } = await supabase
-            .from('pedidos')
-            .select(`
-                id, 
-                cliente, 
-                total, 
-                archivado,
-                pagos
-            `);
+            .from("pedidos")
+            .select("*")
+            .eq("archivado", false);
 
         if (error) throw error;
 
-        container.innerHTML = "";
+        const clientesAgrupados = {};
 
-        // Filtrado
-        const pedidosFiltrados = pedidos.filter(p => 
-            p.cliente?.toLowerCase().includes(searchTerm) || 
-            p.id.toString().includes(searchTerm)
-        );
+        pedidos.forEach(p => {
+            const dniKey = p.dni ? p.dni.toString().trim() : null;
+            const nombreKey = p.cliente.toLowerCase().trim();
+            const groupKey = dniKey || nombreKey;
 
-        if (pedidosFiltrados.length === 0) {
-            container.innerHTML = "<tr><td colspan='7'>No se encontraron resultados</td></tr>";
-            return;
-        }
+            const totalPedido = Number(p.total || 0);
+            const pagado = (p.pagos || []).reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+            const saldoPedido = totalPedido - pagado;
 
-        pedidosFiltrados.forEach(p => {
-            // Calcular el total pagado sumando el array de la relación
-            const totalPagado = Array.isArray(p.pagos)
-    ? p.pagos.reduce((sum, pago) => sum + Number(pago.monto || 0), 0)
-    : 0;
-            const saldo = p.total - totalPagado;
-            const estadoLabel = p.archivado ? '📦 Archivad' : '📑 Activo';
-
-            const tr = document.createElement('tr');
+            if (!clientesAgrupados[groupKey]) {
+                clientesAgrupados[groupKey] = {
+                    nombreDisplay: p.cliente,
+                    dni: p.dni || "S/D",
+                    saldoTotal: 0,
+                    cantidadPedidos: 0
+                };
+            }
             
-            // Usamos interpolación limpia. 
-            // IMPORTANTE: saldo lo pasamos como número puro a abrirModalPago
-            tr.innerHTML = `
-                <td>${p.cliente}</td>
-                <td>#${p.id} <br><small>${estadoLabel}</small></td>
-                <td>$${p.total.toLocaleString()}</td>
-                <td style="color: green; font-weight:bold;">$${totalPagado.toLocaleString()}</td>
-                <td style="color: ${saldo > 0 ? '#e74c3c' : '#27ae60'}; font-weight: bold;">
-                    $${saldo.toLocaleString()}
-                </td>
-                <td>
-                    <span class="badge ${saldo <= 0 ? 'bg-success' : 'bg-warning'}">
-                        ${saldo <= 0 ? '✅ Saldado' : '⏳ Pendiente'}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn-action" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">
-                        ➕ Pago
-                    </button>
-                </td>
-            `;
-
-            // Asignamos el evento de forma segura mediante JS, no mediante el atributo HTML
-            const btn = tr.querySelector('.btn-action');
-            btn.onclick = () => abrirModalPago(p.id);
-
-            container.appendChild(tr);
+            clientesAgrupados[groupKey].saldoTotal += saldoPedido;
+            clientesAgrupados[groupKey].cantidadPedidos += 1;
         });
 
+        const resultadosFiltrados = Object.values(clientesAgrupados).filter(cliente => {
+            return cliente.nombreDisplay.toLowerCase().includes(searchTerm) || 
+                   cliente.dni.toString().includes(searchTerm);
+        });
+
+        container.innerHTML = resultadosFiltrados.map(c => `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 12px;">
+                    <div style="font-weight:bold;">${c.nombreDisplay}</div>
+                    <small style="color:#666;">DNI: ${c.dni}</small>
+                </td>
+                <td style="padding: 12px; text-align:center;">${c.cantidadPedidos}</td>
+                <td style="padding: 12px; text-align:right; font-weight:bold; color: ${c.saldoTotal > 0 ? '#e74c3c' : '#27ae60'};">
+                    $${c.saldoTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}
+                </td>
+                <td style="padding: 12px; text-align:center;">
+                    <button onclick="verDetalleCliente('${c.dni !== 'S/D' ? c.dni : c.nombreDisplay}')" 
+                            style="background:#3498db; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">
+                        👁️ Ver Pedidos
+                    </button>
+                </td>
+            </tr>
+        `).join("");
+
     } catch (err) {
-        console.error("Error en Cta Cte:", err);
-        container.innerHTML = `<tr><td colspan='7' style="color:red;">Error: ${err.message}</td></tr>`;
+        console.error(err);
+        container.innerHTML = "<tr><td colspan='4'>Error al cargar datos.</td></tr>";
     }
 }
 
@@ -3596,112 +3763,75 @@ function setupArchiveFilters() {
     }
 }
 
-/**
- * Busca y muestra los pedidos archivados para el mes, año y término de búsqueda seleccionados.
- * Incluye un botón para desarchivar pedidos individualmente.
- */
 async function fetchArchivedOrders() {
     const month = document.getElementById('archiveMonth').value;
     const year = document.getElementById('archiveYear').value;
-    const searchTerm = document.getElementById('archiveSearchTerm').value.trim(); // Captura el término de búsqueda
+    const searchTerm = document.getElementById('archiveSearchTerm').value.trim();
     const container = document.getElementById("listadoArchivados");
-    if (!container) {
-        console.warn("listadoArchivados container not found");
-        return;
-    }
     
-    // Limpiar contenedor y mostrar estado de carga
+    if (!container) return;
     container.innerHTML = "Cargando pedidos archivados...";
 
-    // Verifica que el mes y el año estén seleccionados
     if (!month || !year) {
         container.innerHTML = `<p style="color:#e74c3c;">Seleccione un mes y un año para buscar.</p>`;
         return;
     }
     
     try {
-        // Calcular el rango de fechas (Inicio del mes y fin del mes)
         const firstDayOfMonth = new Date(year, month - 1, 1).toISOString();
         const firstDayOfNextMonth = new Date(year, month, 1).toISOString();
 
-        // 1. Consulta base a Supabase: Filtrar por archivados y rango de fecha
         let query = supabase
             .from("pedidos")
             .select("*")
-            .eq("archivado", true) // Solo los archivados
+            .eq("archivado", true)
             .gte('created_at', firstDayOfMonth) 
             .lt('created_at', firstDayOfNextMonth);
             
-        // 2. Aplicar filtro de búsqueda si se proporcionó un término
         if (searchTerm) {
-            // Usamos 'ilike' para búsqueda insensible a mayúsculas/minúsculas.
             query = query.or(`cliente.ilike.%${searchTerm}%,dni.ilike.%${searchTerm}%`);
         }
 
-        // 3. Ejecutar la consulta
-        const { data: pedidos, error: pedidosError } = await query
-            .order("id", { ascending: false });
-
+        const { data: pedidos, error: pedidosError } = await query.order("id", { ascending: false });
         if (pedidosError) throw pedidosError;
 
-        // 4. Manejar caso de no resultados
         if (!pedidos?.length) {
-            // "meses" debe estar definido globalmente, de lo contrario usar month directamente
-            const nombreMes = (typeof meses !== 'undefined' && meses[month-1]) ? meses[month-1].name : `Mes ${month}`;
-            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados para ${nombreMes} de ${year} ${searchTerm ? `con el término "${typeof safeText === 'function' ? safeText(searchTerm) : searchTerm}"` : ""}.</p>`;
+            container.innerHTML = `<p style="color:#888;">No se encontraron pedidos archivados.</p>`;
             return;
         }
 
         container.innerHTML = '';
-        
-        // 5. Inicializar variables para el resumen de totales
         let totalVentasMes = 0;
         let totalPagadoMes = 0;
 
-        // Agregar el contenedor del resumen al inicio
-        const nombreMesResumen = (typeof meses !== 'undefined' && meses[month-1]) ? meses[month-1].name : `Mes ${month}`;
+        // Renderizar encabezado de resumen
         const resumenHTML = `
             <div style="margin-bottom:20px; padding:15px; background:#fff; border-radius:8px; border-left: 5px solid #2980b9; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <h3 style="margin:0 0 10px 0;">Resumen ${nombreMesResumen} / ${year}</h3>
+                <h3 style="margin:0 0 10px 0;">Resumen del Mes</h3>
                 <div id="resumenTotalesArchivados"></div>
             </div>
         `;
         container.insertAdjacentHTML('afterbegin', resumenHTML);
-        const resumenDiv = document.getElementById("resumenTotalesArchivados");
 
-
-        // 6. Renderizar la lista de pedidos archivados
         for (const p of pedidos) {
-            // --- CORRECCIÓN DE CÁLCULOS ---
             const totalPedido = Number(p.total || 0);
-	const pagado = calcularTotalPagado(p.pagos);
-    const saldoCalculado = totalPedido - pagado;
+            // CORRECCIÓN: Definimos las variables necesarias para el renderizado
+            const pagado = calcularTotalPagado(p.pagos);
+            const saldoPendiente = totalPedido - pagado; 
 
-    console.log("Enviando al modal:", p.id, saldoCalculado);
-            
-            // Acumular para el resumen global
             totalVentasMes += totalPedido;
+            totalPagadoMes += pagado;
             
-            // Sumar pagos registrados de forma segura
-            const totalPagosRealizados = (p.pagos || []).reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
-            totalPagadoMes += totalPagosRealizados;
-            
-            // Obtener nombre de localidad (asíncrono)
             const localidad = (typeof getLocalidadNombre === 'function') ? await getLocalidadNombre(p.localidad_id) : "N/A";
             
             const div = document.createElement("div");
             Object.assign(div.style, { 
-                display: "flex", 
-                flexDirection: "column",
-                padding: "18px 14px", 
-                marginBottom: "14px", 
-                borderRadius: "12px", 
-                background: "#f8f8f8", 
-                boxShadow: "0 2px 12px rgba(0,0,0,0.07)", 
-                border: "1px solid #ddd",
+                display: "flex", flexDirection: "column", padding: "18px 14px", 
+                marginBottom: "14px", borderRadius: "12px", background: "#f8f8f8", 
+                boxShadow: "0 2px 12px rgba(0,0,0,0.07)", border: "1px solid #ddd",
             }); 
             
-            // Renderizar productos
+            // Productos
             let prodHTML = '<ul style="margin:7px 0 10px 0;padding-left:22px;font-size:15px;">';
             (Array.isArray(p.productos) ? p.productos : []).forEach(pr => { 
                 const subtotalProd = Number(pr.precio || 0) * Number(pr.cantidad || 0);
@@ -3709,28 +3839,24 @@ async function fetchArchivedOrders() {
             }); 
             prodHTML += "</ul>";
 
-            // Renderizar Pagos (CORREGIDO)
+            // Pagos
             let pagosHTML = "";
             if (p.pagos && p.pagos.length > 0) {
                 pagosHTML = `
                     <div style="margin-top:8px;background:#eef;padding:8px;border-radius:6px;">
                         <b>💳 Pagos Registrados:</b><br>
-                        ${p.pagos.map(pg => {
-                            const montoPago = Number(pg.monto || 0);
-                            return `- ${pg.metodo}${pg.destinatario ? ` (${pg.destinatario})` : ""}: $${montoPago.toFixed(2)}`;
-                        }).join("<br>")}
+                        ${p.pagos.map(pg => `- ${pg.metodo}: $${Number(pg.monto).toFixed(2)}`).join("<br>")}
                         ${saldoPendiente > 0 ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${saldoPendiente.toFixed(2)}</b>` : ""}
                     </div>
                 `;
             }
 
-            const estadoTexto = p.estado === 'Completado' ? '✅ Completado' : saldoPendiente > 0 ? '⚠️ Pendiente de Pago' : '⏳ Pendiente';
+            const estadoTexto = p.estado === 'Completado' ? '✅ Completado' : (saldoPendiente > 0 ? '⚠️ Pendiente de Pago' : '⏳ Pendiente');
             
             div.innerHTML = ` 
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
                         <strong>Pedido #${p.id} - ${safeText(p.cliente)}</strong> 
-                        <div style="color:#888;margin-bottom:2px;">DNI: ${safeText(p.dni || 'N/A')}</div>
                         <div style="color:#888;margin-bottom:2px;">Localidad: ${safeText(localidad)}</div>
                     </div>
                     <div style="text-align:right;">
@@ -3740,15 +3866,8 @@ async function fetchArchivedOrders() {
                 </div>
                 ${prodHTML} 
                 ${pagosHTML}
-                
                 <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:10px; display:flex; justify-content:flex-end; gap: 10px;">
-                    <button class="button-secondary" onclick='exportPedidoPDF(${JSON.stringify(p).replace(/"/g, '&quot;')})'
-                        style="padding: 6px 12px; font-size: 13px; border: 1px solid #3498db; color: #3498db; background: none; cursor:pointer;">
-                        📄 Ver PDF
-                    </button>
-                    
-                    <button class="button-primary" onclick='unarchiveOrder(${p.id})'
-                        style="padding: 6px 12px; font-size: 13px; background: #27ae60; color: white; border: none; cursor:pointer;">
+                    <button onclick='unarchiveOrder(${p.id})' style="padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor:pointer;">
                         🔄 Desarchivar
                     </button>
                 </div>
@@ -3756,24 +3875,118 @@ async function fetchArchivedOrders() {
             container.appendChild(div);
         }
         
-        // 7. Actualizar resumen de totales (CORREGIDO)
-        const totalVentasFinal = Number(totalVentasMes || 0);
-        const totalPagadoFinal = Number(totalPagadoMes || 0);
-        const saldoFinal = totalVentasFinal - totalPagadoFinal;
-
+        // Actualizar el resumen final
+        const resumenDiv = document.getElementById("resumenTotalesArchivados");
         resumenDiv.innerHTML = `
-            <p style="margin:5px 0;"><strong>Ventas Totales:</strong> <span style="float:right; font-weight:bold; color:#ff4d4f;">$${totalVentasFinal.toFixed(2)}</span></p>
-            <p style="margin:5px 0;"><strong>Total Pagado:</strong> <span style="float:right; font-weight:bold; color:#3498db;">$${totalPagadoFinal.toFixed(2)}</span></p>
-            <hr style="border:none; border-top:1px dashed #ccc;">
-            <p style="margin:5px 0;"><strong>Saldo Pendiente:</strong> <span style="float:right; font-weight:bold; color:#e74c3c;">$${saldoFinal.toFixed(2)}</span></p>
+            <p style="margin:5px 0;"><strong>Ventas Totales:</strong> <span style="float:right; color:#ff4d4f;">$${totalVentasMes.toFixed(2)}</span></p>
+            <p style="margin:5px 0;"><strong>Total Pagado:</strong> <span style="float:right; color:#3498db;">$${totalPagadoMes.toFixed(2)}</span></p>
+            <p style="margin:5px 0; border-top:1px solid #eee; padding-top:5px;"><strong>Saldo Pendiente:</strong> <span style="float:right; color:#e74c3c;">$${(totalVentasMes - totalPagadoMes).toFixed(2)}</span></p>
         `;
 
     } catch (err) {
         console.error("Error al cargar pedidos archivados:", err);
-        container.innerHTML = `<p style="color:#e74c3c;">Error al cargar pedidos: ${err.message}</p>`;
+        container.innerHTML = `<p style="color:#e74c3c;">Error: ${err.message}</p>`;
     }
 }
 
+
+
+async function consultarCtaCteAgrupada() {
+    const searchTerm = document.getElementById('searchCtaCte').value.trim().toLowerCase();
+    const container = document.getElementById('resultadoCtaCte');
+    container.innerHTML = "Calculando saldos...";
+
+    try {
+        // 1. Traemos todos los pedidos que NO estén archivados (o todos, según prefieras)
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select('*')
+            .eq('archivado', false);
+
+        if (error) throw error;
+
+        // 2. Objeto para agrupar
+        const grupos = {};
+
+        pedidos.forEach(p => {
+            // Creamos una clave única: Priorizamos DNI, si no hay, usamos el nombre normalizado
+            const dni = p.dni ? p.dni.trim() : null;
+            const nombreNormalizado = p.cliente.toLowerCase().trim();
+            const key = dni || nombreNormalizado;
+
+            if (!grupos[key]) {
+                grupos[key] = {
+                    cliente: p.cliente,
+                    dni: p.dni || "S/D",
+                    pedidos: [],
+                    saldoTotal: 0
+                };
+            }
+
+            // Calculamos saldo de este pedido individual
+            const totalPedido = Number(p.total || 0);
+            const pagado = calcularTotalPagado(p.pagos);
+            const saldoPedido = totalPedido - pagado;
+
+            if (saldoPedido > 0) {
+                grupos[key].pedidos.push({ id: p.id, saldo: saldoPedido });
+                grupos[key].saldoTotal += saldoPedido;
+            }
+        });
+
+        // 3. Filtrar por el término de búsqueda y convertir a array
+        const clientesConSaldo = Object.values(grupos).filter(g => {
+            const coincideNombre = g.cliente.toLowerCase().includes(searchTerm);
+            const coincideDNI = g.dni.includes(searchTerm);
+            return (coincideNombre || coincideDNI) && g.saldoTotal > 0;
+        });
+
+        // 4. Renderizar resultados
+        if (clientesConSaldo.length === 0) {
+            container.innerHTML = "<p>No hay saldos pendientes para esa búsqueda.</p>";
+            return;
+        }
+
+        let html = `
+            <table style="width:100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-md);">
+                <thead style="background: var(--secondary); color: white;">
+                    <tr>
+                        <th style="padding: 12px; text-align: left;">Cliente / DNI</th>
+                        <th style="padding: 12px; text-align: center;">Cant. Pedidos</th>
+                        <th style="padding: 12px; text-align: right;">Saldo Total</th>
+                        <th style="padding: 12px; text-align: center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        clientesConSaldo.forEach(c => {
+            html += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px;">
+                        <strong>${c.cliente}</strong><br>
+                        <small style="color: #666;">DNI: ${c.dni}</small>
+                    </td>
+                    <td style="padding: 12px; text-align: center;">${c.pedidos.length}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: bold; color: var(--accent);">
+                        $${c.saldoTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}
+                    </td>
+                    <td style="padding: 12px; text-align: center;">
+                        <button onclick="verDetalleCtaCte('${c.dni !== "S/D" ? c.dni : c.cliente}')" 
+                                style="background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                            👁️ Ver Detalles
+                        </button>
+                    </td>
+                </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = "Error al consultar saldos.";
+    }
+}
 
 
 
@@ -5780,6 +5993,114 @@ async function cargarCategoriasEnSelects() {
     }
 }
 
+
+
+// Función para calcular el total pagado de un pedido basándose en su array de pagos
+function calcularTotalPagado(pagos) {
+    if (!pagos || !Array.isArray(pagos)) return 0;
+    return pagos.reduce((acc, pago) => acc + (parseFloat(pago.monto) || 0), 0);
+}
+
+
+
+
+async function verDetalleCliente(identificador) {
+    const modal = document.getElementById('modalDetalleCtaCte');
+    const nombreHeader = document.getElementById('detalleClienteNombre');
+    const listaContenedor = document.getElementById('listaPedidosDetalle');
+
+    modal.style.display = 'flex';
+    listaContenedor.innerHTML = "<p>Cargando detalles...</p>";
+
+    try {
+        // Consultamos todos los pedidos del cliente (por DNI o por Nombre)
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select('*')
+            .or(`dni.eq.${identificador},cliente.eq.${identificador}`)
+            .eq('archivado', false);
+
+        if (error) throw error;
+
+        if (!pedidos || pedidos.length === 0) {
+            listaContenedor.innerHTML = "<p>No se encontraron pedidos pendientes.</p>";
+            return;
+        }
+
+        nombreHeader.innerText = `Pedidos pendientes: ${pedidos[0].cliente}`;
+
+        let html = `
+            <table style="width:100%; border-collapse: collapse; font-size:14px;">
+                <thead>
+                    <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                        <th style="padding:10px; text-align:left;">Fecha</th>
+                        <th style="padding:10px; text-align:left;">Pedido</th>
+                        <th style="padding:10px; text-align:right;">Total</th>
+                        <th style="padding:10px; text-align:right;">Pagado</th>
+                        <th style="padding:10px; text-align:right;">Saldo</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        let saldoAcumulado = 0;
+
+     pedidos.forEach(p => {
+    const total = Number(p.total || 0);
+    const pagosArray = Array.isArray(p.pagos) ? p.pagos : [];
+    const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+    const saldo = total - pagado;
+    const fecha = new Date(p.created_at).toLocaleDateString();
+    
+    html += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:10px;">${fecha}</td>
+            <td style="padding:10px;">#${p.id}</td>
+            <td style="padding:10px; text-align:right;">$${saldo.toFixed(2)}</td>
+            <td style="padding:10px; text-align:center;">
+                <button onclick='prepararPagoDesdeCtaCte(${JSON.stringify(p)})' 
+                        style="background:#27ae60; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">
+                    💰 Cobrar
+                </button>
+            </td>
+        </tr>`;
+});
+
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background:#fff5f5; font-weight:bold;">
+                        <td colspan="4" style="padding:15px; text-align:right; font-size:16px;">DEUDA TOTAL:</td>
+                        <td style="padding:15px; text-align:right; font-size:18px; color:var(--accent);">$${saldoAcumulado.toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>`;
+
+        listaContenedor.innerHTML = html;
+
+    } catch (err) {
+        console.error("Error al ver detalle:", err);
+        listaContenedor.innerHTML = "<p>Error al cargar los datos.</p>";
+    }
+}
+
+
+function prepararPagoDesdeCtaCte(pedido) {
+    // Cerramos el modal de detalles de Cta Cte
+    document.getElementById('modalDetalleCtaCte').style.display = 'none';
+    
+    // Aquí usamos la función que ya tienes para abrir el modal de pagos
+    // Asegúrate de que el nombre de la función coincida con la que usas en fetchOrders
+    if (typeof abrirModalPago === 'function') {
+        abrirModalPago(pedido.id, pedido.total); 
+    } else {
+        // Si tu función de pagos se maneja distinto, ajusta aquí:
+        alert("Abriendo pago para pedido #" + pedido.id);
+        // Ejemplo: abrirPagoModal(pedido);
+    }
+}
+
+
+
 </script>
 
 <div id="modalTotalesPorDia" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
@@ -5830,6 +6151,25 @@ async function cargarCategoriasEnSelects() {
         </div>
     </div>
 </div>
+
+
+
+<div id="modalDetalleCtaCte" class="modal" style="display:none; position:fixed; z-index:12000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
+    <div class="modal-content" style="background-color:#fff; padding:25px; border-radius:16px; width:95%; max-width:700px; max-height:85vh; overflow-y:auto; position:relative; box-shadow: var(--shadow-md);">
+        <span class="close-button" onclick="document.getElementById('modalDetalleCtaCte').style.display='none'" style="position:absolute; right:20px; top:15px; font-size:28px; cursor:pointer; color:var(--text-muted);">&times;</span>
+        
+        <h3 id="detalleClienteNombre" style="margin-top:0; color:var(--secondary); border-bottom: 2px solid #f1f5f9; padding-bottom:10px;">Detalle de Cuenta</h3>
+        
+        <div id="listaPedidosDetalle" style="margin-top:20px;">
+            </div>
+
+        <div style="margin-top:20px; padding-top:15px; border-top: 2px solid #f1f5f9; text-align:right;">
+            <button onclick="document.getElementById('modalDetalleCtaCte').style.display='none'" style="padding:10px 20px; background:#e2e8f0; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+
 
 </body>
 </html>
