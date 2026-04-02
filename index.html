@@ -1536,65 +1536,76 @@ document.getElementById("addPromoBtn").addEventListener("click", async () => {
   document.getElementById("addPromoModal").style.display = "block";
 });
 
+
+
+
 async function guardarNuevaPromo() {
-    // 1. Capturar los valores del modal
-    const nombre = document.getElementById('newPromoNombre').value;
+    const nombre = document.getElementById('newPromoNombre').value.trim();
     const precio = parseFloat(document.getElementById('newPromoPrecio').value);
     const precioAnterior = parseFloat(document.getElementById('newPromoPrecioAnterior').value) || 0;
     const stock = parseInt(document.getElementById('newPromoStock').value) || 0;
     const categoriaId = document.getElementById('newPromoCategoria').value; 
     const imagenFile = document.getElementById('newPromoImagen').files[0];
 
-    // Validación básica
     if (!nombre || isNaN(precio) || !imagenFile) {
-        alert("Por favor, completa los campos obligatorios y selecciona una imagen.");
+        alert("Por favor, completa los campos obligatorios.");
         return;
     }
 
     try {
         if (typeof showToast === 'function') showToast("Subiendo imagen...");
 
-        // 2. Subir la imagen al bucket CORRECTO: 'promo_images'
+        // 1. GENERAR NOMBRE DE ARCHIVO
         const fileExt = imagenFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `promos/${fileName}`;
 
+        // 2. DEFINIR EL PATH (Asegúrate de que NO tenga "promos/")
+        // Si aquí pones 'promos/' + fileName, se crea la carpeta.
+        // Al poner SOLO fileName, va directo a la raíz del bucket.
+        const filePath = fileName; 
+
+        // 3. SUBIDA AL STORAGE
+        // .from('promo_images') ya apunta al bucket.
         const { error: uploadError } = await supabase.storage
-            .from('promo_images') // <--- NOMBRE ACTUALIZADO
-            .upload(filePath, imagenFile);
+            .from('promo_images')
+            .upload(filePath, imagenFile); // Se sube como "12345.jpg"
 
         if (uploadError) throw uploadError;
 
-        // 3. Obtener la URL pública de la imagen
+        // 4. OBTENER URL PÚBLICA
         const { data: urlData } = supabase.storage
             .from('promo_images')
             .getPublicUrl(filePath);
         
         const imageUrl = urlData.publicUrl;
 
-        // 4. Insertar en la tabla 'promociones' con tus columnas exactas
+        // 5. INSERTAR EN BASE DE DATOS
         const { error: insertError } = await supabase
-    .from('promociones')
-    .insert([
-        { 
-            // ELIMINA LA LÍNEA DEL ID, Supabase lo asignará solo
-            nombre: nombre, 
-            precio: precio, 
-            stock: stock, 
-            imagen_url: imageUrl,
-            imagen: fileName, 
-            categoria_id: categoriaId,
-            "precio anterior": precioAnterior 
-        }
-    ]);
+            .from('promociones')
+            .insert([
+                { 
+                    nombre: nombre, 
+                    precio: precio, 
+                    stock: stock, 
+                    imagen_url: imageUrl,
+                    imagen: fileName,
+                    categoria_id: categoriaId,
+                    precio_anterior: precioAnterior 
+                }
+            ]);
 
         if (insertError) throw insertError;
 
-        // 5. Éxito y Limpieza
         if (typeof showToast === 'function') showToast("✅ Promoción creada con éxito");
+
+        // LIMPIEZA
         document.getElementById('addPromoModal').style.display = 'none';
-        
-        // Refrescar la lista para ver la nueva promo
+        document.getElementById("newPromoNombre").value = "";
+        document.getElementById("newPromoPrecio").value = "";
+        document.getElementById("newPromoPrecioAnterior").value = "";
+        document.getElementById("newPromoStock").value = "";
+        document.getElementById("newPromoImagen").value = "";
+
         if (typeof renderPromosByFilter === 'function') {
             const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked')).map(cb => cb.value);
             renderPromosByFilter(selectedIds);
@@ -1603,19 +1614,10 @@ async function guardarNuevaPromo() {
         }
 
     } catch (error) {
-        console.error("Error en Supabase:", error);
-        alert("Error al guardar: " + (error.message || "Verifica la consola"));
+        console.error("Error completo:", error);
+        alert("Error: " + error.message);
     }
 }
-
-// 🔹 Limpiar campos para cargar una nueva promo
-  document.getElementById("newPromoNombre").value = "";
-  document.getElementById("newPromoPrecio").value = "";
-  document.getElementById("newPromoPrecioAnterior").value = "";
-  document.getElementById("newPromoStock").value = "";
-  document.getElementById("newPromoCategoria").selectedIndex = 0;
-  document.getElementById("newPromoImagen").value = "";
-
 
 
 // Función para mostrar la sección deseada y ocultar todas las demás
@@ -1693,76 +1695,6 @@ function abrirModalNuevaPromo() {
     document.getElementById('newPromoStock').value = "";
     document.getElementById('newPromoImagen').value = "";
     document.getElementById('addPromoModal').style.display = 'flex';
-}
-
-async function guardarNuevaPromo() {
-    // 1. Capturar valores del modal
-    const nombre = document.getElementById('newPromoNombre').value;
-    const precio = parseFloat(document.getElementById('newPromoPrecio').value);
-    const precioAnterior = parseFloat(document.getElementById('newPromoPrecioAnterior').value) || 0;
-    const stock = parseInt(document.getElementById('newPromoStock').value) || 0;
-    const categoriaId = document.getElementById('newPromoCategoria').value; 
-    const imagenFile = document.getElementById('newPromoImagen').files[0];
-
-    // Validación
-    if (!nombre || isNaN(precio) || !imagenFile) {
-        alert("Por favor, completa los campos obligatorios y selecciona una imagen.");
-        return;
-    }
-
-    try {
-        if (typeof showToast === 'function') showToast("Subiendo imagen a promo_images...");
-
-        // 2. Subir imagen al bucket 'promo_images'
-        const fileExt = imagenFile.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `promos/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-            .from('promo_images')
-            .upload(filePath, imagenFile);
-
-        if (uploadError) throw uploadError;
-
-        // 3. Obtener URL pública
-        const { data: urlData } = supabase.storage
-            .from('promo_images')
-            .getPublicUrl(filePath);
-        
-        const imageUrl = urlData.publicUrl;
-
-        // 4. Insertar en la tabla 'promociones' (ID 903 y columnas exactas)
-        const { error: insertError } = await supabase
-            .from('promociones')
-            .insert([
-                { 
-                    nombre: nombre, 
-                    precio: precio, 
-                    stock: stock, 
-                    imagen_url: imageUrl,
-                    imagen: fileName, 
-                    categoria_id: categoriaId,
-                    precio_anterior: precioAnterior 
-                }
-            ]);
-
-        if (insertError) throw insertError;
-
-        // 5. Éxito
-        if (typeof showToast === 'function') showToast("✅ Promoción 903 creada con éxito");
-        document.getElementById('addPromoModal').style.display = 'none';
-        
-        // Refrescar lista
-        if (typeof renderPromosByFilter === 'function') {
-            renderPromosByFilter([]); 
-        } else {
-            location.reload();
-        }
-
-    } catch (error) {
-        console.error("Error completo:", error);
-        alert("Error al guardar: " + (error.message || "Verifica la consola"));
-    }
 }
 
 
@@ -2724,7 +2656,7 @@ async function deletePromo(promoId) {
     if (!confirm('¿Seguro que deseas eliminar esta promoción?')) return;
     
     try {
-        // 1️⃣ Traer primero la promoción para saber si tiene imagen
+        // 1️⃣ Traer primero la promoción para obtener el nombre del archivo de imagen
         const { data: promoData, error: fetchError } = await supabase
             .from('promociones')
             .select('imagen')
@@ -2733,35 +2665,52 @@ async function deletePromo(promoId) {
 
         if (fetchError) throw fetchError;
 
-        // 2️⃣ Si tiene imagen, eliminarla del bucket
-        if (promoData?.imagen) {
+        // 2️⃣ Si tiene imagen guardada, eliminarla de la raíz del bucket 'promo_images'
+        if (promoData && promoData.imagen) {
             try {
+                // Al estar en la raíz, el array debe contener solo el nombre del archivo
+                // Ejemplo: ['1775100014619.png']
                 const { error: imgDelError } = await supabase.storage
                     .from('promo_images')
                     .remove([promoData.imagen]);
 
-                if (imgDelError) console.warn('⚠️ No se pudo eliminar imagen:', imgDelError.message);
+                if (imgDelError) {
+                    console.warn('⚠️ Nota: La imagen no se encontró en el storage o no pudo borrarse:', imgDelError.message);
+                } else {
+                    console.log('✅ Imagen eliminada del storage correctamente');
+                }
             } catch (err) {
-                console.warn('Error al intentar eliminar imagen del storage:', err);
+                console.warn('Error al intentar acceder al storage:', err);
             }
         }
 
-        // 3️⃣ Eliminar promoción
+        // 3️⃣ Eliminar el registro de la base de datos
         const { error: deleteError } = await supabase
             .from('promociones')
             .delete()
             .eq('id', promoId);
+
         if (deleteError) throw deleteError;
 
-        alert('✅ Promoción eliminada correctamente.');
+        // 4️⃣ Feedback y Recargar vista
+        if (typeof showToast === 'function') {
+            showToast("✅ Promoción eliminada");
+        } else {
+            alert('✅ Promoción eliminada correctamente.');
+        }
 
-        // 4️⃣ Recargar vista
-        const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked')).map(cb => cb.value);
-        renderPromosByFilter(selectedIds);
+        // Intentar refrescar la lista sin recargar toda la página
+        if (typeof renderPromosByFilter === 'function') {
+            const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked')).map(cb => cb.value);
+            renderPromosByFilter(selectedIds);
+        } else {
+            // Si la función no está disponible, recargar para ver los cambios
+            location.reload();
+        }
 
     } catch (err) {
         console.error('❌ Error al eliminar la promoción:', err);
-        alert('Error al eliminar la promoción: ' + err.message);
+        alert('Error al eliminar la promoción: ' + (err.message || 'Error desconocido'));
     }
 }
 
@@ -6570,8 +6519,3 @@ async function guardarGasto() {
 
 </body>
 </html>
-
-
-
-
-
