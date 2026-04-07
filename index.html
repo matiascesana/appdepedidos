@@ -106,7 +106,7 @@ body {
 
 
 
-.section { display: none !important; animation: fadeIn 0.4s ease-out; }
+.section { display: none !important; animation: fadeIn 0.4s ease-out;width: 100%; }
 .section.active { display: block !important; }
 
 @keyframes fadeIn {
@@ -895,7 +895,7 @@ button[onclick*="delete"] {
     <li><button class="tab-btn" data-tab="reporteVentas">Reporte de Ventas</button></li>
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
     <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
-    <li><button class="tab-btn" data-tab="documentos">Documentos</button></li>
+    <li><button class="tab-btn" data-tab="gastos">Gastos</button></li>
   </ul>
 </nav>
    
@@ -1038,23 +1038,6 @@ button[onclick*="delete"] {
 
         <div id="pedidos" class="section">
             <h2>Pedidos</h2>
-<div id="seccionGastosViaje" style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: var(--radius-md); border-left: 5px solid var(--accent); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center;">
-    <div>
-        <span style="color: var(--text-muted); font-size: 0.9em; display: block; margin-bottom: 4px;">Gastos Acumulados del Viaje</span>
-        <b id="totalGastosTexto" style="font-size: 1.5em; color: var(--accent);">$0</b>
-    </div>
-    <div style="display: flex; gap: 10px;">
-        <button onclick="abrirModalGasto()" class="btn-pago-indigo" style="background-color: var(--accent) !important; border:none; padding: 10px 15px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
-            + Cargar Gasto
-        </button>
-        <button onclick="exportarGastosPDF()" class="btn-detalle-slate" style="background-color: var(--secondary); color: white; border:none; padding: 10px 15px; border-radius: 8px; cursor: pointer;">
-            📄 PDF Detalle
-        </button>
-<div id="listaGastosRecientes" style="margin-top: 15px; display:none; background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 10px;">
-    </div>
-<button onclick="toggleListaGastos()" id="btnVerGastos" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.85em; margin-top:5px;">👁️ Ver detalle de gastos</button>
-    </div>
-</div>
 <div id="totalesPedidosBox" style="margin-bottom:15px;"></div>
             <form id="pedidoForm" onsubmit="return false;" 
       style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
@@ -1304,6 +1287,41 @@ button[onclick*="delete"] {
 
 
 
+<div id="gastos" class="section" style="width:100%; display:block;">
+    <h2>Gastos</h2>
+<div id="seccionGastosViaje" style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: var(--radius-md); border-left: 5px solid var(--accent); box-shadow: var(--shadow-sm);">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div>
+            <span style="color: var(--text-muted); font-size: 0.9em;">Total Filtrado</span>
+            <b id="totalGastosTexto" style="font-size: 1.5em; color: var(--accent); display: block;">$0</b>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="abrirModalGasto()" class="btn-pago-indigo" style="background: var(--success) !important;">+ Nuevo Gasto</button>
+            <button onclick="exportarGastosPDF()" class="btn-detalle-slate">📄 Exportar PDF</button>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: flex-end; background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+        <div style="flex:1">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">DESDE:</label>
+            <input type="date" id="filtroFechaDesde" onchange="renderizarListaGastos()" style="width:100%; padding:6px; border-radius:5px; border:1px solid #cbd5e1;">
+        </div>
+        <div style="flex:1">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">HASTA:</label>
+            <input type="date" id="filtroFechaHasta" onchange="renderizarListaGastos()" style="width:100%; padding:6px; border-radius:5px; border:1px solid #cbd5e1;">
+        </div>
+        <button onclick="limpiarFiltrosGastos()" style="padding: 7px; background: #cbd5e1; border: none; border-radius: 5px; cursor: pointer;">🧹</button>
+    </div>
+
+    <div id="listaGastosRecientes" style="max-height: 300px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 8px;">
+        </div>
+</div>
+
+
+
+
+
 
 
 <div id="addPromoModal" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
@@ -1360,47 +1378,90 @@ button[onclick*="delete"] {
 
 
 
-// Función para mostrar/ocultar la lista de gastos cargados
-function toggleListaGastos() {
-    const lista = document.getElementById('listaGastosRecientes');
-    const btn = document.getElementById('btnVerGastos');
-    if (lista.style.display === 'none') {
-        lista.style.display = 'block';
-        btn.innerText = '▲ Ocultar detalle';
-        renderizarListaGastos();
-    } else {
-        lista.style.display = 'none';
-        btn.innerText = '👁️ Ver detalle de gastos';
-    }
+// Limpiar filtros y mostrar todo
+function limpiarFiltrosGastos() {
+    document.getElementById('filtroFechaDesde').value = '';
+    document.getElementById('filtroFechaHasta').value = '';
+    renderizarListaGastos();
 }
 
-// Función para mostrar los gastos con opción de borrar
+// Renderizar lista con filtros (Ver y Editar/Eliminar)
 async function renderizarListaGastos() {
     const contenedor = document.getElementById('listaGastosRecientes');
+    const desde = document.getElementById('filtroFechaDesde').value;
+    const hasta = document.getElementById('filtroFechaHasta').value;
     
-    const { data: gastos, error } = await supabase
-        .from('gastos')
-        .select('*')
-        .order('id', { ascending: false });
+    let query = supabase.from('gastos').select('*').order('fecha', { ascending: false });
 
-    if (error) return;
+    if (desde) query = query.gte('fecha', desde);
+    if (hasta) query = query.lte('fecha', hasta);
+
+    const { data: gastos, error } = await query;
+    if (error) return console.error(error);
+
+    // Actualizar total visual
+    const total = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
+    document.getElementById('totalGastosTexto').innerText = `$${total.toLocaleString('es-AR')}`;
 
     let html = '<table style="width:100%; font-size:0.85em; border-collapse:collapse;">';
     gastos.forEach(g => {
         html += `
-        <tr style="border-bottom:1px solid #eee;">
-            <td style="padding:5px;">${g.detalle}</td>
-            <td style="padding:5px; font-weight:bold;">$${parseFloat(g.monto).toLocaleString()}</td>
-            <td style="padding:5px; text-align:right;">
-                <button onclick="eliminarGasto(${g.id})" style="background:none; border:none; color:var(--accent); cursor:pointer;" title="Eliminar">🗑️</button>
+        <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:8px; color:#64748b;">${new Date(g.fecha).toLocaleDateString('es-AR', {timeZone:'UTC'})}</td>
+            <td style="padding:8px; font-weight:500;">${g.detalle}</td>
+            <td style="padding:8px; font-weight:bold;">$${parseFloat(g.monto).toLocaleString('es-AR')}</td>
+            <td style="padding:8px; text-align:right;">
+                <button onclick="eliminarGasto(${g.id})" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:1.2em;">&times;</button>
             </td>
         </tr>`;
     });
     html += '</table>';
-    contenedor.innerHTML = gastos.length > 0 ? html : '<p style="font-size:0.8em; color:gray;">No hay gastos cargados.</p>';
+    
+    contenedor.innerHTML = gastos.length > 0 ? html : '<div style="padding:20px; text-align:center; color:#94a3b8;">No hay gastos en este rango.</div>';
 }
 
-// Función para ELIMINAR el gasto de Supabase
+// Exportar exactamente lo que se ve en el filtro
+async function exportarGastosPDF() {
+    const desde = document.getElementById('filtroFechaDesde').value;
+    const hasta = document.getElementById('filtroFechaHasta').value;
+
+    let query = supabase.from('gastos').select('*').order('fecha', { ascending: true });
+    if (desde) query = query.gte('fecha', desde);
+    if (hasta) query = query.lte('fecha', hasta);
+
+    const { data: gastos, error } = await query;
+    if (error || !gastos.length) return alert("Nada que exportar en este rango.");
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Reporte de Gastos", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Filtro: ${desde || 'Inicio'} al ${hasta || 'Hoy'}`, 14, 22);
+
+    const filas = gastos.map(g => [
+        new Date(g.fecha).toLocaleDateString('es-AR', {timeZone:'UTC'}),
+        g.detalle,
+        `$${parseFloat(g.monto).toLocaleString('es-AR')}`
+    ]);
+
+    const total = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
+
+    doc.autoTable({
+        startY: 28,
+        head: [['Fecha', 'Descripción', 'Importe']],
+        body: filas,
+        foot: [['', 'TOTAL', `$${total.toLocaleString('es-AR')}`]],
+        headStyles: { fillColor: [99, 102, 241] }
+    });
+
+    doc.save(`Gastos_${desde || 'total'}.pdf`);
+}
+
+
+
+// Asegúrate de que esta función NO esté dentro de window.onload o de otra función
 async function eliminarGasto(id) {
     if (!confirm("¿Estás seguro de que deseas borrar este gasto?")) return;
 
@@ -1412,104 +1473,20 @@ async function eliminarGasto(id) {
 
         if (error) throw error;
 
-        if (typeof showToast === 'function') showToast("🗑️ Gasto eliminado");
+        if (typeof showToast === 'function') {
+            showToast("🗑️ Gasto eliminado");
+        } else {
+            console.log("Gasto eliminado");
+        }
         
-        // Actualizamos la UI
-        await cargarGastosDesdeSupabase(); // Actualiza el número grande ($)
-        renderizarListaGastos();         // Actualiza la listita
+        // Refrescamos la lista con los filtros actuales
+        renderizarListaGastos(); 
+        
     } catch (err) {
         console.error("Error al borrar:", err);
-        alert("No se pudo eliminar el gasto");
+        alert("No se pudo eliminar el gasto: " + err.message);
     }
 }
-
-
-
-
-async function guardarGasto() {
-    const desc = document.getElementById('gastoDesc').value.trim();
-    const monto = parseFloat(document.getElementById('gastoMonto').value);
-    const fecha = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-
-    if (!desc || isNaN(monto)) {
-        alert("Por favor complete descripción y monto válido.");
-        return;
-    }
-
-    try {
-        const { data, error } = await supabase
-            .from('gastos')
-            .insert([{ 
-                detalle: desc, 
-                monto: monto, 
-                fecha: fecha 
-            }]);
-
-        if (error) throw error;
-
-        cerrarModalGasto();
-        // Recargamos los datos para que se vea reflejado el cambio
-        await cargarGastosDesdeSupabase();
-        
-        if (typeof showToast === 'function') showToast("✅ Gasto registrado en la nube");
-    } catch (error) {
-        console.error("Error al guardar gasto:", error);
-        alert("Error al guardar en la base de datos");
-    }
-}
-
-
-
-
-
-async function cargarGastosDesdeSupabase() {
-    try {
-        const { data, error } = await supabase
-            .from('gastos')
-            .select('*')
-            .order('fecha', { ascending: false });
-
-        if (error) throw error;
-
-        // Guardamos en la variable local para el PDF
-        gastosViaje = data; 
-        
-        const total = data.reduce((sum, g) => sum + parseFloat(g.monto), 0);
-        document.getElementById('totalGastosTexto').innerText = `$${total.toLocaleString('es-AR')}`;
-    } catch (error) {
-        console.error("Error cargando gastos:", error);
-    }
-}
-
-// Llama a esta función dentro de tu inicialización principal
-// Ejemplo: dentro de window.onload o donde cargues los pedidos activos
-
-
-
-
-
-async function vaciarGastosAlArchivar() {
-    const confirmar = confirm("¿Estás seguro de archivar pedidos y resetear los gastos del viaje a $0?");
-    if (!confirmar) return;
-
-    try {
-        // Borramos todos los registros de la tabla gastos
-        const { error } = await supabase
-            .from('gastos')
-            .delete()
-            .neq('id', 0); // Truco para borrar todos los registros en Supabase
-
-        if (error) throw error;
-
-        gastosViaje = [];
-        actualizarUIReporte();
-        console.log("Gastos reseteados correctamente");
-    } catch (error) {
-        console.error("Error al resetear gastos:", error);
-    }
-}
-
-
 
 
 
@@ -2096,6 +2073,10 @@ document.querySelectorAll('.sidebar-item, .tab-btn').forEach(btn => {
 document.addEventListener('DOMContentLoaded', () => {
     activateSection('promos');
 });
+
+
+
+
 
 
 /* =========================================================
@@ -6343,39 +6324,79 @@ async function guardarGasto() {
 
 
 async function exportarGastosPDF() {
+    const desde = document.getElementById('filtroFechaDesde').value;
+    const hasta = document.getElementById('filtroFechaHasta').value;
+
+    // 1. Consultar con los mismos filtros de la pantalla
+    let query = supabase.from('gastos').select('*').order('fecha', { ascending: true });
+    if (desde) query = query.gte('fecha', desde);
+    if (hasta) query = query.lte('fecha', hasta);
+
+    const { data: gastos, error } = await query;
+
+    if (error || !gastos || gastos.length === 0) {
+        alert("No hay gastos para exportar en el rango seleccionado.");
+        return;
+    }
+
+    // 2. Calcular el total de los gastos filtrados
+    const totalSuma = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
+
+    // 3. Configurar el PDF
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
+
+    // Encabezado del PDF
     doc.setFontSize(18);
-    doc.text("Detalle de Gastos de Viaje", 14, 20);
-
-    // Mapeamos los datos para que incluyan el método y la cuenta
-    const rows = gastosViaje.map(g => [
-        g.fecha, 
-        g.detalle, 
-        g.metodo_pago + (g.cuenta_origen ? ` (${g.cuenta_origen})` : ""), 
-        `$${parseFloat(g.monto).toLocaleString()}`
-    ]);
+    doc.setTextColor(40);
+    doc.text("Reporte de Gastos de Viaje", 14, 15);
     
-    const total = gastosViaje.reduce((sum, g) => sum + parseFloat(g.monto), 0);
-    rows.push(["", "", "TOTAL ACUMULADO", `$${total.toLocaleString()}`]);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    const periodoTexto = `Periodo: ${desde ? desde : 'Inicio'} hasta ${hasta ? hasta : 'Hoy'}`;
+    doc.text(periodoTexto, 14, 22);
 
+    // 4. Preparar las filas de la tabla
+    const tableBody = gastos.map(g => [
+        new Date(g.fecha).toLocaleDateString('es-AR', {timeZone: 'UTC'}),
+        g.detalle,
+        `$${parseFloat(g.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+    ]);
+
+    // 5. Generar la tabla con la fila de TOTAL
     doc.autoTable({
-        head: [["Fecha", "Descripción", "Método/Cuenta", "Monto"]],
-        body: rows,
-        startY: 30,
-        theme: 'grid',
-        headStyles: { fillColor: [244, 63, 94] } // Color Rose (--accent)
+        startY: 28,
+        head: [['Fecha', 'Detalle / Concepto', 'Monto']],
+        body: tableBody,
+        foot: [[
+            '', 
+            'TOTAL GASTOS FILTRADOS', 
+            `$${totalSuma.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+        ]],
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }, // Color índigo de tu panel
+        footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+        styles: { fontSize: 9 }
     });
 
-    doc.save(`Detalle_Gastos_${new Date().toLocaleDateString()}.pdf`);
+    // Guardar el archivo
+    const nombreArchivo = `Gastos_${desde || 'total'}_al_${hasta || 'hoy'}.pdf`;
+    doc.save(nombreArchivo);
 }
 
 
 
-
-
-function abrirModalGasto() { document.getElementById('modalGasto').style.display = 'flex'; }
+function abrirModalGasto() {
+    document.getElementById('modalGasto').style.display = 'flex';
+    
+    // Establecer fecha de hoy por defecto en formato YYYY-MM-DD
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('gastoFecha').value = hoy;
+    
+    // Limpiar los otros campos si es necesario
+    document.getElementById('gastoDesc').value = '';
+    document.getElementById('gastoMonto').value = '';
+}
 function cerrarModalGasto() { document.getElementById('modalGasto').style.display = 'none'; }
 function toggleCuentasGasto() {
     const metodo = document.getElementById('gastoMetodo').value;
@@ -6383,24 +6404,39 @@ function toggleCuentasGasto() {
 }
 
 async function guardarGasto() {
-    const desc = document.getElementById('gastoDesc').value;
-    const monto = document.getElementById('gastoMonto').value;
-    const metodo = document.getElementById('gastoMetodo').value;
-    const cuenta = (metodo === 'Transferencia') ? document.getElementById('gastoCuenta').value : null;
+    const desc = document.getElementById('gastoDesc').value.trim();
+    const monto = parseFloat(document.getElementById('gastoMonto').value);
+    const fechaSeleccionada = document.getElementById('gastoFecha').value; // <--- Nueva línea
 
-    if(!desc || !monto) return alert("Completa todos los campos");
+    if (!desc || isNaN(monto) || !fechaSeleccionada) {
+        alert("Por favor complete descripción, monto y fecha.");
+        return;
+    }
 
-    const { error } = await supabase.from('gastos').insert([{ 
-        detalle: desc, monto: monto, metodo_pago: metodo, cuenta_origen: cuenta, fecha: new Date().toISOString().split('T')[0] 
-    }]);
+    try {
+        const { data, error } = await supabase
+            .from('gastos')
+            .insert([{ 
+                detalle: desc, 
+                monto: monto, 
+                fecha: fechaSeleccionada // Usa la fecha del input
+            }]);
 
-    if (error) alert("Error al guardar");
-    else {
+        if (error) throw error;
+
         cerrarModalGasto();
-        cargarGastosDesdeSupabase(); // Función para refrescar el total
+        
+        // Refrescar la lista automáticamente con los filtros actuales
+        if (typeof renderizarListaGastos === 'function') {
+            await renderizarListaGastos(); 
+        }
+        
+        if (typeof showToast === 'function') showToast("✅ Gasto guardado");
+    } catch (error) {
+        console.error("Error al guardar gasto:", error);
+        alert("Error al guardar en la base de datos");
     }
 }
-
 
 </script>
 
@@ -6480,7 +6516,12 @@ async function guardarGasto() {
     <div class="modal-content" style="background:#fff; padding:30px; border-radius:var(--radius-lg); width:90%; max-width:400px;">
         <h3 style="margin-top:0; color: var(--secondary);">Registrar Gasto de Viaje</h3>
         
-        <div style="margin-bottom: 15px;">
+<div style="margin-bottom: 15px;">
+    <label style="display:block; margin-bottom:5px; font-weight:bold;">Fecha del Gasto:</label>
+    <input type="date" id="gastoFecha" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+</div>
+        
+<div style="margin-bottom: 15px;">
             <label style="display:block; margin-bottom:5px; font-weight:bold;">Descripción:</label>
             <input type="text" id="gastoDesc" placeholder="Ej: Nafta, Hotel..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
         </div>
@@ -6519,3 +6560,8 @@ async function guardarGasto() {
 
 </body>
 </html>
+
+
+
+
+
