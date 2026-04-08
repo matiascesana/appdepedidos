@@ -3658,7 +3658,6 @@ Object.assign(pagoBtn.style, {
     textAlign: "center",
 });
 
-console.log("Datos del pedido p:", p); 
 
 // calcular saldo restante del pedido
 const saldoRestante = Math.max(0, totalPedido - totalPagado);
@@ -4217,213 +4216,87 @@ async function unarchiveOrder(orderId) {
 
 
 async function abrirModalPago(pedido) {
-
-    // =========================
-    // 1. NORMALIZAR PEDIDO
-    // =========================
+    // 1. NORMALIZAR PEDIDO SELECCIONADO
     if (typeof pedido === 'string' || typeof pedido === 'number') {
-        console.log("Recibido ID directo, buscando pedido...");
-
-        const { data, error } = await supabase
-            .from('pedidos')
-            .select('*')
-            .eq('id', pedido)
-            .single();
-
-        if (error || !data) return alert("No se pudo cargar el pedido " + pedido);
-
+        const { data, error } = await supabase.from('pedidos').select('*').eq('id', pedido).single();
+        if (error || !data) return alert("No se pudo cargar el pedido");
         pedidoSeleccionado = data;
     } else {
         pedidoSeleccionado = pedido;
     }
 
-    if (!pedidoSeleccionado || !pedidoSeleccionado.id) {
-        return alert("Error: pedido inválido");
-    }
-
     const nombreCliente = pedidoSeleccionado.cliente;
+    if (!nombreCliente) return alert("El pedido no tiene nombre de cliente");
 
-    if (!nombreCliente) {
-        console.error("Pedido sin cliente:", pedidoSeleccionado);
-        return alert("El pedido no tiene nombre de cliente");
-    }
-
-    // =========================
-    // 2. TRAER TODOS LOS PEDIDOS DEL CLIENTE (POR NOMBRE)
-    // =========================
+    // 2. TRAER TODOS LOS PEDIDOS DEL CLIENTE
     const { data: pedidosCliente, error: errorPedidos } = await supabase
         .from('pedidos')
         .select('*')
         .eq('cliente', nombreCliente);
 
-    if (errorPedidos) {
-        console.error(errorPedidos);
-        return alert("Error cargando pedidos del cliente");
-    }
+    if (errorPedidos) return alert("Error cargando pedidos del cliente");
 
-   
+    // 3. CARGAR SELECTOR DE PEDIDOS
+    const select = document.getElementById("selectPedidoPago");
+    select.innerHTML = "";
 
-   
-    // =========================
-// 5. CARGAR SELECT (USANDO p.pagos)
-// =========================
-const select = document.getElementById("selectPedidoPago");
-select.innerHTML = "";
+    // Ordenar: primero los que tienen más deuda
+    pedidosCliente.sort((a, b) => {
+        const getSaldo = (p) => {
+            const total = Number(p.total || 0);
+            const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
+            const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+            return total - pagado;
+        };
+        return getSaldo(b) - getSaldo(a);
+    });
 
-// 🔥 ORDENAR: primero los que deben
-pedidosCliente.sort((a, b) => {
-
-    const getSaldo = (p) => {
+    pedidosCliente.forEach(p => {
         const total = Number(p.total || 0);
-
-        let pagosArray = [];
-
-        if (typeof p.pagos === "string") {
-            try {
-                pagosArray = JSON.parse(p.pagos);
-            } catch {
-                pagosArray = [];
-            }
-        } else if (Array.isArray(p.pagos)) {
-            pagosArray = p.pagos;
-        }
-
+        const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
         const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+        const saldo = total - pagado;
 
-        return total - pagado;
-    };
-
-    return getSaldo(b) - getSaldo(a);
-});
-
-// 🔥 CREAR OPCIONES
-pedidosCliente.forEach(p => {
-
-    const total = Number(p.total || 0);
-
-    let pagosArray = [];
-
-    if (typeof p.pagos === "string") {
-        try {
-            pagosArray = JSON.parse(p.pagos);
-        } catch {
-            pagosArray = [];
+        const option = document.createElement("option");
+        option.value = p.id;
+        if (saldo <= 0) {
+            option.textContent = `Pedido #${p.id} - ✅ PAGADO`;
+        } else {
+            option.textContent = `Pedido #${p.id} - ⚠️ Debe $${saldo.toFixed(2)}`;
         }
-    } else if (Array.isArray(p.pagos)) {
-        pagosArray = p.pagos;
-    }
+        select.appendChild(option);
+    });
 
-    const pagado = pagosArray.reduce((acc, pago) => {
-        return acc + Number(pago.monto || 0);
-    }, 0);
-
-    const saldo = total - pagado;
-
-    const option = document.createElement("option");
-    option.value = p.id;
-
-    if (saldo <= 0) {
-        option.textContent = `Pedido #${p.id} - ✅ PAGADO`;
-        option.disabled = true; // 🔥 opcional: no permitir pagar
-    } else {
-        option.textContent = `Pedido #${p.id} - ⚠️ Debe $${saldo.toFixed(2)}`;
-    }
-
-    select.appendChild(option);
-});
-
-
-    // =========================
-    // 6. CAMBIO DE PEDIDO
-    // =========================
+    // 4. CONFIGURAR CAMBIO DE PEDIDO Y ESTADO INICIAL
     select.onchange = () => actualizarPedidoSeleccionado(pedidosCliente);
-
-    // Selección inicial
     select.value = pedidoSeleccionado.id;
-
     await actualizarPedidoSeleccionado(pedidosCliente);
-
-    // =========================
-    // 7. LIMPIAR MEDIOS DE PAGO
-    // =========================
-    const lista = document.getElementById("listaPagos");
-    lista.innerHTML = "";
-
-    crearFilaPago(0);
-
-    recalcularPagos();
 
     document.getElementById("modalPago").style.display = "flex";
 }
 
-
 async function actualizarPedidoSeleccionado(pedidosCliente) {
-
     const pedidoId = Number(document.getElementById("selectPedidoPago").value);
-
-    if (!pedidoId) return;
-
     const pedido = pedidosCliente.find(p => p.id === pedidoId);
-
-    if (!pedido) {
-        console.error("Pedido no encontrado");
-        return;
-    }
+    if (!pedido) return;
 
     pedidoSeleccionado = pedido;
 
-    // =========================
-    // 1. TOTAL DEL PEDIDO
-    // =========================
     const total = Number(pedido.total || 0);
+    const pagosArray = Array.isArray(pedido.pagos) ? pedido.pagos : JSON.parse(pedido.pagos || "[]");
+    const totalPagadoAnterior = pagosArray.reduce((acc, p) => acc + Number(p.monto || 0), 0);
+    const saldo = total - totalPagadoAnterior;
 
-    // =========================
-    // 2. LEER PAGOS DESDE JSON
-    // =========================
-    let pagosArray = [];
-
-    if (typeof pedido.pagos === "string") {
-        try {
-            pagosArray = JSON.parse(pedido.pagos);
-        } catch {
-            pagosArray = [];
-        }
-    } else if (Array.isArray(pedido.pagos)) {
-        pagosArray = pedido.pagos;
-    }
-
-    // =========================
-    // 3. CALCULAR PAGADO
-    // =========================
-    const totalPagado = pagosArray.reduce((acc, p) => {
-        return acc + Number(p.monto || 0);
-    }, 0);
-
-    const saldo = total - totalPagado;
-
-    // =========================
-    // 4. ACTUALIZAR UI
-    // =========================
     document.getElementById("totalPedido").textContent = total.toFixed(2);
+    // Este campo muestra el saldo antes de los nuevos inputs
     document.getElementById("saldoPendiente").textContent = saldo.toFixed(2);
 
-    // =========================
-    // 5. MOSTRAR PAGOS EXISTENTES
-    // =========================
     const lista = document.getElementById("listaPagos");
     lista.innerHTML = "";
-
-    if (pagosArray.length > 0) {
-        pagosArray.forEach((pago, i) => {
-            crearFilaPago(i, pago.metodo, pago.monto, pago.destinatario);
-        });
-    } else {
-        crearFilaPago(0);
-    }
-
+    // Solo mostramos una fila vacía para el nuevo pago, no repetimos los viejos en los inputs
+    crearFilaPago(0);
     recalcularPagos();
 }
-
 
 
 function crearFilaPago(index, metodo = 'Efectivo', monto = 0, destinatario = '') {
@@ -4465,95 +4338,70 @@ function agregarMedioPago() {
 }
 
 async function guardarPagosPedido() {
-
-    // =========================
-    // 1. VALIDACIÓN
-    // =========================
-    if (!pedidoSeleccionado || !pedidoSeleccionado.id) {
-        alert("Error de sistema: No se detectó el ID del pedido.");
-        return;
-    }
+    if (!pedidoSeleccionado || !pedidoSeleccionado.id) return alert("ID de pedido no encontrado");
 
     const lista = document.getElementById("listaPagos");
-    const pagosNuevos = [];
+    const nuevosPagosEntrantes = [];
 
     lista.querySelectorAll(".fila-pago").forEach(fila => {
         const metodo = fila.querySelector("select").value;
-
-        const montoInput = fila.querySelector('input[type="number"]');
-        const monto = montoInput ? parseFloat(montoInput.value) || 0 : 0;
-
-        const destinatarioInput = fila.querySelector('input[type="text"]');
-        const destinatario = destinatarioInput ? destinatarioInput.value : "";
+        const monto = parseFloat(fila.querySelector('input[type="number"]').value) || 0;
+        const destinatario = fila.querySelector('input[type="text"]').value;
 
         if (monto > 0) {
-            pagosNuevos.push({
-                pedido_id: pedidoSeleccionado.id,
-                cliente_id: pedidoSeleccionado.cliente_id,
-                metodo: metodo,
-                monto: monto,
-                destinatario: destinatario,
-                fecha: new Date().toISOString()
+            nuevosPagosEntrantes.push({ 
+                metodo, 
+                monto, 
+                destinatario, 
+                fecha: new Date().toISOString() 
             });
         }
     });
 
-    if (pagosNuevos.length === 0) {
-        alert("Ingresá al menos un pago válido");
-        return;
-    }
+    if (nuevosPagosEntrantes.length === 0) return alert("Ingresá un monto válido");
 
     try {
-        // =========================
-        // 2. INSERTAR PAGOS (NO PISAR)
-        // =========================
-        const { error: errorInsert } = await supabase
-            .from("pagos")
-            .insert(pagosNuevos);
+        // 1. Obtener pagos actuales directamente de la DB para evitar desfases
+        const { data: pedidoActual, error: errFetch } = await supabase
+            .from('pedidos')
+            .select('pagos, total')
+            .eq('id', pedidoSeleccionado.id)
+            .single();
 
-        if (errorInsert) throw errorInsert;
+        if (errFetch) throw errFetch;
 
-        // =========================
-        // 3. RECALCULAR SALDO REAL
-        // =========================
-        const { data: pagosDB, error: errorPagos } = await supabase
-            .from("pagos")
-            .select("monto")
-            .eq("pedido_id", pedidoSeleccionado.id);
+        let pagosHistoricos = Array.isArray(pedidoActual.pagos) ? pedidoActual.pagos : JSON.parse(pedidoActual.pagos || "[]");
 
-        if (errorPagos) throw errorPagos;
+        // 2. Unir pagos antiguos con los nuevos
+        const todosLosPagos = [...pagosHistoricos, ...nuevosPagosEntrantes];
 
-        const totalPagado = pagosDB.reduce((acc, p) => acc + Number(p.monto), 0);
-        const saldo_pendiente = Math.max(0, Number(pedidoSeleccionado.total) - totalPagado);
+        // 3. Calcular nuevo saldo_pendiente
+        const totalPagado = todosLosPagos.reduce((acc, p) => acc + Number(p.monto), 0);
+        const saldoFinal = Math.max(0, Number(pedidoActual.total) - totalPagado);
 
-        // =========================
-        // 4. ACTUALIZAR PEDIDO (SOLO SALDO)
-        // =========================
-        const { error: errorUpdate } = await supabase
+        // 4. Actualizar el pedido con el nuevo array de pagos y el saldo
+        const { error: errUpdate } = await supabase
             .from("pedidos")
             .update({
-                saldo_pendiente: saldo_pendiente
+                pagos: todosLosPagos,
+                saldo_pendiente: saldoFinal
             })
             .eq("id", pedidoSeleccionado.id);
 
-        if (errorUpdate) throw errorUpdate;
+        if (errUpdate) throw errUpdate;
 
-        // =========================
-        // 5. FEEDBACK + REFRESH
-        // =========================
-        alert("✅ Pagos registrados correctamente");
-
+        alert("✅ Pago registrado y saldo actualizado");
         cerrarModalPago();
 
+        // Refrescar las tablas
         if (typeof fetchOrders === 'function') await fetchOrders();
-        if (typeof renderCtaCte === 'function') renderCtaCte();
+        if (typeof fetchCuentasCorrientes === 'function') await fetchCuentasCorrientes();
 
     } catch (err) {
-        console.error("Error en Supabase:", err);
-        alert("Error al guardar: " + err.message);
+        console.error(err);
+        alert("Error: " + err.message);
     }
 }
-
 
 
 function cerrarModalPago() {
@@ -6031,7 +5879,7 @@ async function fetchCuentasCorrientes() {
     const listDiv = document.getElementById('ctaCteList');
     listDiv.innerHTML = '<p style="text-align:center;">Cargando cuentas...</p>';
 
-    const { data, error } = await _supabase.from('pedidos').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('pedidos').select('*').order('created_at', { ascending: false });
     if (error) {
         listDiv.innerHTML = '<p style="color:red;">Error al cargar cuentas.</p>';
         return;
