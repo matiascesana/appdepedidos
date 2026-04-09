@@ -895,7 +895,7 @@ button[onclick*="delete"] {
     <li><button class="tab-btn" data-tab="reporteVentas">Reporte de Ventas</button></li>
     <li><button class="tab-btn" data-tab="categorias">Categorías</button></li>
     <li><button class="tab-btn" data-tab="localidades">Localidades</button></li>
-    <li><button class="tab-btn" data-tab="gastos">Gastos</button></li>
+    <li><button class="tab-btn" data-tab="admin">Ingresos y Gastos</button></li>
   </ul>
 </nav>
    
@@ -1103,6 +1103,9 @@ button[onclick*="delete"] {
 	</div>
 	</div>
 
+
+
+
 <section id="pedidosArchivados" class="section" style="display:none;">
     <h2>Pedidos Archivados</h2>
 
@@ -1287,43 +1290,6 @@ button[onclick*="delete"] {
 
 
 
-<div id="gastos" class="section" style="width:100%; display:block;">
-    <h2>Gastos</h2>
-<div id="seccionGastosViaje" style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: var(--radius-md); border-left: 5px solid var(--accent); box-shadow: var(--shadow-sm);">
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <div>
-            <span style="color: var(--text-muted); font-size: 0.9em;">Total Filtrado</span>
-            <b id="totalGastosTexto" style="font-size: 1.5em; color: var(--accent); display: block;">$0</b>
-        </div>
-        <div style="display: flex; gap: 8px;">
-            <button onclick="abrirModalGasto()" class="btn-pago-indigo" style="background: var(--success) !important;">+ Nuevo Gasto</button>
-            <button onclick="exportarGastosPDF()" class="btn-detalle-slate">📄 Exportar PDF</button>
-        </div>
-    </div>
-
-    <div style="display: flex; gap: 10px; align-items: flex-end; background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
-        <div style="flex:1">
-            <label style="font-size: 11px; font-weight: bold; color: #475569;">DESDE:</label>
-            <input type="date" id="filtroFechaDesde" onchange="renderizarListaGastos()" style="width:100%; padding:6px; border-radius:5px; border:1px solid #cbd5e1;">
-        </div>
-        <div style="flex:1">
-            <label style="font-size: 11px; font-weight: bold; color: #475569;">HASTA:</label>
-            <input type="date" id="filtroFechaHasta" onchange="renderizarListaGastos()" style="width:100%; padding:6px; border-radius:5px; border:1px solid #cbd5e1;">
-        </div>
-        <button onclick="limpiarFiltrosGastos()" style="padding: 7px; background: #cbd5e1; border: none; border-radius: 5px; cursor: pointer;">🧹</button>
-    </div>
-
-    <div id="listaGastosRecientes" style="max-height: 300px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 8px;">
-        </div>
-</div>
-</div>
-
-
-
-
-
-
 
 <div id="addPromoModal" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
     <div class="modal-content" style="background-color:#fff; margin:5% auto; padding:25px; border-radius:12px; width:90%; max-width:500px; position:relative;">
@@ -1375,6 +1341,66 @@ button[onclick*="delete"] {
 </div>
 
 
+
+
+<div id="admin" class="section">
+    <div class="card">
+        <h2 style="margin-bottom: 20px; color: (--secondary);">Finanzas y Caja</h2>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+            
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 15px;">
+                <h3 style="color: #166534; margin: 0 0 15px 0;">💰 Ingresos</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="date" id="filtroIngresoDesde" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ccc;">
+                    <input type="date" id="filtroIngresoHasta" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ccc;">
+                </div>
+                <button onclick="cargarReporteIngresos()" style="width:100%; background:#10b981; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🔍 Buscar Ingresos</button>
+<div id="listaIngresosRecientes"></div>
+                <div style="margin-top:10px; background:white; padding:10px; border-radius:8px; border:1px solid #dcfce7;">
+                    <div style="display:flex; justify-content:space-between;"><span>Efec:</span> <b id="ingresoEfectivoTotal">$0</b></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Transf:</span> <b id="ingresoTransfTotal">$0</b></div>
+                    <div style="margin-top:5px; border-top:1px solid #eee; font-weight:bold; color:#166534;">Total: <span id="ingresoGeneralTotal">$0</span></div>
+                </div>
+                <button onclick="exportarIngresosPDF()" style="width:100%; margin-top:10px; background:#fff; color:#10b981; border:1px solid #10b981; padding:8px; border-radius:8px; cursor:pointer; font-size:0.8em;">📄 PDF Ingresos</button>
+            </div>
+
+            <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 20px; border-radius: 15px;">
+    <h3 style="color: #991b1b; margin: 0 0 15px 0;">💸 Gastos</h3>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <input type="date" id="filtroGastoDesde" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        <input type="date" id="filtroGastoHasta" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ccc;">
+    </div>
+
+    <button onclick="renderizarListaGastos()" style="width:100%; background:#f43f5e; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">
+        🔍 Buscar Gastos
+    </button>
+
+    <div style="margin-top:10px; background:white; padding:15px; border-radius:8px; border:1px solid #fecaca;">
+        <small style="color:gray;">Total Egresos:</small>
+        <div id="totalGastosTexto" style="font-size:1.5em; font-weight:bold; color:#f43f5e;">$0</div>
+    </div>
+
+    <button onclick="exportarGastosPDF()" style="width:100%; margin-top:10px; background:#fff; color:#f43f5e; border:1px solid #f43f5e; padding:8px; border-radius:8px; cursor:pointer; font-size:0.8em;">
+        📄 PDF Gastos
+    </button>
+
+    <!-- 👇 LISTADO AHORA VA ACÁ -->
+    <div id="listaGastosRecientes" style="margin-top:15px;"></div>
+</div>
+</div>
+
+
+        <button onclick="abrirModalGasto()" class="btn-primary" style="margin-bottom: 20px;">+ Nuevo Gasto</button>
+       </div>
+</div>
+
+
+
+
+
+
 <script>
 
 
@@ -1386,52 +1412,96 @@ function limpiarFiltrosGastos() {
     renderizarListaGastos();
 }
 
-// Renderizar lista con filtros (Ver y Editar/Eliminar)
+
+
+
+
 async function renderizarListaGastos() {
-    const contenedor = document.getElementById('listaGastosRecientes');
-    const desde = document.getElementById('filtroFechaDesde').value;
-    const hasta = document.getElementById('filtroFechaHasta').value;
-    
-    let query = supabase.from('gastos').select('*').order('fecha', { ascending: false });
+    const desde = document.getElementById('filtroGastoDesde')?.value;
+    const hasta = document.getElementById('filtroGastoHasta')?.value;
+
+    let query = supabase
+        .from('gastos')
+        .select('*')
+        .order('fecha', { ascending: false });
 
     if (desde) query = query.gte('fecha', desde);
     if (hasta) query = query.lte('fecha', hasta);
 
     const { data: gastos, error } = await query;
-    if (error) return console.error(error);
 
-    // Actualizar total visual
-    const total = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
-    document.getElementById('totalGastosTexto').innerText = `$${total.toLocaleString('es-AR')}`;
+    if (error) {
+        console.error(error);
+        return alert("Error al cargar gastos");
+    }
 
-    let html = '<table style="width:100%; font-size:0.85em; border-collapse:collapse;">';
+    const contenedor = document.getElementById('listaGastosRecientes');
+    contenedor.innerHTML = '';
+
+    let total = 0;
+
     gastos.forEach(g => {
-        html += `
-        <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px; color:#64748b;">${new Date(g.fecha).toLocaleDateString('es-AR', {timeZone:'UTC'})}</td>
-            <td style="padding:8px; font-weight:500;">${g.detalle}</td>
-            <td style="padding:8px; font-weight:bold;">$${parseFloat(g.monto).toLocaleString('es-AR')}</td>
-            <td style="padding:8px; text-align:right;">
-                <button onclick="eliminarGasto(${g.id})" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:1.2em;">&times;</button>
-            </td>
-        </tr>`;
+        total += parseFloat(g.monto);
+
+        let metodo = g.metodo_pago || '—';
+
+        if (metodo.toLowerCase() === 'transferencia') {
+            metodo = `Transferencia (${g.cuenta_origen || 'Sin cuenta'})`;
+        }
+
+        contenedor.innerHTML += `
+            <div style="padding:10px; border-bottom:1px solid #eee;">
+                <b>${new Date(g.fecha).toLocaleDateString('es-AR')}</b> - ${g.detalle}
+                <br>
+                <small>${metodo}</small>
+                <div style="float:right; font-weight:bold;">
+                    $${parseFloat(g.monto).toLocaleString('es-AR')}
+                </div>
+            </div>
+        `;
     });
-    html += '</table>';
-    
-    contenedor.innerHTML = gastos.length > 0 ? html : '<div style="padding:20px; text-align:center; color:#94a3b8;">No hay gastos en este rango.</div>';
+
+    document.getElementById('totalGastosTexto').textContent =
+        `$${total.toLocaleString('es-AR')}`;
 }
 
-// Exportar exactamente lo que se ve en el filtro
-async function exportarGastosPDF() {
-    const desde = document.getElementById('filtroFechaDesde').value;
-    const hasta = document.getElementById('filtroFechaHasta').value;
 
-    let query = supabase.from('gastos').select('*').order('fecha', { ascending: true });
+
+
+
+async function exportarGastosPDF() {
+    const inputDesde = document.getElementById('filtroFechaDesde') 
+                    || document.getElementById('filtroGastoDesde');
+
+    const inputHasta = document.getElementById('filtroFechaHasta') 
+                    || document.getElementById('filtroGastoHasta');
+
+    if (!inputDesde || !inputHasta) {
+        console.error("No existen los inputs de fecha");
+        return alert("Error: no se encontraron los filtros de fecha");
+    }
+
+    const desde = inputDesde.value;
+    const hasta = inputHasta.value;
+
+    let query = supabase
+        .from('gastos')
+        .select('*')
+        .order('fecha', { ascending: true });
+
     if (desde) query = query.gte('fecha', desde);
     if (hasta) query = query.lte('fecha', hasta);
 
     const { data: gastos, error } = await query;
-    if (error || !gastos.length) return alert("Nada que exportar en este rango.");
+
+    if (error) {
+        console.error(error);
+        return alert("Error al consultar gastos");
+    }
+
+    if (!gastos || gastos.length === 0) {
+        return alert("Nada que exportar en este rango.");
+    }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -1441,25 +1511,33 @@ async function exportarGastosPDF() {
     doc.setFontSize(10);
     doc.text(`Filtro: ${desde || 'Inicio'} al ${hasta || 'Hoy'}`, 14, 22);
 
-    const filas = gastos.map(g => [
-        new Date(g.fecha).toLocaleDateString('es-AR', {timeZone:'UTC'}),
+    const filas = gastos.map(g => {
+    let metodo = g.metodo_pago || '—';
+
+    if (metodo.toLowerCase() === 'transferencia') {
+        metodo = `Transferencia (${g.cuenta_origen || 'Sin cuenta'})`;
+    }
+
+    return [
+        new Date(g.fecha).toLocaleDateString('es-AR', { timeZone: 'UTC' }),
         g.detalle,
+        metodo,
         `$${parseFloat(g.monto).toLocaleString('es-AR')}`
-    ]);
+    ];
+});
 
     const total = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
 
     doc.autoTable({
-        startY: 28,
-        head: [['Fecha', 'Descripción', 'Importe']],
-        body: filas,
-        foot: [['', 'TOTAL', `$${total.toLocaleString('es-AR')}`]],
-        headStyles: { fillColor: [99, 102, 241] }
-    });
+    startY: 28,
+    head: [['Fecha', 'Descripción', 'Método de Pago', 'Importe']],
+    body: filas,
+    foot: [['', '', 'TOTAL', `$${total.toLocaleString('es-AR')}`]],
+    headStyles: { fillColor: [99, 102, 241] }
+});
 
     doc.save(`Gastos_${desde || 'total'}.pdf`);
 }
-
 
 
 // Asegúrate de que esta función NO esté dentro de window.onload o de otra función
@@ -3013,7 +3091,7 @@ async function registrarNuevoPago(pedidoId, monto, metodo, destinatario) {
             monto: parseFloat(monto),
             metodo: metodo,
             destinatario: destinatario,
-            fecha: new Date().toISOString().split('T')[0]
+            fecha: new Date().toLocaleDateString('sv-SE')
         }]);
 
     if (error) {
@@ -3659,6 +3737,26 @@ Object.assign(pagoBtn.style, {
 });
 
 
+const prepBtn = document.createElement("button");
+prepBtn.textContent = "📦 Preparar Pedido";
+Object.assign(prepBtn.style, {
+    background: "#3498db", // Mismo color que tus otros botones
+    color: "#fff",
+    border: "none",
+    width: "200px",
+    height: "40px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    textAlign: "center",
+});
+prepBtn.onclick = () => abrirPrepararPedido(p.id);
+
+// No olvides añadirlo al div contenedor:
+actionsDiv.appendChild(prepBtn);
+
+
+
 // calcular saldo restante del pedido
 const saldoRestante = Math.max(0, totalPedido - totalPagado);
 
@@ -4215,8 +4313,11 @@ async function unarchiveOrder(orderId) {
 
 
 
+// Variable global para manejar los pagos del pedido seleccionado
+let pagosEdicionActual = []; 
+
 async function abrirModalPago(pedido) {
-    // 1. NORMALIZAR PEDIDO SELECCIONADO
+    // 1. NORMALIZAR PEDIDO SELECCIONADO (por ID o por Objeto)
     if (typeof pedido === 'string' || typeof pedido === 'number') {
         const { data, error } = await supabase.from('pedidos').select('*').eq('id', pedido).single();
         if (error || !data) return alert("No se pudo cargar el pedido");
@@ -4236,44 +4337,348 @@ async function abrirModalPago(pedido) {
 
     if (errorPedidos) return alert("Error cargando pedidos del cliente");
 
-    // 3. CARGAR SELECTOR DE PEDIDOS
+    // 3. CARGAR SELECTOR DE PEDIDOS (Ordenados por deuda)
     const select = document.getElementById("selectPedidoPago");
-    select.innerHTML = "";
+    if (select) {
+        select.innerHTML = "";
+        pedidosCliente.sort((a, b) => {
+            const getSaldo = (p) => {
+                const total = Number(p.total || 0);
+                const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
+                const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+                return total - pagado;
+            };
+            return getSaldo(b) - getSaldo(a);
+        });
 
-    // Ordenar: primero los que tienen más deuda
-    pedidosCliente.sort((a, b) => {
-        const getSaldo = (p) => {
+        pedidosCliente.forEach(p => {
             const total = Number(p.total || 0);
             const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
             const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
-            return total - pagado;
+            const saldo = total - pagado;
+            const option = document.createElement("option");
+            option.value = p.id;
+            option.textContent = saldo <= 0 ? `Pedido #${p.id} - ✅ PAGADO` : `Pedido #${p.id} - ⚠️ Debe $${saldo.toFixed(2)}`;
+            select.appendChild(option);
+        });
+
+        // Configurar el evento de cambio
+        select.onchange = async () => {
+            const pId = select.value;
+            const pEncontrado = pedidosCliente.find(p => p.id == pId);
+            pedidoSeleccionado = pEncontrado;
+            pagosEdicionActual = Array.isArray(pEncontrado.pagos) ? [...pEncontrado.pagos] : JSON.parse(pEncontrado.pagos || "[]");
+            renderizarListaEdicionPagos();
         };
-        return getSaldo(b) - getSaldo(a);
-    });
+        select.value = pedidoSeleccionado.id;
+    }
 
-    pedidosCliente.forEach(p => {
-        const total = Number(p.total || 0);
-        const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
-        const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
-        const saldo = total - pagado;
-
-        const option = document.createElement("option");
-        option.value = p.id;
-        if (saldo <= 0) {
-            option.textContent = `Pedido #${p.id} - ✅ PAGADO`;
-        } else {
-            option.textContent = `Pedido #${p.id} - ⚠️ Debe $${saldo.toFixed(2)}`;
-        }
-        select.appendChild(option);
-    });
-
-    // 4. CONFIGURAR CAMBIO DE PEDIDO Y ESTADO INICIAL
-    select.onchange = () => actualizarPedidoSeleccionado(pedidosCliente);
-    select.value = pedidoSeleccionado.id;
-    await actualizarPedidoSeleccionado(pedidosCliente);
-
+    // Inicializar historial y mostrar modal
+    pagosEdicionActual = Array.isArray(pedidoSeleccionado.pagos) ? [...pedidoSeleccionado.pagos] : JSON.parse(pedidoSeleccionado.pagos || "[]");
+    renderizarListaEdicionPagos();
+    
     document.getElementById("modalPago").style.display = "flex";
+    
+    // Setear fecha de hoy por defecto en el input de nuevo pago
+    if(document.getElementById('newPagoFecha')) {
+document.getElementById('newPagoFecha').value = new Date().toISOString().substring(0, 10);
+    }
 }
+
+
+
+
+
+
+function renderizarListaEdicionPagos() {
+    let contenedor = document.getElementById("listaPagosRegistrados");
+    
+    if (!contenedor) {
+        contenedor = document.createElement("div");
+        contenedor.id = "listaPagosRegistrados";
+        contenedor.style = "margin-top:20px; border-top:2px solid #eee; padding-top:15px;";
+        const modalBody = document.querySelector("#modalPago div[style*='background: white']") || 
+                          document.querySelector("#modalPago .modal-content") ||
+                          document.getElementById("modalPago");
+        if (modalBody) modalBody.appendChild(contenedor);
+    }
+
+    contenedor.innerHTML = `<label style="font-weight:bold; color:var(--secondary); display:block; margin-bottom:10px;">Editar Pagos Registrados:</label>`;
+    
+    if (pagosEdicionActual.length === 0) {
+        contenedor.innerHTML += `<p style="color:gray; font-size:0.85em;">No hay pagos previos.</p>`;
+        return;
+    }
+
+    pagosEdicionActual.forEach((pago, idx) => {
+        const item = document.createElement("div");
+        item.style = "background:#f8fafc; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #e2e8f0; display:grid; grid-template-columns: 1fr 1fr; gap:8px;";
+        
+        item.innerHTML = `
+            <input type="date" value="${pago.fecha}" id="editFecha_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+            <input type="number" value="${pago.monto}" id="editMonto_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+            <select id="editMetodo_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+                <option value="Efectivo" ${pago.metodo === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+                <option value="Transferencia" ${pago.metodo === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+            </select>
+            <div style="display:flex; gap:5px;">
+                <button onclick="guardarEdicionPago(${idx})" style="flex:1; background:var(--success); color:white; border:none; border-radius:5px; cursor:pointer; font-size:0.8em; font-weight:bold;">Guardar</button>
+                <button onclick="eliminarPagoExistente(${idx})" style="background:#f43f5e; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>
+            </div>
+        `;
+        contenedor.appendChild(item);
+    });
+}
+
+
+
+async function guardarEdicionPago(idx) {
+    // Capturar nuevos valores de los inputs
+    const nuevaFecha = document.getElementById(`editFecha_${idx}`).value;
+    const nuevoMonto = Number(document.getElementById(`editMonto_${idx}`).value);
+    const nuevoMetodo = document.getElementById(`editMetodo_${idx}`).value;
+
+    // Actualizar el array local
+    pagosEdicionActual[idx] = {
+        fecha: nuevaFecha,
+        monto: nuevoMonto,
+        metodo: nuevoMetodo
+    };
+
+    // Guardar en Supabase
+    const { error } = await supabase
+        .from('pedidos')
+        .update({ pagos: pagosEdicionActual })
+        .eq('id', pedidoSeleccionado.id);
+
+    if (error) {
+        alert("Error al guardar cambios: " + error.message);
+    } else {
+        showToast("✅ Pago actualizado correctamente");
+        // Refrescar modal para actualizar saldos
+        abrirModalPago(pedidoSeleccionado.id);
+        if (typeof fetchPedidos === 'function') fetchPedidos();
+    }
+}
+
+
+
+
+
+
+async function cargarReporteIngresos() {
+    const desde = document.getElementById('filtroIngresoDesde').value;
+    const hasta = document.getElementById('filtroIngresoHasta').value;
+
+    if (!desde || !hasta) {
+        alert("Selecciona un rango de fechas.");
+        return;
+    }
+
+    const { data, error } = await supabase.rpc('pedidos_por_rango', {
+        fecha_desde: desde,
+        fecha_hasta: hasta
+    });
+
+    if (error) {
+        console.error("Error RPC:", error);
+        return;
+    }
+
+    const pedidos = Array.isArray(data) ? data : [];
+
+    let efec = 0;
+    let trans = 0;
+    let listaFiltrada = [];
+
+    pedidos.forEach(p => {
+        let pagosArray = [];
+
+        try {
+            pagosArray = Array.isArray(p.pagos)
+                ? p.pagos
+                : JSON.parse(p.pagos || "[]");
+        } catch (e) {
+            pagosArray = [];
+        }
+
+        pagosArray.forEach(pago => {
+            if (!pago.fecha) return;
+
+            if (pago.fecha >= desde && pago.fecha <= hasta) {
+
+                const monto = parseFloat(pago.monto || 0);
+                const metodo = pago.metodo || "Efectivo";
+
+                if (metodo === 'Efectivo') efec += monto;
+                else trans += monto;
+
+                listaFiltrada.push({
+    fecha: pago.fecha,
+    cliente: p.cliente,
+    metodo: metodo,
+    monto: monto,
+    destinatario: pago.destinatario || "-"
+});
+            }
+        });
+    });
+
+    // 👉 GUARDAR PARA PDF
+    datosIngresosParaPDF = {
+        lista: listaFiltrada,
+        total: efec + trans,
+        desde,
+        hasta
+    };
+
+    // 👉 ACTUALIZAR TOTALES
+    document.getElementById('ingresoEfectivoTotal').innerText =
+        `$${efec.toLocaleString('es-AR')}`;
+
+    document.getElementById('ingresoTransfTotal').innerText =
+        `$${trans.toLocaleString('es-AR')}`;
+
+    document.getElementById('ingresoGeneralTotal').innerText =
+        `$${(efec + trans).toLocaleString('es-AR')}`;
+
+    // ✅ 👉 RENDER LISTADO (ACA ADENTRO, NO AFUERA)
+    const contenedor = document.getElementById('listaIngresosRecientes');
+    contenedor.innerHTML = '';
+
+    listaFiltrada
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+        .forEach(i => {
+
+            let metodoTexto = i.metodo;
+
+            if (metodoTexto.toLowerCase() === 'transferencia') {
+                metodoTexto = `Transferencia (${i.cuenta_origen || 'Sin cuenta'})`;
+            }
+
+            contenedor.innerHTML += `
+                <div style="padding:10px; border-bottom:1px solid #eee;">
+                    <b>${new Date(i.fecha).toLocaleDateString('es-AR')}</b> - ${i.cliente}
+                    <br>
+                    <small>${metodoTexto}</small>
+                    <div style="float:right; font-weight:bold; color:#10b981;">
+                        $${i.monto.toLocaleString('es-AR')}
+                    </div>
+                </div>
+            `;
+        });
+}
+
+
+function actualizarUIFianzas(efec, trans, desde, hasta, lista) {
+    const efecE = document.getElementById('ingresoEfectivoTotal');
+    const transE = document.getElementById('ingresoTransfTotal');
+    const totalE = document.getElementById('ingresoGeneralTotal');
+
+    if (efecE) efecE.innerText = `$${efec.toLocaleString('es-AR')}`;
+    if (transE) transE.innerText = `$${trans.toLocaleString('es-AR')}`;
+    if (totalE) totalE.innerText = `$${(efec + trans).toLocaleString('es-AR')}`;
+    
+    // Guardar para exportación PDF
+    window.datosIngresosPDF = { lista, total: efec + trans, desde, hasta };
+}
+
+
+
+
+
+// 3. INTEGRACIÓN: Al presionar el botón de búsqueda del panel, disparar ambos
+function ejecutarBusquedaFinanciera() {
+    renderListaGastos(); // Tu función original o la nueva
+    cargarReporteIngresos();
+}
+
+
+function exportarIngresosPDF() {
+    if (!datosIngresosParaPDF || !datosIngresosParaPDF.lista.length) {
+        alert("No hay datos para exportar");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const { lista, desde, hasta } = datosIngresosParaPDF;
+
+    // =========================
+    // 🟩 HOJA 1 - DETALLE
+    // =========================
+
+    doc.setFontSize(16);
+    doc.text("Reporte de Ingresos", 14, 15);
+
+    doc.setFontSize(10);
+    doc.text(`Filtro: ${desde} al ${hasta}`, 14, 22);
+
+    const filas = lista.map(i => [
+        new Date(i.fecha).toLocaleDateString('es-AR'),
+        i.cliente,
+        i.metodo,
+        i.metodo === "Transferencia" ? (i.destinatario || "-") : "-",
+        `$${i.monto.toLocaleString('es-AR')}`
+    ]);
+
+    doc.autoTable({
+        startY: 28,
+        head: [['Fecha', 'Cliente', 'Método', 'Destinatario', 'Importe']],
+        body: filas,
+        headStyles: { fillColor: [99, 102, 241] }
+    });
+
+    // =========================
+    // 🟦 HOJA 2 - RESUMEN
+    // =========================
+
+    doc.addPage();
+
+    let totalEfectivo = 0;
+    let totalesTransferencia = {};
+
+    lista.forEach(i => {
+        if (i.metodo === "Efectivo") {
+            totalEfectivo += i.monto;
+        } else if (i.metodo === "Transferencia") {
+            const dest = i.destinatario || "Sin especificar";
+
+            if (!totalesTransferencia[dest]) {
+                totalesTransferencia[dest] = 0;
+            }
+
+            totalesTransferencia[dest] += i.monto;
+        }
+    });
+
+    doc.setFontSize(16);
+    doc.text("Resumen de Ingresos", 14, 15);
+
+    let y = 25;
+
+    // 💵 EFECTIVO
+    doc.setFontSize(11);
+    doc.text(`Total Efectivo: $${totalEfectivo.toLocaleString('es-AR')}`, 14, y);
+    y += 10;
+
+    // 🏦 TRANSFERENCIAS
+    doc.text("Transferencias por destinatario:", 14, y);
+    y += 8;
+
+    Object.entries(totalesTransferencia).forEach(([dest, total]) => {
+        doc.text(`- ${dest}: $${total.toLocaleString('es-AR')}`, 16, y);
+        y += 7;
+    });
+
+    doc.save(`Ingresos_${desde}_${hasta}.pdf`);
+}
+
+
+
+
+
 
 async function actualizarPedidoSeleccionado(pedidosCliente) {
     const pedidoId = Number(document.getElementById("selectPedidoPago").value);
@@ -4353,7 +4758,7 @@ async function guardarPagosPedido() {
                 metodo, 
                 monto, 
                 destinatario, 
-                fecha: new Date().toISOString() 
+                fecha: new Date().toLocaleDateString('sv-SE'), 
             });
         }
     });
@@ -4952,7 +5357,7 @@ async function exportPedidoPDF(pedido) {
             // 💾 Guardar PDF
             // ==============================
             const safeName = nombreCliente.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const fechaArchivo = new Date().toISOString().split('T')[0];
+            const fechaArchivo = new Date().toLocaleDateString('sv-SE');
             doc.save(`Pedido_${safeName}_${fechaArchivo}.pdf`);
         };
 
@@ -6000,16 +6405,16 @@ function verDetallePagosCC(pedido) {
         </div>
 
         <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">
-            <h4 style="margin:0 0 10px 0;">Registrar Nuevo Pago</h4>
-            <input type="number" id="newPagoMonto" placeholder="Monto $" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
-            <select id="newPagoMetodo" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
-                <option value="Efectivo">Efectivo</option>
-                <option value="Transferencia">Transferencia</option>
-            </select>
-            <button onclick="guardarNuevoPagoCC()" style="width:100%; background:#27ae60; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">
-                Guardar Pago
-            </button>
-        </div>
+    <h4 style="margin:0 0 10px 0;">Registrar Nuevo Pago</h4>
+    <input type="date" id="newPagoFecha" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+    
+    <input type="number" id="newPagoMonto" placeholder="Monto $" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+    <select id="newPagoMetodo" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+    </select>
+    <button onclick="guardarNuevoPagoCC()" ...>Guardar Pago</button>
+</div>
 
         <h4>Historial</h4>
         <div style="max-height:150px; overflow-y:auto; border:1px solid #eee;">
@@ -6031,6 +6436,7 @@ function verDetallePagosCC(pedido) {
     </div>`;
 
     openModal(pagosHTML);
+document.getElementById('newPagoFecha').value = new Date().toLocaleDateString('sv-SE');
 }
 
 // Función auxiliar necesaria para el desplegable de transferencia
@@ -6043,65 +6449,133 @@ function toggleDestinatarioCC(val) {
 async function guardarNuevoPagoCC() {
     const montoInput = document.getElementById('newPagoMonto');
     const metodoInput = document.getElementById('newPagoMetodo');
+    const fechaInput = document.getElementById('newPagoFecha'); 
+
     const monto = parseFloat(montoInput.value);
     const metodo = metodoInput.value;
+    
+    // BLINDAJE TOTAL: 
+    // Tomamos el valor del input, y si por alguna razón tiene hora, la cortamos.
+    // Si el input está vacío, generamos la de hoy limpia.
+    let fechaRaw = fechaInput.value || new Date().toISOString();
+    const fechaLimpia = fechaRaw.substring(0, 10); 
 
-    if (!monto || monto <= 0) {
-        alert("Por favor, ingresa un monto válido.");
-        return;
-    }
-
-    if (!pedidoSeleccionado) {
-        alert("Error: No se ha seleccionado ningún pedido.");
-        return;
-    }
+    if (!monto || monto <= 0) return alert("Ingresa un monto válido.");
 
     try {
-        // 1. Preparar el historial
         let historialActual = [];
-        try {
-            if (pedidoSeleccionado.pagos) {
+        if (pedidoSeleccionado.pagos) {
+            // Manejo de errores por si hay datos viejos corruptos
+            try {
                 historialActual = typeof pedidoSeleccionado.pagos === 'string' 
                     ? JSON.parse(pedidoSeleccionado.pagos) 
                     : pedidoSeleccionado.pagos;
-            }
-        } catch (e) { historialActual = []; }
+            } catch(e) { historialActual = []; }
+        }
 
-        // 2. Crear el nuevo registro de pago (CORREGIDO)
-        const nuevoPago = {
-            monto: monto, // Antes decía 'pagos: pagos'
-            metodo: metodo,
-            fecha: new Date().toLocaleString()
-        };
+        // El objeto de historial se mantiene simple como pediste
+        const nuevoPago = { monto, metodo }; 
         const nuevoHistorial = [...historialActual, nuevoPago];
 
-        // 3. Calcular nuevo saldo
         const totalPagado = nuevoHistorial.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
         const nuevoSaldo = Math.max(0, Number(pedidoSeleccionado.total) - totalPagado);
 
-        // 4. Actualizar Supabase (CORREGIDO)
+        // ENVIAR A SUPABASE
         const { error } = await supabase
             .from('pedidos')
             .update({ 
                 pagos: nuevoHistorial, 
-                saldo_pendiente: nuevoSaldo 
+                saldo_pendiente: nuevoSaldo,
+                fecha_pago: fechaLimpia // <--- Enviamos el valor de 10 caracteres
             })
-            .eq('id', pedidoSeleccionado.id); // Antes decía 'pedidoId'
+            .eq('id', pedidoSeleccionado.id);
 
         if (error) throw error;
 
-        alert("Pago registrado correctamente.");
-        closeModal();
+        alert("✅ Pago registrado con éxito.");
         
-        // Refrescar la tabla de CTA CTE para ver los cambios
+        // Limpiar para el próximo uso
+        montoInput.value = "";
+        closeModal();
         if (typeof fetchCuentasCorrientes === 'function') fetchCuentasCorrientes();
 
     } catch (err) {
-        console.error("Error al guardar el pago:", err.message);
-        alert("No se pudo guardar el pago: " + err.message);
+        alert("Error al guardar: " + err.message);
     }
 }
 
+
+
+async function eliminarPagoExistente(index) {
+    if (!pedidoSeleccionado) return;
+    
+    if (!confirm("¿Estás seguro de que deseas eliminar este registro de pago?")) return;
+
+    const scrollYAntes = window.scrollY;
+    const pedidoId = pedidoSeleccionado.id;
+
+    try {
+        let historialActual = [];
+        if (pedidoSeleccionado.pagos) {
+            historialActual = typeof pedidoSeleccionado.pagos === 'string' 
+                ? JSON.parse(pedidoSeleccionado.pagos) 
+                : pedidoSeleccionado.pagos;
+        }
+
+        historialActual.splice(index, 1);
+
+        const totalPagado = historialActual.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+        const nuevoSaldo = Math.max(0, Number(pedidoSeleccionado.total) - totalPagado);
+
+        const { error } = await supabase
+            .from('pedidos')
+            .update({ 
+                pagos: historialActual, 
+                saldo_pendiente: nuevoSaldo 
+            })
+            .eq('id', pedidoSeleccionado.id);
+
+        if (error) throw error;
+
+        // 🔥 actualizar estado local
+        pedidoSeleccionado.pagos = historialActual;
+        pedidoSeleccionado.saldo_pendiente = nuevoSaldo;
+        
+        // 🔁 refrescar modal
+        renderizarListaEdicionPagos(); 
+        
+        // 🔥 refrescar pedido en lista principal
+        actualizarPedidoEnDOM(pedidoSeleccionado);
+
+        // 🔁 otras tablas
+        if (typeof fetchCuentasCorrientes === 'function') fetchCuentasCorrientes();
+
+        // 🔥 restaurar scroll
+        setTimeout(() => {
+            const el = document.querySelector(`[data-id="${pedidoId}"]`);
+            
+            if (el) {
+                el.scrollIntoView({ behavior: "auto", block: "center" });
+            } else {
+                window.scrollTo(0, scrollYAntes);
+            }
+        }, 200);
+
+    } catch (err) {
+        console.error("Error:", err.message);
+        alert("No se pudo eliminar el pago.");
+    }
+}
+
+
+
+function actualizarPedidoEnDOM(pedido) {
+    const contenedor = document.querySelector(`[data-id="${pedido.id}"]`);
+    if (!contenedor) return;
+
+    const nuevoHTML = renderPedido(pedido); // tu render actual
+    contenedor.outerHTML = nuevoHTML;
+}
 
 
 
@@ -6385,7 +6859,7 @@ async function guardarGasto() {
     const monto = parseFloat(document.getElementById('gastoMonto').value);
     const metodo = document.getElementById('gastoMetodo').value;
     const cuenta = (metodo === 'Transferencia') ? document.getElementById('gastoCuenta').value : null;
-    const fecha = new Date().toISOString().split('T')[0];
+    const fecha = new Date().toLocaleDateString('sv-SE');
 
     if (!desc || isNaN(monto)) {
         alert("Por favor complete descripción y monto.");
@@ -6418,66 +6892,6 @@ async function guardarGasto() {
 
 
 
-async function exportarGastosPDF() {
-    const desde = document.getElementById('filtroFechaDesde').value;
-    const hasta = document.getElementById('filtroFechaHasta').value;
-
-    // 1. Consultar con los mismos filtros de la pantalla
-    let query = supabase.from('gastos').select('*').order('fecha', { ascending: true });
-    if (desde) query = query.gte('fecha', desde);
-    if (hasta) query = query.lte('fecha', hasta);
-
-    const { data: gastos, error } = await query;
-
-    if (error || !gastos || gastos.length === 0) {
-        alert("No hay gastos para exportar en el rango seleccionado.");
-        return;
-    }
-
-    // 2. Calcular el total de los gastos filtrados
-    const totalSuma = gastos.reduce((sum, g) => sum + parseFloat(g.monto), 0);
-
-    // 3. Configurar el PDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // Encabezado del PDF
-    doc.setFontSize(18);
-    doc.setTextColor(40);
-    doc.text("Reporte de Gastos de Viaje", 14, 15);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    const periodoTexto = `Periodo: ${desde ? desde : 'Inicio'} hasta ${hasta ? hasta : 'Hoy'}`;
-    doc.text(periodoTexto, 14, 22);
-
-    // 4. Preparar las filas de la tabla
-    const tableBody = gastos.map(g => [
-        new Date(g.fecha).toLocaleDateString('es-AR', {timeZone: 'UTC'}),
-        g.detalle,
-        `$${parseFloat(g.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
-    ]);
-
-    // 5. Generar la tabla con la fila de TOTAL
-    doc.autoTable({
-        startY: 28,
-        head: [['Fecha', 'Detalle / Concepto', 'Monto']],
-        body: tableBody,
-        foot: [[
-            '', 
-            'TOTAL GASTOS FILTRADOS', 
-            `$${totalSuma.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
-        ]],
-        theme: 'striped',
-        headStyles: { fillColor: [99, 102, 241] }, // Color índigo de tu panel
-        footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
-        styles: { fontSize: 9 }
-    });
-
-    // Guardar el archivo
-    const nombreArchivo = `Gastos_${desde || 'total'}_al_${hasta || 'hoy'}.pdf`;
-    doc.save(nombreArchivo);
-}
 
 
 
@@ -6485,7 +6899,7 @@ function abrirModalGasto() {
     document.getElementById('modalGasto').style.display = 'flex';
     
     // Establecer fecha de hoy por defecto en formato YYYY-MM-DD
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('sv-SE');
     document.getElementById('gastoFecha').value = hoy;
     
     // Limpiar los otros campos si es necesario
@@ -6533,6 +6947,94 @@ async function guardarGasto() {
     }
 }
 
+
+
+
+let currentPrepOrder = null;
+let prepItems = [];
+
+async function abrirPrepararPedido(pedidoId) {
+    const { data: p, error } = await supabase.from('pedidos').select('*').eq('id', pedidoId).single();
+    if (error) return;
+
+    currentPrepOrder = p;
+    prepItems = Array.isArray(p.productos) ? [...p.productos] : JSON.parse(p.productos || "[]");
+
+    // Verificar Pagos
+    const pagos = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
+    const totalPagado = pagos.reduce((acc, pg) => acc + Number(pg.monto || 0), 0);
+    const statusText = totalPagado >= p.total ? "✅ PAGADO" : (totalPagado > 0 ? `⚠️ PARCIAL ($${totalPagado})` : "❌ SIN PAGO");
+    
+    document.getElementById('prepOrderPagoStatus').textContent = statusText;
+    document.getElementById('prepOrderTitle').textContent = `Pedido #${p.id} - ${p.cliente}`;
+    
+    renderPrepList();
+    document.getElementById('prepOrderModal').style.display = 'flex';
+}
+
+function renderPrepList() {
+    const container = document.getElementById('prepProductList');
+    let totalAcumulado = 0;
+
+    container.innerHTML = prepItems.map((item, index) => {
+        const subtotal = item.precio * item.cantidad;
+        totalAcumulado += subtotal;
+        return `
+            <div style="display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px dotted #ccc; background:${item.check ? '#f0fdf4' : 'transparent'}">
+                <input type="checkbox" ${item.check ? 'checked' : ''} onchange="prepItems[${index}].check = this.checked; renderPrepList()" style="width:18px; height:18px;">
+                <div style="flex:1; font-size:0.9em;">
+                    <div style="font-weight:bold;">${item.nombre}</div>
+                    <div style="color:#666;">$${item.precio} u.</div>
+                </div>
+                <input type="number" value="${item.cantidad}" onchange="updatePrepQty(${index}, this.value)" style="width:50px; padding:5px; border:1px solid #ddd;">
+                <button onclick="removePrepItem(${index})" style="background:none; border:none; color:red; cursor:pointer;">✕</button>
+            </div>
+        `;
+    }).join("");
+
+    document.getElementById('prepOrderTotal').textContent = `$${totalAcumulado.toLocaleString()}`;
+}
+
+async function searchInPrep(query) {
+    const resDiv = document.getElementById('prepSearchResults');
+    if (query.length < 2) { resDiv.style.display = 'none'; return; }
+
+    const { data } = await supabase.from('promociones').select('*').ilike('nombre', `%${query}%`).limit(5);
+    if (data && data.length > 0) {
+        resDiv.innerHTML = data.map(pr => `
+            <div onclick="addPrepItem('${pr.nombre}', ${pr.precio})" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;">${pr.nombre} - $${pr.precio}</div>
+        `).join("");
+        resDiv.style.display = 'block';
+    }
+}
+
+function addPrepItem(nombre, precio) {
+    prepItems.push({ nombre, precio, cantidad: 1, check: false });
+    document.getElementById('prepSearchInput').value = "";
+    document.getElementById('prepSearchResults').style.display = 'none';
+    renderPrepList();
+}
+
+function updatePrepQty(idx, val) { prepItems[idx].cantidad = Number(val); renderPrepList(); }
+function removePrepItem(idx) { prepItems.splice(idx, 1); renderPrepList(); }
+function closePrepModal() { document.getElementById('prepOrderModal').style.display = 'none'; }
+
+async function savePrepChanges() {
+    const nuevoTotal = prepItems.reduce((acc, i) => acc + (i.precio * i.cantidad), 0);
+    const { error } = await supabase.from('pedidos')
+        .update({ productos: prepItems, total: nuevoTotal })
+        .eq('id', currentPrepOrder.id);
+
+    if (!error) {
+        alert("¡Pedido actualizado!");
+        closePrepModal();
+        if (typeof fetchPedidos === 'function') fetchPedidos(); // Recargar la lista
+    }
+}
+
+
+
+
 </script>
 
 <div id="modalTotalesPorDia" class="modal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
@@ -6546,6 +7048,7 @@ async function guardarGasto() {
             </div>
     </div>
 </div>
+
 
 
 
@@ -6591,7 +7094,7 @@ async function guardarGasto() {
         </div>
 
         <div style="display:flex; gap:12px; margin-top:25px;">
-            <button onclick="cerrarModalPago()" style="flex:1; background:#f1f5f9; color:#475569; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:600;">Cancelar</button>
+            <button onclick="cerrarModalPago()" style="flex:1; background:#f1f5f9; color:#475569; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:600;">Cerrar</button>
             <button onclick="guardarPagosPedido()" style="flex:1; background:#6366f1; color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:600; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);">Guardar Cambios</button>
         </div>
     </div>
@@ -6657,6 +7160,43 @@ async function guardarGasto() {
         </div>
     </div>
 </div>
+
+
+
+
+<div id="prepOrderModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; justify-content:center; align-items:center;">
+    <div style="background:white; width:95%; max-width:700px; height:85vh; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
+        
+        <div style="padding:15px 20px; background:#1e293b; color:white; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h3 id="prepOrderTitle" style="margin:0; font-size:1.1em;">Preparar Pedido</h3>
+                <span id="prepOrderPagoStatus" style="font-size:0.85em; font-weight:normal;"></span>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:0.8em; opacity:0.8;">TOTAL ACTUAL</div>
+                <div id="prepOrderTotal" style="font-size:1.4em; font-weight:bold; color:#10b981;">$0</div>
+            </div>
+        </div>
+
+        <div style="padding:15px; background:#f1f5f9; border-bottom:1px solid #ddd;">
+            <div style="position:relative;">
+                <input type="text" id="prepSearchInput" placeholder="🔍 Agregar producto o promoción..." 
+                    style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc;" 
+                    oninput="searchInPrep(this.value)">
+                <div id="prepSearchResults" style="display:none; position:absolute; top:42px; left:0; width:100%; background:white; border:1px solid #ddd; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:100; max-height:200px; overflow-y:auto;"></div>
+            </div>
+        </div>
+
+        <div id="prepProductList" style="flex:1; overflow-y:auto; padding:10px;">
+            </div>
+
+        <div style="padding:15px; background:#f8fafc; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="closePrepModal()" style="padding:10px 20px; background:#64748b; color:white; border:none; border-radius:6px; cursor:pointer;">Cerrar</button>
+            <button onclick="savePrepChanges()" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+
 
 
 
