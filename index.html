@@ -4317,7 +4317,16 @@ async function unarchiveOrder(orderId) {
 let pagosEdicionActual = []; 
 
 async function abrirModalPago(pedido) {
-    // 1. NORMALIZAR PEDIDO SELECCIONADO (por ID o por Objeto)
+    // --- 1. LIMPIEZA INICIAL DEL MODAL (Para que no se vea el cliente anterior) ---
+    const contenedorPagos = document.getElementById('listaPagos');
+    if (contenedorPagos) contenedorPagos.innerHTML = ""; // Vacía la lista de pagos cargados
+    
+    const totalPagadoText = document.getElementById('totalPagado');
+    const saldoPendienteText = document.getElementById('saldoPendiente');
+    if (totalPagadoText) totalPagadoText.innerText = "0";
+    if (saldoPendienteText) saldoPendienteText.innerText = "0";
+
+    // --- 2. NORMALIZAR PEDIDO SELECCIONADO ---
     if (typeof pedido === 'string' || typeof pedido === 'number') {
         const { data, error } = await supabase.from('pedidos').select('*').eq('id', pedido).single();
         if (error || !data) return alert("No se pudo cargar el pedido");
@@ -4326,10 +4335,17 @@ async function abrirModalPago(pedido) {
         pedidoSeleccionado = pedido;
     }
 
+    // --- 3. MOSTRAR NOMBRE DEL CLIENTE ---
     const nombreCliente = pedidoSeleccionado.cliente;
+    const spanNombre = document.getElementById("pagoClienteNombre");
+    
+    if (spanNombre) {
+        spanNombre.innerText = nombreCliente || "Sin Nombre"; 
+    }
+
     if (!nombreCliente) return alert("El pedido no tiene nombre de cliente");
 
-    // 2. TRAER TODOS LOS PEDIDOS DEL CLIENTE
+    // --- 4. TRAER TODOS LOS PEDIDOS DEL CLIENTE ---
     const { data: pedidosCliente, error: errorPedidos } = await supabase
         .from('pedidos')
         .select('*')
@@ -4337,7 +4353,7 @@ async function abrirModalPago(pedido) {
 
     if (errorPedidos) return alert("Error cargando pedidos del cliente");
 
-    // 3. CARGAR SELECTOR DE PEDIDOS (Ordenados por deuda)
+    // --- 5. CARGAR SELECTOR DE PEDIDOS ---
     const select = document.getElementById("selectPedidoPago");
     if (select) {
         select.innerHTML = "";
@@ -4362,15 +4378,18 @@ async function abrirModalPago(pedido) {
             select.appendChild(option);
         });
 
-        // Configurar el evento de cambio
         select.onchange = async () => {
             const pId = select.value;
             const pEncontrado = pedidosCliente.find(p => p.id == pId);
             pedidoSeleccionado = pEncontrado;
+            // Actualizamos el total mostrado arriba según el pedido seleccionado en el select
+            document.getElementById("totalPedido").innerText = Number(pedidoSeleccionado.total || 0).toFixed(2);
             pagosEdicionActual = Array.isArray(pEncontrado.pagos) ? [...pEncontrado.pagos] : JSON.parse(pEncontrado.pagos || "[]");
             renderizarListaEdicionPagos();
         };
         select.value = pedidoSeleccionado.id;
+        // Actualizamos el total inicial
+        document.getElementById("totalPedido").innerText = Number(pedidoSeleccionado.total || 0).toFixed(2);
     }
 
     // Inicializar historial y mostrar modal
@@ -4379,9 +4398,61 @@ async function abrirModalPago(pedido) {
     
     document.getElementById("modalPago").style.display = "flex";
     
-    // Setear fecha de hoy por defecto en el input de nuevo pago
     if(document.getElementById('newPagoFecha')) {
-document.getElementById('newPagoFecha').value = new Date().toISOString().substring(0, 10);
+        document.getElementById('newPagoFecha').value = new Date().toISOString().substring(0, 10);
+    }
+}
+
+
+
+
+
+async function calcularDeudaTotalCliente(nombreCliente) {
+    if (!nombreCliente) return;
+
+    try {
+        // Traemos todos los pedidos del cliente para sumar sus saldos
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select('total, pagos')
+            .eq('cliente', nombreCliente);
+
+        if (error) throw error;
+
+        let deudaTotal = 0;
+
+        if (pedidos && pedidos.length > 0) {
+            pedidos.forEach(p => {
+                const totalPedido = parseFloat(p.total) || 0;
+                
+                // Normalizamos los pagos: pueden venir como string JSON o como Array
+                let pagosArray = [];
+                try {
+                    pagosArray = Array.isArray(p.pagos) 
+                        ? p.pagos 
+                        : JSON.parse(p.pagos || "[]");
+                } catch (e) {
+                    pagosArray = [];
+                }
+
+                const pagadoEnPedido = pagosArray.reduce((acc, pago) => acc + (parseFloat(pago.monto) || 0), 0);
+                
+                // Sumamos la diferencia (saldo de cada pedido)
+                deudaTotal += (totalPedido - pagadoEnPedido);
+            });
+        }
+
+        const elSaldoTotal = document.getElementById('saldoTotalCliente');
+        if (elSaldoTotal) {
+            // Mostramos el total formateado. Si es menor a 0, mostramos 0.
+            const totalFinal = Math.max(0, deudaTotal);
+            elSaldoTotal.innerText = totalFinal.toLocaleString('es-AR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            });
+        }
+    } catch (err) {
+        console.error("Error al calcular deuda global:", err);
     }
 }
 
@@ -4428,7 +4499,17 @@ function renderizarListaEdicionPagos() {
         `;
         contenedor.appendChild(item);
     });
+
+const totalPedido = Number(pedidoSeleccionado.total || 0);
+    const sumaPagosActuales = pagosEdicionActual.reduce((acc, p) => acc + Number(p.monto || 0), 0);
+    
+    document.getElementById('totalPagado').innerText = sumaPagosActuales.toFixed(2);
+    document.getElementById('saldoPendiente').innerText = (totalPedido - sumaPagosActuales).toFixed(2);
+
+    // LLAMADA A LA FUNCIÓN GLOBAL (Igual que en Cta Cte)
+    calcularDeudaTotalCliente(pedidoSeleccionado.cliente);
 }
+
 
 
 
@@ -4739,8 +4820,27 @@ function recalcularPagos() {
 }
 
 function agregarMedioPago() {
-    crearFilaPago();
+    const contenedor = document.getElementById('listaPagos');
+    const div = document.createElement('div');
+    div.className = "fila-pago"; // Puedes darle estilos aquí
+    div.style = "display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; margin-bottom:10px; align-items:center;";
+    
+    div.innerHTML = `
+        <select class="metodo-pago" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Tarjeta">Tarjeta</option>
+        </select>
+        <input type="number" class="monto-pago" placeholder="Monto" oninput="calcularTotalesPago()" 
+               style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+        <button onclick="this.parentElement.remove(); calcularTotalesPago();" 
+                style="background:none; border:none; color:#f43f5e; cursor:pointer;">✕</button>
+    `;
+    
+    contenedor.appendChild(div);
 }
+
+
 
 async function guardarPagosPedido() {
     if (!pedidoSeleccionado || !pedidoSeleccionado.id) return alert("ID de pedido no encontrado");
@@ -4748,10 +4848,22 @@ async function guardarPagosPedido() {
     const lista = document.getElementById("listaPagos");
     const nuevosPagosEntrantes = [];
 
-    lista.querySelectorAll(".fila-pago").forEach(fila => {
-        const metodo = fila.querySelector("select").value;
-        const monto = parseFloat(fila.querySelector('input[type="number"]').value) || 0;
-        const destinatario = fila.querySelector('input[type="text"]').value;
+    // Seleccionamos las filas
+    const filas = lista.querySelectorAll(".fila-pago");
+
+    filas.forEach(fila => {
+        // Usamos selectores más específicos y validamos que existan antes de leer .value
+        const comboMetodo = fila.querySelector("select");
+        const inputMonto = fila.querySelector('input[type="number"]');
+        const inputDestino = fila.querySelector('input[type="text"]');
+
+        // VALIDACIÓN: Si alguno de los elementos no existe en esta fila, saltamos a la siguiente
+        if (!comboMetodo || !inputMonto) return;
+
+        const metodo = comboMetodo.value;
+        const monto = parseFloat(inputMonto.value) || 0;
+        // Si el input de texto no existe (destinatario), usamos un string vacío
+        const destinatario = inputDestino ? inputDestino.value : "";
 
         if (monto > 0) {
             nuevosPagosEntrantes.push({ 
@@ -4766,7 +4878,6 @@ async function guardarPagosPedido() {
     if (nuevosPagosEntrantes.length === 0) return alert("Ingresá un monto válido");
 
     try {
-        // 1. Obtener pagos actuales directamente de la DB para evitar desfases
         const { data: pedidoActual, error: errFetch } = await supabase
             .from('pedidos')
             .select('pagos, total')
@@ -4776,15 +4887,10 @@ async function guardarPagosPedido() {
         if (errFetch) throw errFetch;
 
         let pagosHistoricos = Array.isArray(pedidoActual.pagos) ? pedidoActual.pagos : JSON.parse(pedidoActual.pagos || "[]");
-
-        // 2. Unir pagos antiguos con los nuevos
         const todosLosPagos = [...pagosHistoricos, ...nuevosPagosEntrantes];
-
-        // 3. Calcular nuevo saldo_pendiente
         const totalPagado = todosLosPagos.reduce((acc, p) => acc + Number(p.monto), 0);
         const saldoFinal = Math.max(0, Number(pedidoActual.total) - totalPagado);
 
-        // 4. Actualizar el pedido con el nuevo array de pagos y el saldo
         const { error: errUpdate } = await supabase
             .from("pedidos")
             .update({
@@ -4796,18 +4902,26 @@ async function guardarPagosPedido() {
         if (errUpdate) throw errUpdate;
 
         alert("✅ Pago registrado y saldo actualizado");
+
+        // --- LIMPIEZA TOTAL DEL MODAL ---
+        document.getElementById('listaPagos').innerHTML = "";
+        document.getElementById('pagoClienteNombre').innerText = "-";
+        document.getElementById('totalPedido').innerText = "0";
+        if(document.getElementById('totalPagado')) document.getElementById('totalPagado').innerText = "0";
+        if(document.getElementById('saldoPendiente')) document.getElementById('saldoPendiente').innerText = "0";
+        
         cerrarModalPago();
 
-        // Refrescar las tablas
+        // Refrescar datos según la vista donde estés
         if (typeof fetchOrders === 'function') await fetchOrders();
         if (typeof fetchCuentasCorrientes === 'function') await fetchCuentasCorrientes();
+        if (typeof cargarPedidos === 'function') await cargarPedidos();
 
     } catch (err) {
-        console.error(err);
+        console.error("Error en guardarPagosPedido:", err);
         alert("Error: " + err.message);
     }
 }
-
 
 function cerrarModalPago() {
     document.getElementById("modalPago").style.display = "none";
@@ -6508,7 +6622,6 @@ async function guardarNuevoPagoCC() {
 
 async function eliminarPagoExistente(index) {
     if (!pedidoSeleccionado) return;
-    
     if (!confirm("¿Estás seguro de que deseas eliminar este registro de pago?")) return;
 
     const scrollYAntes = window.scrollY;
@@ -6537,35 +6650,34 @@ async function eliminarPagoExistente(index) {
 
         if (error) throw error;
 
-        // 🔥 actualizar estado local
+        // Actualizar estado local
         pedidoSeleccionado.pagos = historialActual;
         pedidoSeleccionado.saldo_pendiente = nuevoSaldo;
         
-        // 🔁 refrescar modal
-        renderizarListaEdicionPagos(); 
-        
-        // 🔥 refrescar pedido en lista principal
-        actualizarPedidoEnDOM(pedidoSeleccionado);
+        // --- CAMBIOS SOLICITADOS ---
+        alert("✅ Pago eliminado correctamente"); // Confirmación de éxito
 
-        // 🔁 otras tablas
+   pedidoSeleccionado.pagos = historialActual;
+        renderizarListaEdicionPagos(); // Esto actualizará el saldo restante en el modal
+        actualizarDeudaHistoricaCliente(pedidoSeleccionado.cliente); // Actualizar deuda total
+   renderizarListaEdicionPagos();
+        
+        if (typeof actualizarPedidoEnDOM === 'function') actualizarPedidoEnDOM(pedidoSeleccionado);
         if (typeof fetchCuentasCorrientes === 'function') fetchCuentasCorrientes();
 
-        // 🔥 restaurar scroll
+        // Restaurar scroll
         setTimeout(() => {
             const el = document.querySelector(`[data-id="${pedidoId}"]`);
-            
-            if (el) {
-                el.scrollIntoView({ behavior: "auto", block: "center" });
-            } else {
-                window.scrollTo(0, scrollYAntes);
-            }
+            if (el) el.scrollIntoView({ behavior: "auto", block: "center" });
+            else window.scrollTo(0, scrollYAntes);
         }, 200);
 
     } catch (err) {
         console.error("Error:", err.message);
-        alert("No se pudo eliminar el pago.");
+        alert("No se pudo eliminar el pago: " + err.message);
     }
 }
+
 
 
 
@@ -6687,6 +6799,21 @@ async function cargarCategoriasEnSelects() {
 function calcularTotalPagado(pagos) {
     if (!pagos || !Array.isArray(pagos)) return 0;
     return pagos.reduce((acc, pago) => acc + (parseFloat(pago.monto) || 0), 0);
+}
+
+
+
+function calcularTotalesPago() {
+    const totalPedido = parseFloat(document.getElementById('totalPedido').innerText) || 0;
+    const montos = document.querySelectorAll('.monto-pago');
+    let totalInformado = 0;
+
+    montos.forEach(input => {
+        totalInformado += parseFloat(input.value) || 0;
+    });
+
+    document.getElementById('totalPagado').innerText = totalInformado.toLocaleString();
+    document.getElementById('saldoPendiente').innerText = (totalPedido - totalInformado).toLocaleString();
 }
 
 
@@ -7083,15 +7210,20 @@ async function savePrepChanges() {
         </button>
 
         <div style="background:#f1f5f9; padding:15px; border-radius:12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                <span style="color:#64748b;">Total Informado:</span>
-                <span style="color:#10b981; font-weight:bold;">$<span id="totalPagado">0</span></span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <span style="color:#64748b;">Saldo Restante:</span>
-                <span style="color:#f43f5e; font-weight:bold;">$<span id="saldoPendiente">0</span></span>
-            </div>
-        </div>
+    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:#64748b;">Total Informado (Pago actual):</span>
+        <span style="color:#10b981; font-weight:bold;">$<span id="totalPagado">0</span></span>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:#64748b;">Saldo Restante (Este Pedido):</span>
+        <span style="color:#f43f5e; font-weight:bold;">$<span id="saldoPendiente">0</span></span>
+    </div>
+    
+    <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:2px solid #e2e8f0;">
+        <span style="color:#1e293b; font-weight:bold;">DEUDA TOTAL CLIENTE:</span>
+        <span style="color:#1e293b; font-weight:bold; font-size:1.1rem;">$<span id="saldoTotalCliente">0</span></span>
+    </div>
+</div>
 
         <div style="display:flex; gap:12px; margin-top:25px;">
             <button onclick="cerrarModalPago()" style="flex:1; background:#f1f5f9; color:#475569; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:600;">Cerrar</button>
