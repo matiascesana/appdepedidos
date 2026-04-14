@@ -7039,40 +7039,6 @@ function toggleCuentasGasto() {
     document.getElementById('divCuentaGasto').style.display = (metodo === 'Transferencia') ? 'block' : 'none';
 }
 
-async function guardarGasto() {
-    const desc = document.getElementById('gastoDesc').value.trim();
-    const monto = parseFloat(document.getElementById('gastoMonto').value);
-    const fechaSeleccionada = document.getElementById('gastoFecha').value; // <--- Nueva línea
-
-    if (!desc || isNaN(monto) || !fechaSeleccionada) {
-        alert("Por favor complete descripción, monto y fecha.");
-        return;
-    }
-
-    try {
-        const { data, error } = await supabase
-            .from('gastos')
-            .insert([{ 
-                detalle: desc, 
-                monto: monto, 
-                fecha: fechaSeleccionada // Usa la fecha del input
-            }]);
-
-        if (error) throw error;
-
-        cerrarModalGasto();
-        
-        // Refrescar la lista automáticamente con los filtros actuales
-        if (typeof renderizarListaGastos === 'function') {
-            await renderizarListaGastos(); 
-        }
-        
-        if (typeof showToast === 'function') showToast("✅ Gasto guardado");
-    } catch (error) {
-        console.error("Error al guardar gasto:", error);
-        alert("Error al guardar en la base de datos");
-    }
-}
 
 
 
