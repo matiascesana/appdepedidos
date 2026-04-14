@@ -1450,15 +1450,35 @@ async function renderizarListaGastos() {
         }
 
         contenedor.innerHTML += `
-            <div style="padding:10px; border-bottom:1px solid #eee;">
-                <b>${new Date(g.fecha).toLocaleDateString('es-AR')}</b> - ${g.detalle}
-                <br>
-                <small>${metodo}</small>
-                <div style="float:right; font-weight:bold;">
-                    $${parseFloat(g.monto).toLocaleString('es-AR')}
-                </div>
+    <div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        
+        <div>
+            <b>${g.fecha.split('-').reverse().join('/')}</b> - ${g.detalle}
+            <br>
+            <small>${metodo}</small>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="font-weight:bold;">
+                $${parseFloat(g.monto).toLocaleString('es-AR')}
             </div>
-        `;
+
+            <button 
+                onclick="eliminarGasto(${g.id})"
+                style="
+                    background:#ef4444;
+                    color:white;
+                    border:none;
+                    padding:6px 10px;
+                    border-radius:6px;
+                    cursor:pointer;
+                ">
+                🗑️
+            </button>
+        </div>
+
+    </div>
+`;
     });
 
     document.getElementById('totalGastosTexto').textContent =
@@ -4317,14 +4337,28 @@ async function unarchiveOrder(orderId) {
 let pagosEdicionActual = []; 
 
 async function abrirModalPago(pedido) {
-    // --- 1. LIMPIEZA INICIAL DEL MODAL (Para que no se vea el cliente anterior) ---
+    // --- 1. LIMPIEZA INICIAL DEL MODAL ---
     const contenedorPagos = document.getElementById('listaPagos');
-    if (contenedorPagos) contenedorPagos.innerHTML = ""; // Vacía la lista de pagos cargados
+    if (contenedorPagos) contenedorPagos.innerHTML = "";
     
     const totalPagadoText = document.getElementById('totalPagado');
     const saldoPendienteText = document.getElementById('saldoPendiente');
     if (totalPagadoText) totalPagadoText.innerText = "0";
     if (saldoPendienteText) saldoPendienteText.innerText = "0";
+
+    // --- NUEVO: REINICIAR CAMPOS DE PAGO Y OCULTAR DESTINATARIO ---
+    if (document.getElementById('newPagoMonto')) document.getElementById('newPagoMonto').value = "";
+    
+    // Reiniciamos el selector al ID único y el valor a Efectivo
+    if (document.getElementById('newPagoMetodoUnico')) {
+        document.getElementById('newPagoMetodoUnico').value = "Efectivo";
+    }
+    
+    // OCULTAR el campo de destinatario usando los nuevos IDs únicos
+    const wrapperDest = document.getElementById('wrapperDestinatarioPagoUnico');
+    const inputDest = document.getElementById('newPagoDestinatarioUnico');
+    if (wrapperDest) wrapperDest.style.display = "none"; 
+    if (inputDest) inputDest.value = "";
 
     // --- 2. NORMALIZAR PEDIDO SELECCIONADO ---
     if (typeof pedido === 'string' || typeof pedido === 'number') {
@@ -4336,20 +4370,18 @@ async function abrirModalPago(pedido) {
     }
 
     // --- 3. MOSTRAR NOMBRE DEL CLIENTE ---
-    const nombreCliente = pedidoSeleccionado.cliente;
     const spanNombre = document.getElementById("pagoClienteNombre");
-    
     if (spanNombre) {
-        spanNombre.innerText = nombreCliente || "Sin Nombre"; 
+        spanNombre.innerText = pedidoSeleccionado.cliente || "Sin Nombre"; 
     }
 
-    if (!nombreCliente) return alert("El pedido no tiene nombre de cliente");
+    if (!pedidoSeleccionado.cliente) return alert("El pedido no tiene nombre de cliente");
 
     // --- 4. TRAER TODOS LOS PEDIDOS DEL CLIENTE ---
     const { data: pedidosCliente, error: errorPedidos } = await supabase
         .from('pedidos')
         .select('*')
-        .eq('cliente', nombreCliente);
+        .eq('cliente', pedidoSeleccionado.cliente);
 
     if (errorPedidos) return alert("Error cargando pedidos del cliente");
 
@@ -4357,11 +4389,13 @@ async function abrirModalPago(pedido) {
     const select = document.getElementById("selectPedidoPago");
     if (select) {
         select.innerHTML = "";
+        
+        // Ordenar pedidos por saldo deudor
         pedidosCliente.sort((a, b) => {
             const getSaldo = (p) => {
                 const total = Number(p.total || 0);
                 const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
-                const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+                const pagado = pagosArray.reduce((acc, p) => acc + Number(p.monto || 0), 0);
                 return total - pagado;
             };
             return getSaldo(b) - getSaldo(a);
@@ -4370,7 +4404,7 @@ async function abrirModalPago(pedido) {
         pedidosCliente.forEach(p => {
             const total = Number(p.total || 0);
             const pagosArray = Array.isArray(p.pagos) ? p.pagos : JSON.parse(p.pagos || "[]");
-            const pagado = pagosArray.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+            const pagado = pagosArray.reduce((acc, p) => acc + Number(p.monto || 0), 0);
             const saldo = total - pagado;
             const option = document.createElement("option");
             option.value = p.id;
@@ -4382,13 +4416,11 @@ async function abrirModalPago(pedido) {
             const pId = select.value;
             const pEncontrado = pedidosCliente.find(p => p.id == pId);
             pedidoSeleccionado = pEncontrado;
-            // Actualizamos el total mostrado arriba según el pedido seleccionado en el select
             document.getElementById("totalPedido").innerText = Number(pedidoSeleccionado.total || 0).toFixed(2);
             pagosEdicionActual = Array.isArray(pEncontrado.pagos) ? [...pEncontrado.pagos] : JSON.parse(pEncontrado.pagos || "[]");
             renderizarListaEdicionPagos();
         };
         select.value = pedidoSeleccionado.id;
-        // Actualizamos el total inicial
         document.getElementById("totalPedido").innerText = Number(pedidoSeleccionado.total || 0).toFixed(2);
     }
 
@@ -4398,11 +4430,11 @@ async function abrirModalPago(pedido) {
     
     document.getElementById("modalPago").style.display = "flex";
     
+    // Fecha por defecto hoy
     if(document.getElementById('newPagoFecha')) {
         document.getElementById('newPagoFecha').value = new Date().toISOString().substring(0, 10);
     }
 }
-
 
 
 
@@ -4822,25 +4854,42 @@ function recalcularPagos() {
 function agregarMedioPago() {
     const contenedor = document.getElementById('listaPagos');
     const div = document.createElement('div');
-    div.className = "fila-pago"; // Puedes darle estilos aquí
-    div.style = "display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; margin-bottom:10px; align-items:center;";
-    
+
+    div.className = "fila-pago";
+    div.style = "display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:10px; margin-bottom:10px; align-items:center;";
+
     div.innerHTML = `
-        <select class="metodo-pago" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+        <select class="metodo-pago" 
+            onchange="toggleDestinatarioFila(this)"
+            style="padding:8px; border-radius:8px; border:1px solid #ddd;">
             <option value="Efectivo">Efectivo</option>
             <option value="Transferencia">Transferencia</option>
-            <option value="Tarjeta">Tarjeta</option>
         </select>
-        <input type="number" class="monto-pago" placeholder="Monto" oninput="calcularTotalesPago()" 
-               style="padding:8px; border-radius:8px; border:1px solid #ddd;">
-        <button onclick="this.parentElement.remove(); calcularTotalesPago();" 
-                style="background:none; border:none; color:#f43f5e; cursor:pointer;">✕</button>
+
+        <input type="number" class="monto-pago" placeholder="Monto"
+            style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+
+        <input type="text" class="destinatario-pago" placeholder="Destinatario"
+            style="padding:8px; border-radius:8px; border:1px solid #ddd; display:none;">
+
+        <button onclick="this.parentElement.remove();" 
+            style="background:none; border:none; color:#f43f5e; cursor:pointer;">✕</button>
     `;
-    
+
     contenedor.appendChild(div);
 }
 
+function toggleDestinatarioFila(select) {
+    const fila = select.parentElement;
+    const inputDest = fila.querySelector('.destinatario-pago');
 
+    if (select.value === 'Transferencia') {
+        inputDest.style.display = 'block';
+    } else {
+        inputDest.style.display = 'none';
+        inputDest.value = "";
+    }
+}
 
 async function guardarPagosPedido() {
     if (!pedidoSeleccionado || !pedidoSeleccionado.id) return alert("ID de pedido no encontrado");
@@ -6483,6 +6532,10 @@ async function fetchCuentasCorrientes() {
 
 
 
+
+
+
+
 function verDetallePagosCC(pedido) {
     // 1. Validar que recibimos un pedido
     if (!pedido || !pedido.id) {
@@ -6522,13 +6575,22 @@ function verDetallePagosCC(pedido) {
     <h4 style="margin:0 0 10px 0;">Registrar Nuevo Pago</h4>
     <input type="date" id="newPagoFecha" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
     
-    <input type="number" id="newPagoMonto" placeholder="Monto $" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
-    <select id="newPagoMetodo" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
-        <option value="Efectivo">Efectivo</option>
-        <option value="Transferencia">Transferencia</option>
-    </select>
-    <button onclick="guardarNuevoPagoCC()" ...>Guardar Pago</button>
+   <input type="number" id="newPagoMonto" placeholder="Monto $" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+
+<select id="newPagoMetodoUnico" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;" 
+        onchange="document.getElementById('wrapperDestinatarioPagoUnico').style.display = (this.value === 'Transferencia') ? 'block' : 'none'">
+    <option value="Efectivo">Efectivo</option>
+    <option value="Transferencia">Transferencia</option>
+</select>
+
+<div id="wrapperDestinatarioPagoUnico" style="display: none; margin-bottom: 10px;">
+    <input type="text" id="newPagoDestinatarioUnico" placeholder="Nombre del destinatario / Cuenta" 
+           style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
 </div>
+
+<input type="date" id="newPagoFecha" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+
+<button onclick="guardarNuevoPagoCC()" style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:4px; cursor:pointer;">Guardar Pago</button>
 
         <h4>Historial</h4>
         <div style="max-height:150px; overflow-y:auto; border:1px solid #eee;">
@@ -6562,15 +6624,16 @@ function toggleDestinatarioCC(val) {
 
 async function guardarNuevoPagoCC() {
     const montoInput = document.getElementById('newPagoMonto');
-    const metodoInput = document.getElementById('newPagoMetodo');
+    const metodoInput = document.getElementById('newPagoMetodoUnico');
     const fechaInput = document.getElementById('newPagoFecha'); 
+    const destinatarioInput = document.getElementById('newPagoDestinatarioUnico');
 
     const monto = parseFloat(montoInput.value);
     const metodo = metodoInput.value;
-    
-    // BLINDAJE TOTAL: 
-    // Tomamos el valor del input, y si por alguna razón tiene hora, la cortamos.
-    // Si el input está vacío, generamos la de hoy limpia.
+    // Capturamos el valor escrito (si es transferencia)
+    const destinatario = (metodo === 'Transferencia' && destinatarioInput) ? destinatarioInput.value : "";
+
+    // BLINDAJE DE FECHA: 
     let fechaRaw = fechaInput.value || new Date().toISOString();
     const fechaLimpia = fechaRaw.substring(0, 10); 
 
@@ -6579,7 +6642,6 @@ async function guardarNuevoPagoCC() {
     try {
         let historialActual = [];
         if (pedidoSeleccionado.pagos) {
-            // Manejo de errores por si hay datos viejos corruptos
             try {
                 historialActual = typeof pedidoSeleccionado.pagos === 'string' 
                     ? JSON.parse(pedidoSeleccionado.pagos) 
@@ -6587,8 +6649,14 @@ async function guardarNuevoPagoCC() {
             } catch(e) { historialActual = []; }
         }
 
-        // El objeto de historial se mantiene simple como pediste
-        const nuevoPago = { monto, metodo }; 
+        // ACTUALIZADO: El objeto ahora incluye el destinatario capturado
+        const nuevoPago = { 
+            monto, 
+            metodo, 
+            destinatario: destinatario,
+            fecha: fechaLimpia 
+        }; 
+        
         const nuevoHistorial = [...historialActual, nuevoPago];
 
         const totalPagado = nuevoHistorial.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
@@ -6600,7 +6668,7 @@ async function guardarNuevoPagoCC() {
             .update({ 
                 pagos: nuevoHistorial, 
                 saldo_pendiente: nuevoSaldo,
-                fecha_pago: fechaLimpia // <--- Enviamos el valor de 10 caracteres
+                fecha_pago: fechaLimpia 
             })
             .eq('id', pedidoSeleccionado.id);
 
@@ -6608,8 +6676,10 @@ async function guardarNuevoPagoCC() {
 
         alert("✅ Pago registrado con éxito.");
         
-        // Limpiar para el próximo uso
+        // Limpiar campos usando los IDs nuevos
         montoInput.value = "";
+        if (destinatarioInput) destinatarioInput.value = "";
+        
         closeModal();
         if (typeof fetchCuentasCorrientes === 'function') fetchCuentasCorrientes();
 
@@ -6617,6 +6687,7 @@ async function guardarNuevoPagoCC() {
         alert("Error al guardar: " + err.message);
     }
 }
+
 
 
 
@@ -7007,7 +7078,7 @@ async function guardarGasto() {
         if (error) throw error;
 
         cerrarModalGasto();
-        await cargarGastosDesdeSupabase(); // Recarga el total en la parte superior
+        await renderizarListaGastos(); // Recarga el total en la parte superior
         if (typeof showToast === 'function') showToast("✅ Gasto registrado");
         
     } catch (error) {
