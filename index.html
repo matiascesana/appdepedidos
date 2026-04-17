@@ -5484,20 +5484,34 @@ async function exportPedidoPDF(pedido) {
             // ==============================
             // 🧮 Totales
             // ==============================
-            const totalX = pageWidth - marginX;
+           const totalX = pageWidth - marginX;
 
-            finalY += 10;
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text(`Total del Pedido: $${totalSinDescuento.toFixed(2)}`, totalX, finalY, { align: "right" });
-            finalY += 8;
-            if (descuentoGeneral > 0) {
-                doc.text(`Descuento general (${descuentoGeneral.toFixed(2)}%): -$${(totalSinDescuento * descuentoGeneral / 100).toFixed(2)}`, totalX, finalY, { align: "right" });
-                finalY += 8;
-            }
-            doc.text(`Pagado: $${totalPagos.toFixed(2)}`, totalX, finalY, { align: "right" });
-            finalY += 8;
-            doc.text(`Saldo pendiente: $${saldoPendiente.toFixed(2)}`, totalX, finalY, { align: "right" });
+// ✅ asegurar número
+const descuento = Number(descuentoGeneral) || 0;
+
+finalY += 10;
+doc.setFontSize(14);
+doc.setFont("helvetica", "bold");
+
+doc.text(`Total del Pedido: $${Number(totalSinDescuento || 0).toFixed(2)}`, totalX, finalY, { align: "right" });
+
+finalY += 8;
+
+if (descuento > 0) {
+    doc.text(
+        `Descuento general (${descuento.toFixed(2)}%): -$${(Number(totalSinDescuento || 0) * descuento / 100).toFixed(2)}`,
+        totalX,
+        finalY,
+        { align: "right" }
+    );
+    finalY += 8;
+}
+
+doc.text(`Pagado: $${Number(totalPagos || 0).toFixed(2)}`, totalX, finalY, { align: "right" });
+
+finalY += 8;
+
+doc.text(`Saldo pendiente: $${Number(saldoPendiente || 0).toFixed(2)}`, totalX, finalY, { align: "right" });
 
             // ==============================
             // 💬 Líneas finales con descuentos
