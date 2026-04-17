@@ -4671,7 +4671,7 @@ async function cargarReporteIngresos() {
 
             contenedor.innerHTML += `
                 <div style="padding:10px; border-bottom:1px solid #eee;">
-                    <b>${new Date(i.fecha).toLocaleDateString('es-AR')}</b> - ${i.cliente}
+                    <b>${parseFechaLocal(i.fecha).toLocaleDateString('es-AR')}</b> - ${i.cliente}
                     <br>
                     <small>${metodoTexto}</small>
                     <div style="float:right; font-weight:bold; color:#10b981;">
@@ -4729,7 +4729,7 @@ function exportarIngresosPDF() {
     doc.text(`Filtro: ${desde} al ${hasta}`, 14, 22);
 
     const filas = lista.map(i => [
-        new Date(i.fecha).toLocaleDateString('es-AR'),
+        parseFechaLocal(i.fecha).toLocaleDateString('es-AR'),
         i.cliente,
         i.metodo,
         i.metodo === "Transferencia" ? (i.destinatario || "-") : "-",
