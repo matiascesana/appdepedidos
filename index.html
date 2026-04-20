@@ -130,8 +130,46 @@ body {
         .card-actions .edit-btn:hover { background: #2980b9; }
         .card-actions .delete-btn { background: var(--accent); color: #fff; }
         .card-actions .delete-btn:hover { background: #e8434f; }
-        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); justify-content: center; align-items: center; z-index: 9999; }
-        #modalInner { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 1100px; max-height: 90%; overflow-y: auto; }
+       #modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; /* Asegura el ancho total de la ventana */
+    height: 100vh; 
+    background: rgba(0, 0, 0, 0.6); 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 99999 !important; /* Aumentado para superar sidebars */
+    backdrop-filter: blur(2px); /* Efecto moderno para separar del fondo */
+}
+
+#modalInner { 
+    background: white; 
+    padding: 15px; /* Un poco menos de padding en móviles */
+    border-radius: 12px; 
+    width: 95%; 
+    max-width: 1100px; 
+    max-height: 92%; 
+    overflow-y: auto; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* Ajuste para que las tablas no rompan el diseño en cel */
+@media (max-width: 768px) {
+    #modalInner {
+        padding: 10px;
+        width: 98%;
+    }
+    /* Estilo para que las celdas de la tabla permitan saltos de línea */
+    #modalInner td {
+        white-space: normal !important; 
+        word-wrap: break-word;
+        font-size: 13px; /* Texto un poco más pequeño en móviles */
+    }
+}
         input, select, button { margin-bottom: 8px; padding: 6px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; }
         button[type=submit] { background: var(--accent); color: #fff; border: none; cursor: pointer; }
         button[type=submit]:hover { background: #e8434f; }
@@ -1036,47 +1074,8 @@ button[onclick*="delete"] {
 
 
 
-        <div id="pedidos" class="section">
-            <h2>Pedidos</h2>
-<div id="totalesPedidosBox" style="margin-bottom:15px;"></div>
-            <form id="pedidoForm" onsubmit="return false;" 
-      style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-start;">
-<!-- Cliente: más largo -->
-    <div style="width:40%;" min-width:50px; display:flex; flex-direction:column;">
-        <label>Cliente</label>
-        <input id="pedidoCliente" type="text" placeholder="Nombre cliente" style="width:500px;" /> <div>
-	</div>
-<!-- DNI -->
-	<div style="width:30%; min-width:180px; display:flex; flex-direction:column;">
-  <label>DNI</label>
-  <input id="pedidoDni" type="text" placeholder="Documento del cliente" style="width:500px;" />
-</div>
-<!-- Localidad -->
-    	<div style="width:30%;" min-width:180px; display:flex; flex-direction:column;">
-        <label>Localidad</label>
-        <select id="pedidoLocalidad" style="width:500px;"></select> <div>
-	</div>
-<!-- Seleccionar Productos -->
-    	<div style="flex:1; min-width:180px; display:flex; flex-direction:column; justify-content:flex-start;">
-        <label>Productos</label>
-        <button type="button" id="selectProductsBtn" 
-        style="width:300px; background-color:#4CAF50; color:white; border:none; padding:8px 0; border-radius:4px; cursor:pointer;">
-        Seleccionar Productos
-        </button> <div>
-<!-- Productos seleccionados debajo -->
-	<div style="width:100%; margin-top:6px;">
-        <div id="selectedProductsContainer" class="small-muted">No hay productos seleccionados</div>
-</div>
-    	</div>
-
-	<div class="button-group">
-	<button type="button" id="addOrderBtn" class="button button-primary">
-        + Confirmar Pedido
-    	</button>
-    	</div>
-    	</div>
-	</div>	
-<div id="pedidosContenedorLista" class="tab-content" data-section="pedidos">
+        
+<section id="pedidos" class="section">
 <h2>Pedidos Activos</h2>
 
 <div style="margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -3233,191 +3232,193 @@ function confirmProducts(){
 
 
 /* ========== MODAL DE SELECCIÓN DE PRODUCTOS ========== */
-document.getElementById('selectProductsBtn').addEventListener('click', async ()=>{
-    const { data: categoriasData } = await supabase.from('categorias').select('*').order('id');
-    const { data: promos } = await supabase.from('promociones').select('*').order('id'); // Consulta directa
-    
-    function renderFilteredPromos(categoryId = "") {
-    // Guarda el estado actual antes de redibujar
-    const modalInner = document.getElementById('modalInner');
-    if (modalInner.querySelector('table')) {
-        updateSelectedProductsFromModal();
-    }
+const selectProductsBtn = document.getElementById('selectProductsBtn');
 
-    let filteredPromos = (!categoryId)
-        ? promos
-        : promos.filter(p => String(p.categoria_id) === String(categoryId));
+if (selectProductsBtn) {
+    selectProductsBtn.addEventListener('click', async () => {
+        const { data: categoriasData } = await supabase.from('categorias').select('*').order('id');
+        const { data: promos } = await supabase.from('promociones').select('*').order('id'); // Consulta directa
+        
+        function renderFilteredPromos(categoryId = "") {
+        // Guarda el estado actual antes de redibujar
+        const modalInner = document.getElementById('modalInner');
+        if (modalInner.querySelector('table')) {
+            updateSelectedProductsFromModal();
+        }
 
-    let html = `
-        <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            background:#f9fafb;
-            padding:16px 22px;
-            border-bottom:1px solid #ddd;
-            border-radius:12px 12px 0 0;
-        ">
-            <button id="closeModalBtn" 
-                style="
-                    background:none;
-                    border:none;
-                    color:#555;
-                    font-size:18px;
-                    font-weight:bold;
-                    cursor:pointer;
-                    transition:0.2s;
-                "
-                onmouseover="this.style.color='#000'"
-                onmouseout="this.style.color='#555'"
-            >
-                ❌ Cerrar
-            </button>
+        let filteredPromos = (!categoryId)
+            ? promos
+            : promos.filter(p => String(p.categoria_id) === String(categoryId));
 
-            <h3 style="margin:0;font-size:20px;font-weight:600;color:#2c3e50;text-align:center;flex:1;">
-                🛍️ Seleccionar Productos
-            </h3>
-
-            <button onclick="confirmProducts()" 
-                style="
-                    background:#3498db;
-                    color:#fff;
-                    border:none;
-                    padding:10px 22px;
-                    border-radius:8px;
-                    font-size:15px;
-                    font-weight:600;
-                    cursor:pointer;
-                    transition:0.2s;
-                "
-                onmouseover="this.style.background='#2980b9'"
-                onmouseout="this.style.background='#3498db'"
-            >
-                💾 Confirmar selección
-            </button>
-        </div>
-
-        <div style="
-            display:flex;
-            align-items:center;
-            gap:14px;
-            margin:18px 0;
-            flex-wrap:wrap;
-        ">
-            <label style="font-weight:600;color:#333;">Filtrar por categoría:</label>
-            <select id="filterCategoria" 
-                style="
-                    padding:8px 14px;
-                    border-radius:8px;
-                    border:1px solid #ccc;
-                    min-width:200px;
-                    background:#fff;
-                ">
-                <option value="">Todas</option>
-                ${categoriasData.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join("")}
-            </select>
-        </div>
-
-        <div style="
-            overflow-y:auto;
-            max-height:70vh;
-            border:1px solid #ddd;
-            border-radius:10px;
-            background:#fff;
-        ">
-            <table style="
-                width:100%;
-                border-collapse:collapse;
-                font-size:15px;
+        let html = `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                background:#f9fafb;
+                padding:16px 22px;
+                border-bottom:1px solid #ddd;
+                border-radius:12px 12px 0 0;
             ">
-                <thead style="background:#ecf0f1;">
-                    <tr>
-                        <th style="padding:10px;text-align:left;">Producto</th>
-                        <th style="padding:10px;text-align:right;">Precio</th>
-                        <th style="padding:10px;text-align:center;">Stock</th>
-                        <th style="padding:10px;text-align:center;">Cantidad</th>
-                        <th style="padding:10px;text-align:right;">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
+                <button id="closeModalBtn" 
+                    style="
+                        background:none;
+                        border:none;
+                        color:#555;
+                        font-size:18px;
+                        font-weight:bold;
+                        cursor:pointer;
+                        transition:0.2s;
+                    "
+                    onmouseover="this.style.color='#000'"
+                    onmouseout="this.style.color='#555'"
+                >
+                    ❌ Cerrar
+                </button>
 
-    for (const p of filteredPromos) {
-        const qty = getSelectedQty(p.id);
-        const stockMax = p.stock ?? 0;
-        const price = Number(p.precio);
+                <h3 style="margin:0;font-size:20px;font-weight:600;color:#2c3e50;text-align:center;flex:1;">
+                    🛍️ Seleccionar Productos
+                </h3>
+
+                <button onclick="confirmProducts()" 
+                    style="
+                        background:#3498db;
+                        color:#fff;
+                        border:none;
+                        padding:10px 22px;
+                        border-radius:8px;
+                        font-size:15px;
+                        font-weight:600;
+                        cursor:pointer;
+                        transition:0.2s;
+                    "
+                    onmouseover="this.style.background='#2980b9'"
+                    onmouseout="this.style.background='#3498db'"
+                >
+                    💾 Confirmar selección
+                </button>
+            </div>
+
+            <div style="
+                display:flex;
+                align-items:center;
+                gap:14px;
+                margin:18px 0;
+                flex-wrap:wrap;
+            ">
+                <label style="font-weight:600;color:#333;">Filtrar por categoría:</label>
+                <select id="filterCategoria" 
+                    style="
+                        padding:8px 14px;
+                        border-radius:8px;
+                        border:1px solid #ccc;
+                        min-width:200px;
+                        background:#fff;
+                    ">
+                    <option value="">Todas</option>
+                    ${categoriasData.map(c => `<option value="${c.id}">${safeText(c.nombre)}</option>`).join("")}
+                </select>
+            </div>
+
+            <div style="
+                overflow-y:auto;
+                max-height:70vh;
+                border:1px solid #ddd;
+                border-radius:10px;
+                background:#fff;
+            ">
+                <table style="
+                    width:100%;
+                    border-collapse:collapse;
+                    font-size:15px;
+                ">
+                    <thead style="background:#ecf0f1;">
+                        <tr>
+                            <th style="padding:10px;text-align:left;">Producto</th>
+                            <th style="padding:10px;text-align:right;">Precio</th>
+                            <th style="padding:10px;text-align:center;">Stock</th>
+                            <th style="padding:10px;text-align:center;">Cantidad</th>
+                            <th style="padding:10px;text-align:right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        for (const p of filteredPromos) {
+            const qty = getSelectedQty(p.id);
+            const stockMax = p.stock ?? 0;
+            const price = Number(p.precio);
+
+            html += `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px;">${safeText(p.nombre || p.descripcion || '')}</td>
+                    <td style="padding:10px;text-align:right;">$${price.toFixed(2)}</td>
+                    <td style="padding:10px;text-align:center;">${stockMax}</td>
+                    <td style="padding:10px;text-align:center;">
+                        ${renderQuantityControls(p.id, qty, price, stockMax)}
+                    </td>
+                    <td id="sub_${p.id}" style="padding:10px;text-align:right;">
+                        $${(qty * price).toFixed(2)}
+                    </td>
+                </tr>
+            `;
+        }
 
         html += `
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px;">${safeText(p.nombre || p.descripcion || '')}</td>
-                <td style="padding:10px;text-align:right;">$${price.toFixed(2)}</td>
-                <td style="padding:10px;text-align:center;">${stockMax}</td>
-                <td style="padding:10px;text-align:center;">
-                    ${renderQuantityControls(p.id, qty, price, stockMax)}
-                </td>
-                <td id="sub_${p.id}" style="padding:10px;text-align:right;">
-                    $${(qty * price).toFixed(2)}
-                </td>
-            </tr>
+                    <tr style="background:#fafafa;">
+                        <td colspan="4" style="text-align:right;padding:12px 10px;font-weight:600;">Total:</td>
+                        <td id="totalPedido" style="text-align:right;padding:12px 10px;font-weight:700;color:#27ae60;">$0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
         `;
+
+        // Aplicar al modal
+        modalInner.innerHTML = html;
+        modalInner.style.maxWidth = "1100px";
+        modalInner.style.width = "95%";
+        modalInner.style.background = "#fdfdfd";
+        modalInner.style.borderRadius = "12px";
+        modalInner.style.boxShadow = "0 6px 20px rgba(0,0,0,0.15)";
+        modalInner.style.padding = "20px";
+        modalInner.style.position = "relative";
+
+        const modal = document.getElementById("modal");
+        modal.style.display = "flex";
+        modal.style.justifyContent = "center";
+        modal.style.alignItems = "center";
+        modal.style.background = "rgba(0,0,0,0.45)";
+        modal.style.zIndex = "9999";
+
+        // Filtro por categoría
+        const filterEl = document.getElementById('filterCategoria');
+        if (filterEl) {
+            filterEl.value = categoryId;
+            filterEl.addEventListener('change', function(){
+                renderFilteredPromos(this.value);
+            });
+        }
+
+        // Botón para cerrar el modal (sin confirmar)
+        const closeBtn = document.getElementById('closeModalBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = "none";
+            });
+        }
+
+        // Listeners de cantidad y total
+        addQuantityControlListeners();
+        setTimeout(() => {
+            const tEl = document.getElementById('totalPedido');
+            if (tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}`;
+        }, 40);
     }
 
-    html += `
-                <tr style="background:#fafafa;">
-                    <td colspan="4" style="text-align:right;padding:12px 10px;font-weight:600;">Total:</td>
-                    <td id="totalPedido" style="text-align:right;padding:12px 10px;font-weight:700;color:#27ae60;">$0.00</td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
-    `;
-
-    // Aplicar al modal
-    modalInner.innerHTML = html;
-    modalInner.style.maxWidth = "1100px";
-    modalInner.style.width = "95%";
-    modalInner.style.background = "#fdfdfd";
-    modalInner.style.borderRadius = "12px";
-    modalInner.style.boxShadow = "0 6px 20px rgba(0,0,0,0.15)";
-    modalInner.style.padding = "20px";
-    modalInner.style.position = "relative";
-
-    const modal = document.getElementById("modal");
-    modal.style.display = "flex";
-    modal.style.justifyContent = "center";
-    modal.style.alignItems = "center";
-    modal.style.background = "rgba(0,0,0,0.45)";
-    modal.style.zIndex = "9999";
-
-    // Filtro por categoría
-    const filterEl = document.getElementById('filterCategoria');
-    if (filterEl) {
-        filterEl.value = categoryId;
-        filterEl.addEventListener('change', function(){
-            renderFilteredPromos(this.value);
-        });
-    }
-
-    // Botón para cerrar el modal (sin confirmar)
-    const closeBtn = document.getElementById('closeModalBtn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            modal.style.display = "none";
-        });
-    }
-
-    // Listeners de cantidad y total
-    addQuantityControlListeners();
-    setTimeout(() => {
-        const tEl = document.getElementById('totalPedido');
-        if (tEl) tEl.textContent = `$${calculateTotal().toFixed(2)}`;
-    }, 40);
+        renderFilteredPromos();
+    });
 }
-
-
-    renderFilteredPromos();
-});
-
 
 function renderSelectedProducts(){
     const c = document.getElementById('selectedProductsContainer');
@@ -3436,35 +3437,78 @@ async function getPromoById(id){
 }
 
 /* ================== AGREGAR PEDIDO ================== */
-document.getElementById('addOrderBtn').addEventListener('click', async ()=>{
-    const cliente = document.getElementById('pedidoCliente').value.trim();
-    const localidad_id = document.getElementById('pedidoLocalidad').value || null;
-    if(!cliente || selectedProducts.length === 0) return alert('Complete cliente y seleccione productos');
-    
-    const promosActuales = await Promise.all(selectedProducts.map(p => getPromoById(p.id)));
-    for (let i = 0; i < selectedProducts.length; i++) {
-        if (selectedProducts[i].cantidad > (promosActuales[i].stock || 0)) {
-            return alert(`Stock insuficiente para ${selectedProducts[i].nombre} (disponible: ${promosActuales[i].stock})`);
+const addOrderBtn = document.getElementById('addOrderBtn');
+
+if (addOrderBtn) {
+    addOrderBtn.addEventListener('click', async () => {
+        const cliente = document.getElementById('pedidoCliente').value.trim();
+        const localidad_id = document.getElementById('pedidoLocalidad').value || null;
+        // Agregamos la obtención del DNI para que no de error de "not defined"
+        const dni = document.getElementById('pedidoDni') ? document.getElementById('pedidoDni').value.trim() : null;
+
+        if (!cliente || selectedProducts.length === 0) {
+            return alert('Complete cliente y seleccione productos');
         }
-    }
-    
-    // SOLO DESCONTAR STOCK UNA VEZ
-    await Promise.all(selectedProducts.map((p, i) =>
-        supabase.from('promociones').update({ stock: (promosActuales[i].stock || 0) - p.cantidad }).eq('id', p.id)
-    ));
-    
-    const productosPayload = selectedProducts.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio }));
-    const total = productosPayload.reduce((s,x)=>s + x.precio * x.cantidad, 0);
-    const { error } = await supabase.from('pedidos').insert([{ cliente, localidad_id, dni, productos: productosPayload, total }]);
-    
-    if(error) return alert(error.message);
-    
-    document.getElementById('pedidoForm').reset();
-    selectedProducts = []; renderSelectedProducts();
-    await fetchOrders();
-    await fetchPromos(); // Cambiado a fetchPromos (tu función)
-    showToast('Pedido agregado');
-});
+
+        try {
+            const promosActuales = await Promise.all(selectedProducts.map(p => getPromoById(p.id)));
+            
+            // Validar Stock
+            for (let i = 0; i < selectedProducts.length; i++) {
+                const stockDisponible = promosActuales[i].stock || 0;
+                if (selectedProducts[i].cantidad > stockDisponible) {
+                    return alert(`Stock insuficiente para ${selectedProducts[i].nombre} (disponible: ${stockDisponible})`);
+                }
+            }
+
+            // Descontar Stock
+            await Promise.all(selectedProducts.map((p, i) =>
+                supabase.from('promociones')
+                    .update({ stock: (promosActuales[i].stock || 0) - p.cantidad })
+                    .eq('id', p.id)
+            ));
+
+            const productosPayload = selectedProducts.map(p => ({ 
+                id: p.id, 
+                nombre: p.nombre, 
+                cantidad: p.cantidad, 
+                precio: p.precio 
+            }));
+            
+            const total = productosPayload.reduce((s, x) => s + (x.precio * x.cantidad), 0);
+
+            const { error } = await supabase.from('pedidos').insert([{ 
+                cliente, 
+                localidad_id, 
+                dni, 
+                productos: productosPayload, 
+                total 
+            }]);
+
+            if (error) throw error;
+
+            // Limpieza y feedback
+            if (document.getElementById('pedidoForm')) {
+                document.getElementById('pedidoForm').reset();
+            }
+            
+            selectedProducts = []; 
+            renderSelectedProducts();
+            
+            if (typeof fetchOrders === 'function') await fetchOrders();
+            if (typeof fetchPromos === 'function') await fetchPromos();
+            
+            showToast('Pedido agregado con éxito');
+
+        } catch (err) {
+            console.error("Error al agregar pedido:", err);
+            alert('Error: ' + err.message);
+        }
+    });
+}
+
+
+
 
 /* ========== OBTENER LOCALIDAD ========== */
 async function getLocalidadNombre(id) {
@@ -5857,54 +5901,59 @@ function escapeHtml(str) {
 
 
 // ================= LOCALIDADES =================
-async function fetchLocalidades(){
+async function fetchLocalidades() {
   const { data, error } = await supabase.from("localidades").select("*").order("id");
-  if(error) return console.error(error);
+  if (error) return console.error(error);
 
-  // Lista para gestión
+  // 1. Lista para gestión (Validamos si existe el contenedor)
   const container = document.getElementById("localidadList");
-  container.innerHTML = "";
-  data.forEach(l=>{
-    // Tarjeta simple con flex
-    const div = document.createElement('div');
-    div.className = 'item-card';
-    div.style.display = 'flex';
-    div.style.justifyContent = 'space-between';
-    div.style.alignItems = 'center';
-    div.style.background = '#fff';
-    div.style.border = '1px solid #eee';
-    div.style.borderRadius = '10px';
-    div.style.padding = '12px 18px';
-    div.style.marginBottom = '12px';
-    div.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)';
+  if (container) {
+    container.innerHTML = "";
+    data.forEach(l => {
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      div.style.display = 'flex';
+      div.style.justifyContent = 'space-between';
+      div.style.alignItems = 'center';
+      div.style.background = '#fff';
+      div.style.border = '1px solid #eee';
+      div.style.borderRadius = '10px';
+      div.style.padding = '12px 18px';
+      div.style.marginBottom = '12px';
+      div.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)';
 
-    // Nombre
-    const nombreDiv = document.createElement('div');
-    nombreDiv.textContent = l.nombre;
-    nombreDiv.style.fontSize = '1.08em';
-    nombreDiv.style.fontWeight = '500';
+      const nombreDiv = document.createElement('div');
+      nombreDiv.textContent = l.nombre;
+      nombreDiv.style.fontSize = '1.08em';
+      nombreDiv.style.fontWeight = '500';
 
-    // Botones
-    const btnsDiv = document.createElement('div');
-    btnsDiv.style.display = 'flex';
-    btnsDiv.style.gap = '14px';
-    btnsDiv.innerHTML = `
-      <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')" style="background:#3498db;color:#fff;border:none;padding:7px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">✏️ Editar</button>
-      <button onclick="deleteLocalidad(${l.id})" style="background:#ff4d4f;color:#fff;border:none;padding:7px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">🗑️ Eliminar</button>
-    `;
+      const btnsDiv = document.createElement('div');
+      btnsDiv.style.display = 'flex';
+      btnsDiv.style.gap = '14px';
+      btnsDiv.innerHTML = `
+        <button onclick="editLocalidad(${l.id},'${escapeHtml(l.nombre)}')" style="background:#3498db;color:#fff;border:none;padding:7px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">✏️ Editar</button>
+        <button onclick="deleteLocalidad(${l.id})" style="background:#ff4d4f;color:#fff;border:none;padding:7px 18px;border-radius:7px;font-weight:bold;font-size:15px;cursor:pointer;">🗑️ Eliminar</button>
+      `;
 
-    div.appendChild(nombreDiv);
-    div.appendChild(btnsDiv);
-    container.appendChild(div);
-  });
+      div.appendChild(nombreDiv);
+      div.appendChild(btnsDiv);
+      container.appendChild(div);
+    });
+  }
 
-  // Select en formulario de pedidos
+  // 2. Select en formulario de pedidos (Validamos si existe el select)
   const sel = document.getElementById("pedidoLocalidad");
-  sel.innerHTML = '<option value="">Seleccione localidad</option>';
-  data.forEach(l=>{
-    sel.innerHTML += `<option value="${l.id}">${escapeHtml(l.nombre)}</option>`;
-  });
+  if (sel) {
+    sel.innerHTML = '<option value="">Seleccione localidad</option>';
+    data.forEach(l => {
+      const option = document.createElement('option');
+      option.value = l.id;
+      option.textContent = l.nombre;
+      sel.appendChild(option);
+    });
+  }
 }
+
 
 async function addLocalidad(){
   const nombre=document.getElementById("localidadNombre").value.trim(); if(!nombre) return alert("Ingrese nombre");
@@ -7392,7 +7441,6 @@ async function savePrepChanges() {
 
 </body>
 </html>
-
 
 
 
