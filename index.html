@@ -3707,12 +3707,21 @@ if (Array.isArray(p.pagos) && p.pagos.length > 0) {
     pagosHTML = `
         <div style="margin-top:8px; background:#f0f7ff; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
             <b style="font-size:0.9em; color:#2c3e50;">💳 Pagos Registrados:</b><br>
-            ${p.pagos.map(pg => `
-                <div style="display:flex; justify-content:space-between; font-size:0.9em; margin-top:2px;">
-                    <span>• ${pg.metodo} ${pg.destinatario ? `(${pg.destinatario})` : ""}:</span>
-                    <span style="font-weight:bold;">$${Number(pg.monto).toLocaleString()}</span>
-                </div>
-            `).join("")}
+           ${p.pagos.map(pg => {
+    let metodoTexto = pg.metodo;
+
+    if (pg.metodo === "Transferencia" && pg.destinatario && pg.destinatario.trim() !== "") {
+        metodoTexto += ` (${pg.destinatario})`;
+    }
+
+    return `
+        <div style="display:flex; justify-content:space-between; font-size:0.9em; margin-top:2px;">
+            <span>• ${metodoTexto}:</span>
+            <span style="font-weight:bold;">$${Number(pg.monto).toLocaleString()}</span>
+        </div>
+    `;
+}).join("")}
+
             ${saldoPendiente > 0 ? `
                 <div style="margin-top:5px; text-align:right; border-top:1px dashed #ccc; padding-top:5px;">
                     <b style="color:#e74c3c;">Saldo pendiente: $${saldoPendiente.toLocaleString()}</b>
@@ -3801,6 +3810,24 @@ Object.assign(pagoBtn.style, {
 });
 
 
+const preparadoBtn = document.createElement("button");
+preparadoBtn.textContent = p.preparado ? "✅ Preparado" : "🕓 Sin preparar";
+
+Object.assign(preparadoBtn.style, {
+    background: p.preparado ? "#10b981" : "#f59e0b",
+    color: "#fff",
+    border: "none",
+    width: "200px",
+    height: "40px",
+    borderRadius: "7px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    textAlign: "center",
+});
+
+preparadoBtn.onclick = () => togglePreparado(p.id, p.preparado);
+
+
 const prepBtn = document.createElement("button");
 prepBtn.textContent = "📦 Preparar Pedido";
 Object.assign(prepBtn.style, {
@@ -3822,7 +3849,7 @@ actionsDiv.appendChild(prepBtn);
 
 
 // calcular saldo restante del pedido
-const saldoRestante = Math.max(0, totalPedido - totalPagado);
+const saldoRestante = Math.max(0, montoTotal - totalPagado);
 
 // Si tu objeto de pedido se llama 'p', verifica que tenga 'id'
 pagoBtn.onclick = () => {
@@ -3872,7 +3899,15 @@ pagoBtn.onclick = () => {
         archiveIndividualBtn.onclick = () => archiveIndividualOrder(p.id);
 
 
-        actionsDiv.append(pdfBtn, editBtn, deleteBtn, pagoBtn, estadoBtn, archiveIndividualBtn);
+        actionsDiv.append(
+    pdfBtn,
+    editBtn,
+    deleteBtn,
+    pagoBtn,
+    estadoBtn,
+    preparadoBtn, // 👈 ESTE ES EL NUEVO
+    archiveIndividualBtn
+);
         div.append(infoDiv, actionsDiv);
         container.appendChild(div);
       }
@@ -3892,6 +3927,23 @@ pagoBtn.onclick = () => {
   }
 }
 
+
+
+async function togglePreparado(id, estadoActual) {
+    try {
+        const { error } = await supabase
+            .from("pedidos")
+            .update({ preparado: !estadoActual })
+            .eq("id", id);
+
+        if (error) throw error;
+
+        fetchOrders();
+        } catch (err) {
+        console.error(err);
+        alert("Error al actualizar estado");
+    }
+}
 
 
 /**
@@ -3939,7 +3991,25 @@ function renderPedidosTotales(pedidos) {
 
 
 
+function agregarItem(producto) {
+    if (!window.nuevosProductos) window.nuevosProductos = [];
 
+    const existente = nuevosProductos.find(p => p.id === producto.id);
+
+    if (existente) {
+        existente.cantidad += 1;
+    } else {
+        nuevosProductos.push({
+            id: producto.id,
+            nombre: producto.nombre,
+            precio: producto.precio,
+            cantidad: 1,
+            descuento: 0
+        });
+    }
+
+    renderProductosEdicion(); // importante refrescar UI
+}
 
 
 
@@ -4187,7 +4257,15 @@ async function fetchArchivedOrders() {
                 pagosHTML = `
                     <div style="margin-top:8px;background:#eef;padding:8px;border-radius:6px;">
                         <b>💳 Pagos Registrados:</b><br>
-                        ${p.pagos.map(pg => `- ${pg.metodo}: $${Number(pg.monto).toFixed(2)}`).join("<br>")}
+                        ${(p.pagos || []).map(pg => {
+    let metodoTexto = pg.metodo || "";
+
+    if (pg.metodo === "Transferencia" && pg.destinatario) {
+        metodoTexto += ` (${pg.destinatario})`;
+    }
+
+    return `- ${metodoTexto}: $${Number(pg.monto || 0).toFixed(2)}`;
+}).join("<br>")}
                         ${saldoPendiente > 0 ? `<br><b style="color:#e74c3c;">Saldo pendiente: $${saldoPendiente.toFixed(2)}</b>` : ""}
                     </div>
                 `;
@@ -4562,17 +4640,32 @@ function renderizarListaEdicionPagos() {
         item.style = "background:#f8fafc; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #e2e8f0; display:grid; grid-template-columns: 1fr 1fr; gap:8px;";
         
         item.innerHTML = `
-            <input type="date" value="${pago.fecha}" id="editFecha_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
-            <input type="number" value="${pago.monto}" id="editMonto_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
-            <select id="editMetodo_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
-                <option value="Efectivo" ${pago.metodo === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
-                <option value="Transferencia" ${pago.metodo === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
-            </select>
-            <div style="display:flex; gap:5px;">
-                <button onclick="guardarEdicionPago(${idx})" style="flex:1; background:var(--success); color:white; border:none; border-radius:5px; cursor:pointer; font-size:0.8em; font-weight:bold;">Guardar</button>
-                <button onclick="eliminarPagoExistente(${idx})" style="background:#f43f5e; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>
-            </div>
-        `;
+    <input type="date" value="${pago.fecha}" id="editFecha_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+    
+    <input type="number" value="${pago.monto}" id="editMonto_${idx}" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+    
+    <select id="editMetodo_${idx}" 
+        onchange="toggleDestinatarioEdit(${idx})"
+        style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+        
+        <option value="Efectivo" ${pago.metodo === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+        <option value="Transferencia" ${pago.metodo === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+    </select>
+
+    <input 
+        type="text" 
+        id="editDestinatario_${idx}" 
+        value="${pago.destinatario || ""}" 
+        placeholder="Destinatario"
+        style="padding:5px; border-radius:5px; border:1px solid #ddd; display:${pago.metodo === 'Transferencia' ? 'block' : 'none'}; grid-column: span 2;"
+    >
+
+    <div style="display:flex; gap:5px; grid-column: span 2;">
+        <button onclick="guardarEdicionPago(${idx})" style="flex:1; background:var(--success); color:white; border:none; border-radius:5px; cursor:pointer; font-size:0.8em; font-weight:bold;">Guardar</button>
+        
+        <button onclick="eliminarPagoExistente(${idx})" style="background:#f43f5e; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>
+    </div>
+`;
         contenedor.appendChild(item);
     });
 
@@ -4587,22 +4680,31 @@ const totalPedido = Number(pedidoSeleccionado.total || 0);
 }
 
 
+function toggleDestinatarioEdit(idx) {
+    const metodo = document.getElementById(`editMetodo_${idx}`).value;
+    const input = document.getElementById(`editDestinatario_${idx}`);
+
+    if (input) {
+        input.style.display = metodo === "Transferencia" ? "block" : "none";
+    }
+}
+
 
 
 async function guardarEdicionPago(idx) {
-    // Capturar nuevos valores de los inputs
     const nuevaFecha = document.getElementById(`editFecha_${idx}`).value;
     const nuevoMonto = Number(document.getElementById(`editMonto_${idx}`).value);
     const nuevoMetodo = document.getElementById(`editMetodo_${idx}`).value;
+    const destinatario = document.getElementById(`editDestinatario_${idx}`)?.value.trim() || "";
 
-    // Actualizar el array local
     pagosEdicionActual[idx] = {
+        ...pagosEdicionActual[idx],
         fecha: nuevaFecha,
         monto: nuevoMonto,
-        metodo: nuevoMetodo
+        metodo: nuevoMetodo,
+        destinatario: nuevoMetodo === "Transferencia" ? destinatario : ""
     };
 
-    // Guardar en Supabase
     const { error } = await supabase
         .from('pedidos')
         .update({ pagos: pagosEdicionActual })
@@ -4612,12 +4714,10 @@ async function guardarEdicionPago(idx) {
         alert("Error al guardar cambios: " + error.message);
     } else {
         showToast("✅ Pago actualizado correctamente");
-        // Refrescar modal para actualizar saldos
         abrirModalPago(pedidoSeleccionado.id);
         if (typeof fetchPedidos === 'function') fetchPedidos();
     }
 }
-
 
 
 
@@ -5041,11 +5141,11 @@ async function editOrderModal(pedido) {
     // Variable persistente dentro del modal para el descuento general
     let descuentoGeneral = typeof pedido.descuento_general !== 'undefined' ? pedido.descuento_general : 0;
 
-    function renderModal(stockMsg = "") {
+    function renderModal(stockMsg = "", scrollPos = 0) {
         const modalInner = document.getElementById("modalInner");
         modalInner.style.maxWidth = "min(90vw, 500px)"; 
         modalInner.style.width = "90vw";
-        modalInner.style.zIndex = "1001"; // Asegura prioridad
+        modalInner.style.zIndex = "1000"; // Asegura prioridad
         
         // Aplicamos una animación de entrada suave al contenedor
         modalInner.style.animation = "modalFadeIn 0.3s ease-out";
@@ -5140,6 +5240,11 @@ async function editOrderModal(pedido) {
             </div>
         `);
 
+setTimeout(() => {
+    const container = document.querySelector(".edit-modal-container");
+    if (container) container.scrollTop = scrollPos;
+}, 0);
+
         // ---- EVENTOS ----
         const descuentoInput = document.getElementById("editDescuentoGeneral");
         if (descuentoInput) {
@@ -5158,40 +5263,49 @@ async function editOrderModal(pedido) {
 
         document.querySelectorAll('.qtyPlus').forEach(btn => {
             btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx, 10);
-                const pInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
-                const sOrig = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
-                const sBase = (pInfo?.stock ?? 0) + sOrig;
-                if (productosPedido[idx].cantidad < sBase) {
-                    productosPedido[idx].cantidad++;
-                    renderModal();
-                } else {
-                    renderModal(`Stock máximo para "${productosPedido[idx].nombre}" es ${sBase}.`);
-                }
-            };
+    const container = document.querySelector(".edit-modal-container");
+    const scrollPos = container ? container.scrollTop : 0;
+
+    const idx = parseInt(btn.dataset.idx, 10);
+    const pInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
+    const sOrig = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
+    const sBase = (pInfo?.stock ?? 0) + sOrig;
+
+    if (productosPedido[idx].cantidad < sBase) {
+        productosPedido[idx].cantidad++;
+        renderModal("", scrollPos);
+    } else {
+        renderModal(`Stock máximo alcanzado`, scrollPos);
+    }
+};
         });
 
         document.querySelectorAll('.qtyMinus').forEach(btn => {
             btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx, 10);
-                if (productosPedido[idx].cantidad > 1) {
-                    productosPedido[idx].cantidad--;
-                    renderModal();
-                }
-            };
+    const container = document.querySelector(".edit-modal-container");
+    const scrollPos = container ? container.scrollTop : 0;
+
+    const idx = parseInt(btn.dataset.idx, 10);
+
+    if (productosPedido[idx].cantidad > 1) {
+        productosPedido[idx].cantidad--;
+        renderModal("", scrollPos);
+    }
+};
         });
 
         document.querySelectorAll('.editQtyInput').forEach(input => {
             input.onchange = () => {
-                const idx = parseInt(input.dataset.idx, 10);
-                const pInfo = productosDB.find(pdb => pdb.id === productosPedido[idx].id);
-                const sOrig = (pedido.productos || []).find(op => op.id === productosPedido[idx].id)?.cantidad || 0;
-                const sBase = (pInfo?.stock ?? 0) + sOrig;
-                let val = Math.max(1, parseInt(input.value, 10) || 1);
-                if (val > sBase) val = sBase;
-                productosPedido[idx].cantidad = val;
-                renderModal();
-            };
+    const container = document.querySelector(".edit-modal-container");
+    const scrollPos = container ? container.scrollTop : 0;
+
+    const idx = parseInt(input.dataset.idx, 10);
+    let val = Math.max(1, parseInt(input.value, 10) || 1);
+
+    productosPedido[idx].cantidad = val;
+
+    renderModal("", scrollPos);
+};
         });
 
         document.querySelectorAll('.editDescuentoInput').forEach(input => {
@@ -5205,9 +5319,13 @@ async function editOrderModal(pedido) {
 
         document.querySelectorAll('.deletePrBtn').forEach(btn => {
             btn.onclick = () => {
-                productosPedido.splice(parseInt(btn.dataset.idx, 10), 1);
-                renderModal();
-            };
+    const container = document.querySelector(".edit-modal-container");
+    const scrollPos = container ? container.scrollTop : 0;
+
+    productosPedido.splice(parseInt(btn.dataset.idx, 10), 1);
+
+    renderModal("", scrollPos);
+};
         });
 
         const saveBtn = document.getElementById('saveEditPedidoBtn');
@@ -5236,7 +5354,7 @@ async function editOrderModal(pedido) {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
             display: flex; align-items: center; justify-content: center;
-            z-index: 2000; animation: modalFadeIn 0.2s ease-out;
+            z-index: 99999; animation: modalFadeIn 0.2s ease-out;
         `;
 
         subOverlay.innerHTML = `
@@ -6656,7 +6774,6 @@ function verDetallePagosCC(pedido) {
            style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
 </div>
 
-<input type="date" id="newPagoFecha" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
 
 <button onclick="guardarNuevoPagoCC()" style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:4px; cursor:pointer;">Guardar Pago</button>
 
@@ -6667,12 +6784,22 @@ function verDetallePagosCC(pedido) {
                     <tr><th style="padding:8px; text-align:left;">Método</th><th style="padding:8px; text-align:right;">Monto</th></tr>
                 </thead>
                 <tbody>
-                    ${listaPagos.length === 0 ? '<tr><td colspan="2" style="text-align:center; padding:10px;">No hay pagos previos</td></tr>' : 
-                      listaPagos.map(pg => `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:8px;">${pg.metodo}</td>
-                            <td style="padding:8px; text-align:right;">$${Number(pg.monto).toLocaleString()}</td>
-                        </tr>`).join('')}
+                    ${listaPagos.length === 0 
+    ? '<tr><td colspan="2" style="text-align:center; padding:10px;">No hay pagos previos</td></tr>' 
+    : listaPagos.map(pg => {
+        let metodoTexto = pg.metodo;
+
+        if (pg.metodo === "Transferencia" && pg.destinatario) {
+            metodoTexto += ` (${pg.destinatario})`;
+        }
+
+        return `
+        <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:8px;">${metodoTexto}</td>
+            <td style="padding:8px; text-align:right;">$${Number(pg.monto).toLocaleString()}</td>
+        </tr>`;
+    }).join('')
+}
                 </tbody>
             </table>
         </div>
